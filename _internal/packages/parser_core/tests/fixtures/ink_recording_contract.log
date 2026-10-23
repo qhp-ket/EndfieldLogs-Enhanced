@@ -1,0 +1,14 @@
+# Synthetic exact record ledger: source 120 (100 attacker, 20 support), recorded 12.
+[10:00:00.000] BUFF_START #1 id="buff_wpn_lance_0014_damageup" uid=9001 owner=chr_0004_pelica src=chr_0035_liino ownerId=1001 srcId=2001 dur=10
+[10:00:00.000] BB[9001]: atk_up=0.2
+[10:00:00.000] BUFF_ENABLE {"schemaVersion":1,"buffUid":"9001","ownerId":"1001","enabled":true,"operationSeq":1}
+[10:00:00.000] BUFF_START #2 id="buff_chr_0036_jsspsi_xianjing_inkhurteffect" uid=7001 owner=eny_0051_rodin src=chr_0036_jsspsi ownerId=3001 srcId=4001 dur=20
+[10:00:00.000] BB[7001]: ink_damage_rate=0.1 duration=20
+[10:00:00.000] BUFF_CREATE_OBSERVED {"schemaVersion":1,"buffUid":"7001","buffTemplate":"buff_chr_0036_jsspsi_xianjing_inkhurteffect","sourceActorId":"4001","targetActorId":"3001","sessionId":"test","operationSeq":90,"operationOwnerId":"4001","operationGeneration":0,"sourceEvent":"BattleOpTriggerAction","buffNumId":4117,"assignedItems":[],"observationKind":"creation_or_refresh","actionId":8,"triggerType":0,"creationActionType":"BattleActionCreateBuff","creationActionRuntimeCase":"create_buff_action"}
+[10:00:00.500] HP_V2 #1 hit=120 cum=120 raw=120 packetFinalValue=120 pHP=100 eHP=1000 skill="chr_0004_pelica_combo_skill_projhit" actionId=11 damageUnitIndex=0 src=chr_0004_pelica tgt=eny_0051_rodin atk=chr_0004_pelica atkId=1001 tgtId=3001 hits=1 packetSeq=100 clientTick=1000 packetSessionId="test"
+[10:00:00.500] BB_MODIFY_DYNAMIC seq=101 tick=1000 inst=7001 ownerId=3001 skill=buff_chr_0036_jsspsi_xianjing_inkhurteffect actionId=45 value=120 packetSessionId=test
+[10:00:00.500] BB_SIMPLE_CALC seq=102 tick=1000 inst=7001 ownerId=3001 skill=buff_chr_0036_jsspsi_xianjing_inkhurteffect actionId=47 key=EntityBB_ink_damage valueA=0 valueB=12 final=12 packetSessionId=test
+[10:00:00.750] BUFF_END #3 uid=9001
+[10:00:01.000] INK_RELEASE {"schema_version":1,"template_key":"buff_chr_0036_jsspsi_xianjing_inkhurteffect","action_id":14,"session_id":"test","operation_seq":130,"buff_uid":"7001","owner_id":"3001","source_actor_id":"4001","projectile_id":"8001","client_tick_ms":1000}
+[10:00:01.000] BB_MODIFY_DYNAMIC seq=132 tick=1000 inst=7001 ownerId=3001 skill=buff_chr_0036_jsspsi_xianjing_inkhurteffect actionId=15 value=0 packetSessionId=test
+[10:00:01.500] HP_V2 #2 hit=12 cum=12 raw=12 packetFinalValue=12 pHP=100 eHP=988 skill="chr_0036_jsspsi_normal_skill_inkmark_projhit" actionId=30 damageUnitIndex=0 src=chr_0036_jsspsi tgt=eny_0051_rodin atk=chr_0036_jsspsi atkId=4001 tgtId=3001 hits=1 packetSeq=140 clientTick=2000 packetSessionId="test" eventOwnerId=8001 eventInstId=8002

@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "StreamingAssets/42A8FCA6": {
+      "sha256": "2e375cc08f8766e4cef5407f902bb55ab209a9aa9996091cd1d8a3f4e48b9407",
+      "fileCount": 65
+    },
+    "StreamingAssets/775A31D1": {
+      "sha256": "0a94d68ec5d727c2500f75513e5140972690d1e8988eda94d910ccb6ca8cbeb2",
+      "fileCount": 112
+    },
+    "Persistent/42A8FCA6": {
+      "sha256": "47191804e77ba3675aae2efe81ea4e622d8148d26456765b244544a15bf3f222",
+      "fileCount": 29
+    },
+    "Persistent/775A31D1": {
+      "sha256": "354c6b84f0098ec782f4992c0b6c9ab91768759eaea308680be50d61fca1f77d",
+      "fileCount": 81
+    }
+  },
+  "extracted": {
+    "TableCfg": {
+      "sha256": "d56b3b7ce379a5652f14417735c25388e3db635787d83a28bf70751d1b499999",
+      "fileCount": 770
+    },
+    "Json/BuffData": {
+      "sha256": "15a5b8ababe8bc36e76c1d70c34a94e959b17d52f9a372bd91effcc3edad8da8",
+      "fileCount": 3395
+    },
+    "Json/SkillData": {
+      "sha256": "81d029e267bd50905f733535027cd781dd44b6d147e3be9f86618bea2b08c663",
+      "fileCount": 2928
+    },
+    "Json/StringPool": {
+      "sha256": "7fd955ecfb9ba49380de1953d41445dabc70f07b10e74253e70a33373df08ee0",
+      "fileCount": 30
+    }
+  },
+  "generated": {
+    "local_tables": {
+      "sha256": "f7967b5f2ddb3585ba4c54a84d7d86aef4e0767bae643db786f7f6c3064978fb",
+      "fileCount": 361,
+      "jsonNewlines": "LF"
+    },
+    "local_static": {
+      "sha256": "66304a81cfc615eda0df0fc19b126621b56c4a2684bb02424d7fd2f3b8c0b0eb",
+      "fileCount": 15,
+      "jsonNewlines": "LF"
+    },
+    "local_semantics": {
+      "sha256": "3239c1f12d80ed830bc9e7794b8394878c63613052094897ba4a75bb15175cb2",
+      "fileCount": 8,
+      "jsonNewlines": "LF"
+    }
+  },
+  "metadataPolicy": "Machine-local generation paths removed; original hashes and data versions retained."
+}

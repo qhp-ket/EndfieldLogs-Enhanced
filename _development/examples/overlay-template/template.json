@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "name": "自定义快照示例",
+  "entry": "index.html",
+  "subscriptions": ["analysis_snapshot"],
+  "font_mode": "css",
+  "window": {"min_width": 240, "min_height": 120, "default_width": 400, "default_height": 200},
+  "settings": [
+    {
+      "key": "metric",
+      "label": "展示指标",
+      "type": "select",
+      "default": "total_damage",
+      "options": [
+        {"value": "total_damage", "label": "团队 DMG"},
+        {"value": "total_dps", "label": "团队 DPS"}
+      ]
+    }
+  ]
+}

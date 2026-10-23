@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "source": "official_WeaponBasic_SkillPatch_I18nText_CN_exact_fields",
+  "extraction": "_endfield_update_local/run_20261016_150110",
+  "sourceTables": {
+    "WeaponBasicTable": "4a65250231a09079853662982a7f103e6ff704b529ef2a56a8749a2f307ccbbc",
+    "SkillPatchTable": "2e5d6fd770ba96991123ccf2952f5ec02ab6fb41cf54a33ed8a1a4321acf7032",
+    "I18nTextTable_CN": "aab35eb35422d305237332b86f1d850bd9a024da82f96a3df6fec121b0214d5d"
+  },
+  "rows": {
+    "wpn_claym_0018": {
+      "skillId": "sk_wpn_claym_0018",
+      "skillSlot": 2,
+      "descriptionId": -8361805328598629879,
+      "description": "攻击力<@ba.vup>+{atk_up:0.0%}</>。\n装备者对敌人施加<#ba.static>定身</>时，使目标敌人受到的伤害<@ba.vup>+{dmg_taken_up:0.0%}</>，持续{duration:0}秒。\n装备者对敌人施加<#ba.static>定身</>或施放终结技后，{duration_combo:0}秒内的下个连携技造成的伤害<@ba.vup>+{combo_dmg_up:0.0%}</>。\n<@ba.info>两种效果独立生效，且均无法叠加。</>",
+      "skillNameId": -3324630258382054705,
+      "skillName": "效益·落墨添彩"
+    },
+    "wpn_claym_0019": {
+      "skillId": "sk_wpn_claym_0019",
+      "skillSlot": 2,
+      "descriptionId": 7404384389884046137,
+      "description": "主能力<@ba.vup>+{primary_attr_up:0.0%}</>。\n装备者通过战技施加<#ba.crystinflict>寒冷附着</>或<#ba.fireinflict>灼热附着</>时，寒冷伤害<@ba.vup>+{cryst_dmg_up:0.0%}</>，持续{duration:0}秒。\n装备者对小队内其他干员施加<#ba.spellenhance>法术增幅</>后，全队法术伤害<@ba.vup>+{spell_dmg_up:0.0%}</>，持续{duration2:0}秒。\n<@ba.info>两种效果独立生效，且均无法叠加。</>",
+      "skillNameId": 5319304839606511820,
+      "skillName": "效益·秘辛史话"
+    }
+  }
+}

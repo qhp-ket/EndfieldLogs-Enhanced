@@ -1,0 +1,37 @@
+# Normalize text in Git; use LF in source and CRLF for Windows command scripts.
+* text=auto
+*.py text eol=lf
+*.toml text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.js text eol=lf
+*.svg text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+.gitignore text eol=lf
+.gitattributes text eol=lf
+LICENSE text eol=lf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Preserve byte-sensitive protocol fixtures, resource checksums and evidence.
+*.log -text
+*.ndjson -text
+/_internal/data/**/*.json -text
+/_internal/jsondata/**/*.json -text
+/_development/implementations/**/*.json -text
+/_development/implementations/**/*.txt -text
+*.png binary
+*.jpg binary
+*.webp binary
+*.ico binary
+*.woff2 binary
+*.gz binary
+*.zip binary
+*.exe binary
+*.dll binary
+*.pyd binary

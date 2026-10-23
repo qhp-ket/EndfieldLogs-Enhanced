@@ -1,0 +1,15 @@
+# Synthetic accounting fixture. Total damage 760; attacker retains 640; provider receives 120.
+[10:00:00.000] BUFF_START #1 id="buff_wpn_lance_0014_damageup" uid=9007199254740993 owner=chr_0004_pelica src=chr_0035_liino ownerId=1001 srcId=2001 dur=10
+[10:00:00.000] BB[9007199254740993]: atk_up=0.2
+[10:00:00.000] BUFF_ENABLE {"schemaVersion":1,"buffUid":"9007199254740993","ownerId":"1001","enabled":true,"operationSeq":1}
+[10:00:00.500] HP_V2 #1 hit=120 cum=120 raw=120 packetFinalValue=120 pHP=100 eHP=1000 skill="chr_0004_pelica_combo_skill_projhit" actionId=11 damageUnitIndex=0 src=chr_0004_pelica tgt=eny_0051_rodin atk=chr_0004_pelica atkId=1001 tgtId=3001 hits=1
+[10:00:01.000] HP_V2 #2 hit=120 cum=240 raw=120 packetFinalValue=120 pHP=100 eHP=1000 skill="chr_0004_pelica_combo_skill_projhit" actionId=11 damageUnitIndex=0 src=chr_0004_pelica tgt=eny_0051_rodin atk=chr_0004_pelica atkId=1001 tgtId=3001 hits=1
+[10:00:01.000] BUFF_START #2 id="buff_wpn_lance_0014_damageup" uid=9007199254740993 owner=chr_0004_pelica src=chr_0035_liino ownerId=1001 srcId=2001 dur=10
+[10:00:01.000] BB[9007199254740993]: atk_up=0.4
+[10:00:01.000] HP_V2 #3 hit=140 cum=380 raw=140 packetFinalValue=140 pHP=100 eHP=1000 skill="chr_0004_pelica_combo_skill_projhit" actionId=11 damageUnitIndex=0 src=chr_0004_pelica tgt=eny_0051_rodin atk=chr_0004_pelica atkId=1001 tgtId=3001 hits=1
+[10:00:01.250] BUFF_ENABLE {"schemaVersion":1,"buffUid":"9007199254740993","ownerId":"1001","enabled":false,"operationSeq":2}
+[10:00:01.500] HP_V2 #4 hit=140 cum=520 raw=140 packetFinalValue=140 pHP=100 eHP=1000 skill="chr_0004_pelica_combo_skill_projhit" actionId=11 damageUnitIndex=0 src=chr_0004_pelica tgt=eny_0051_rodin atk=chr_0004_pelica atkId=1001 tgtId=3001 hits=1
+[10:00:01.750] BUFF_ENABLE {"schemaVersion":1,"buffUid":"9007199254740993","ownerId":"1001","enabled":true,"operationSeq":3}
+[10:00:02.000] HP_V2 #5 hit=140 cum=660 raw=140 packetFinalValue=140 pHP=100 eHP=1000 skill="chr_0004_pelica_combo_skill_projhit" actionId=11 damageUnitIndex=0 src=chr_0004_pelica tgt=eny_0051_rodin atk=chr_0004_pelica atkId=1001 tgtId=3001 hits=1
+[10:00:02.500] BUFF_END #3 uid=9007199254740993
+[10:00:02.500] HP_V2 #6 hit=100 cum=760 raw=100 packetFinalValue=100 pHP=100 eHP=1000 skill="chr_0004_pelica_combo_skill_projhit" actionId=11 damageUnitIndex=0 src=chr_0004_pelica tgt=eny_0051_rodin atk=chr_0004_pelica atkId=1001 tgtId=3001 hits=1

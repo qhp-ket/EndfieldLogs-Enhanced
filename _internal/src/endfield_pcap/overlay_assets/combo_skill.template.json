@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "name": "连携 CD",
+  "entry": "combo.html",
+  "subscriptions": [
+    "combo_snapshot"
+  ],
+  "font_mode": "css",
+  "settings": [
+    {
+      "key": "theme",
+      "label": "背景模式",
+      "type": "select",
+      "default": "light",
+      "options": [
+        {
+          "value": "light",
+          "label": "浅色"
+        },
+        {
+          "value": "dark",
+          "label": "深色"
+        },
+        {
+          "value": "transparent",
+          "label": "透明背景"
+        }
+      ],
+      "legacy_field": "overlay_theme"
+    }
+  ],
+  "window": {
+    "min_width": 180,
+    "min_height": 80,
+    "default_width": 300,
+    "default_height": 220
+  }
+}

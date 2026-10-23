@@ -1,0 +1,736 @@
+{
+  "schema_version": 1,
+  "scope": "presentation_estimates_only",
+  "capacity": 300,
+  "base_recovery_per_second": 8,
+  "source": {
+    "repository": "NagiYume/AKEDatabase",
+    "commit": "31b53147cd88fb6e9576b5c389967d21687c85cf",
+    "table_version": "1.6.4@11262943-8",
+    "skill_patch_sha256": "8962192053ce7b5281a408915c1df35f6deb5749b1f3c5325c2a3fc9fa967ac6",
+    "mechanism": "public/CH/research/终末地数据机制导论.md §4.5",
+    "caveat": "Static defaults; dynamic discounts/refunds/pauses are not guaranteed by the log"
+  },
+  "skills": {
+    "chr_0024_deepfin_normal_skill": {
+      "cost": 100.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0002_endminm_normal_skill": {
+      "cost": 100.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0003_endminf_normal_skill": {
+      "cost": 100.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0013_aglina_normal_skill": {
+      "cost": 100.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0007_ikut_normal_skill": {
+      "cost": 100.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0004_pelica_normal_skill": {
+      "cost": 100.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0005_chen_normal_skill": {
+      "cost": 100.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0031_mifu_normalskill_3": {
+      "cost": 50.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0006_wolfgd_normal_skill": {
+      "cost": 100.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0015_lifeng_normal_skill": {
+      "cost": 100.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0016_laevat_normal_skill_during_ult": {
+      "cost": 100.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0021_whiten_normal_skill": {
+      "cost": 100.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0009_azrila_normal_skill": {
+      "cost": 100.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0028_wulfa_normal_skill": {
+      "cost": 100.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0011_seraph_normal_skill": {
+      "cost": 100.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0012_avywen_normal_skill": {
+      "cost": 100.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0029_pograni_normal_skill": {
+      "cost": 100.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0014_aurora_normal_skill": {
+      "cost": 100.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0016_laevat_normal_skill": {
+      "cost": 100.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0026_lastrite_normal_skill": {
+      "cost": 100.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0017_yvonne_normal_skill": {
+      "cost": 100.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0034_typhoea_normal_skill_floating_start": {
+      "cost": 100.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0018_dapan_normal_skill": {
+      "cost": 100.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0019_karin_normal_skill": {
+      "cost": 100.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0031_mifu_normalskill_2": {
+      "cost": 50.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0020_meurs_normal_skill": {
+      "cost": 100.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0033_camille_normal_skill": {
+      "cost": 100.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0022_bounda_normal_skill": {
+      "cost": 100.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0023_antal_normal_skill": {
+      "cost": 100.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0025_ardelia_normal_skill": {
+      "cost": 100.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0038_purrche_normal_skill": {
+      "cost": 100.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0027_tangtang_normal_skill": {
+      "cost": 100.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0030_zhuangfy_normal_skill_ult": {
+      "cost": 100.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0042_namtch_normal_skill": {
+      "cost": 50.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0030_zhuangfy_normal_skill": {
+      "cost": 100.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0031_mifu_normalskill_1": {
+      "cost": 100.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0032_lizhiyan_normal_skill": {
+      "cost": 100.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0035_liino_normal_skill": {
+      "cost": 25.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0036_jsspsi_normal_skill": {
+      "cost": 100.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0036_jsspsi_normal_skill_1": {
+      "cost": 15.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    }
+  }
+}

@@ -1,0 +1,2148 @@
+{
+  "version": 2,
+  "updated": "2026-10-15",
+  "purpose": "Pre-allocation semantic gate for strict packet-grounded rDPS. Damage totals remain packet HP loss; this registry only classifies external buffs as known rDPS effects, known non-rDPS, or blockers.",
+  "sources": {
+    "numeric_packet_map": "data/packet_semantics/buff_numeric_map.json",
+    "mechanism_registry": "data/packet_semantics/mechanism_registry.json"
+  },
+  "allocatable_zones": {
+    "atk": "攻击力",
+    "dmg_inc": "增伤",
+    "amp": "增幅",
+    "fragile": "脆弱",
+    "vuln_taken": "承伤易伤",
+    "res": "减抗",
+    "combo": "连击增伤",
+    "arts_strength": "源石技艺强度"
+  },
+  "verified_effects": {
+    "buff_wpn_claym_0018_enemyvul": {
+      "cn_name": "玉中身·落墨添彩承伤易伤",
+      "numeric_ids": ["4534"],
+      "source": "2026-10-15 官方 WeaponBasic/SkillPatch 中文及当前完整 typed CreateBuff/Defender NormalCalcZone",
+      "value_source": "runtime_packet",
+      "guard": {"weapon_id": "wpn_claym_0018", "requires_source_loadout": true, "requires_actor_identity": true, "target_kind": "enemy"},
+      "allowed_bb_keys": ["dmg_taken_up", "duration"],
+      "effects": [{"zone": "vuln_taken", "element": "all", "bb_key": "dmg_taken_up"}],
+      "note": "装备者施加定身后对该敌人的明确 Buff。必须有同一实例的来源/目标 actor、当时来源武器快照及运行时 dmg_taken_up，不按精炼档位补值。"
+    },
+    "buff_wpn_claym_0019_teamatk": {
+      "cn_name": "悠久传承·全队法术增伤",
+      "numeric_ids": ["4535"],
+      "source": "2026-10-15 官方 WeaponBasic/SkillPatch 中文及当前完整 typed CharacterTeamFinder/四法术属性 BaseAddition",
+      "value_source": "runtime_packet",
+      "guard": {"weapon_id": "wpn_claym_0019", "requires_source_loadout": true, "requires_actor_identity": true, "target_kind": "character"},
+      "allowed_bb_keys": ["spell_dmg_up", "duration"],
+      "effects": [{"zone": "dmg_inc", "element": "spell", "bb_key": "spell_dmg_up"}],
+      "note": "名字 teamatk 不代表攻击力。当前 root 明确增加灼热/电磁/寒冷/自然伤害；自身寒冷增伤 teamspell 是另一 Buff，不作为队友收益。"
+    },
+    "buff_chr_0036_jsspsi_atk_buff_2": {
+      "cn_name": "祀·终结技寒冷与灼热增幅来源",
+      "lifecycle_only": true,
+      "source": "2026-10-15 官方谁都不许扫兴文本及当前完整 typed 终结技实体/父 Buff EnhancedAction 1、2",
+      "value_source": "runtime_packet",
+      "guard": {"source_character_key": "chr_0036_jsspsi", "requires_actor_identity": true, "target_kind": "character"},
+      "allowed_bb_keys": ["enhance_final", "heal_value", "duration", "rate", "child_buff_id"],
+      "ignored_bb_keys": ["enhance_final", "heal_value"],
+      "effects": [
+        {"zone": "amp", "element": "fire", "bb_key": "rate", "origin_bb_keys": ["enhance_final"]},
+        {"zone": "amp", "element": "cryst", "bb_key": "rate", "origin_bb_keys": ["enhance_final"]}
+      ],
+      "note": "父 Buff 本身不分配伤害；仅同 UID/source/target 的明确 create/origin 且启用的 Fire/Crystal action 可授权实际 keyword main Buff。main 的 rate 已含潜能强化，不再乘潜能3的1.2；禁用的 Physical action 不授权。"
+    },
+    "buff_common_affixes_vulnerable_spell": {
+      "cn_name": "通用法术脆弱",
+      "note": "属性 71-74 由当前原生 _GetDefenderDamageVulnerable 写入 damageVulnerableZoneName（VulnerableDmgIncreace），与 NormalCalcZone 承伤易伤分开。",
+      "source": "当前 BuffData AttributeModifier",
+      "value_source": "runtime_packet",
+      "allowed_bb_keys": ["child_buff_id", "duration", "rate"],
+      "effects": [
+        {"zone": "fragile", "element": "fire", "bb_key": "rate"},
+        {"zone": "fragile", "element": "pulse", "bb_key": "rate"},
+        {"zone": "fragile", "element": "cryst", "bb_key": "rate"},
+        {"zone": "fragile", "element": "natural", "bb_key": "rate"}
+      ]
+    },
+    "buff_common_affixes_vulnerable_physical": {
+      "cn_name": "通用物理脆弱",
+      "note": "属性 70 进入当前 damageVulnerableZoneName（VulnerableDmgIncreace），与 NormalCalcZone 承伤易伤分开。",
+      "source": "当前 BuffData AttributeModifier",
+      "value_source": "runtime_packet",
+      "allowed_bb_keys": ["child_buff_id", "duration", "rate"],
+      "effects": [
+        {"zone": "fragile", "element": "physical", "bb_key": "rate"}
+      ]
+    },
+    "buff_common_natural_natural_corrupt_do": {
+      "cn_name": "腐蚀抗性降低",
+      "source": "当前 BuffData ModifyDynamicBlackboard",
+      "dynamic": true,
+      "value_source": "runtime_packet",
+      "allowed_bb_keys": ["additional_def_decrease", "consumed_layer", "consumed_type", "count", "def_decrease", "def_decrease_tick", "duration", "extra_scaling", "max_def_decrease", "start_def_decrease", "tick"],
+      "ignored_bb_keys": ["consumed_layer", "consumed_type", "count", "def_decrease_tick", "duration", "extra_scaling", "max_def_decrease", "start_def_decrease", "tick"],
+      "note": "当前 typed 属性实际读取 def_decrease 与 additional_def_decrease（有符号抗性点数）。start/tick/max 是动态更新控制输入，不是独立属性收益；不得按时间积分。分配仍等待明确的字段更新结果、属性刷新与命中抗性证据。",
+      "effects": [
+        {"zone": "res", "element": "all", "bb_key": "def_decrease"},
+        {"zone": "res", "element": "all", "bb_key": "additional_def_decrease"}
+      ]
+    },
+    "buff_common_natural_fire_triggered": {
+      "cn_name": "腐蚀（自然与灼热反应）",
+      "numeric_ids": ["329"],
+      "source": "当前 BuffData AttributeModifier / ModifyDynamicBlackboard",
+      "dynamic": true,
+      "value_source": "runtime_packet",
+      "allowed_bb_keys": ["additional_def_decrease", "atk_scale", "burning_atk_scale", "consumed_layer", "consumed_type", "count", "def_decrease", "def_decrease_tick", "duration", "extra_scaling", "max_def_decrease", "start_def_decrease", "tick"],
+      "ignored_bb_keys": ["atk_scale", "burning_atk_scale", "consumed_layer", "consumed_type", "count", "def_decrease_tick", "duration", "extra_scaling", "max_def_decrease", "start_def_decrease", "tick"],
+      "note": "实包 trace_20261022-030054 和当前 typed 根确认：五种抗性的 BaseAddition 实际读取 def_decrease / additional_def_decrease。只使用绑定同一实例、来源、会话且经过属性刷新的当前值；不按 tick 积分，不用 start/max 重建或钳制已继承的减抗。try/wrapper 仅负责创建，不重复记收益。",
+      "effects": [
+        {"zone": "res", "element": "all", "bb_key": "def_decrease"},
+        {"zone": "res", "element": "all", "bb_key": "additional_def_decrease"}
+      ]
+    },
+    "buff_common_pulse_pulse_conduct_triggered_do": {
+      "cn_name": "导电",
+      "numeric_ids": ["2268"],
+      "aliases": ["buff_common_pulse_cryst_triggered"],
+      "source": "通用机制",
+      "allowed_bb_keys": ["final_spell_resistance_decrease", "spell_resistance_decrease", "duration", "count", "consumed_type", "extra_scaling", "consumed_layer"],
+      "ignored_bb_keys": ["spell_resistance_decrease", "atk_scale"],
+      "effects": [
+        {"zone": "vuln_taken", "element": "spell", "bb_key": "final_spell_resistance_decrease", "expose_bb_key": true}
+      ]
+    },
+    "buff_common_natural_cryst_triggered": {
+      "cn_name": "腐蚀",
+      "numeric_ids": ["327"],
+      "aliases": ["buff_common_natural_pulse_triggered"],
+      "source": "通用机制",
+      "dynamic": true,
+      "ignored_bb_keys": ["atk_scale", "burning_atk_scale", "consumed_layer", "def_decrease_tick", "max_def_decrease", "start_def_decrease", "tick"],
+      "note": "当前 typed 属性实际读取 def_decrease 与 additional_def_decrease（有符号抗性点数）。start/tick/max 是动态更新控制输入，不是独立属性收益；不得按时间积分。分配仍等待明确的字段更新结果、属性刷新与命中抗性证据。",
+      "effects": [
+        {"zone": "res", "element": "all", "bb_key": "def_decrease"},
+        {"zone": "res", "element": "all", "bb_key": "additional_def_decrease"}
+      ]
+    },
+    "buff_physical_do_fracture": {
+      "cn_name": "碎甲物理易伤",
+      "numeric_ids": ["1211"],
+      "source": "通用机制",
+      "value_source": "runtime_packet",
+      "note": "碎甲属于物理易伤区，不属于物理脆弱区；physical_res_down 是运行时取值字段名，atk_scale 是触发伤害参数。",
+      "ignored_bb_keys": ["atk_scale"],
+      "effects": [
+        {"zone": "vuln_taken", "element": "physical", "bb_key": "physical_res_down"}
+      ]
+    },
+    "buff_chr_0013_aglina_ultimate_spell_vulnerable": {
+      "cn_name": "洁尔佩塔大招法术脆弱",
+      "numeric_ids": ["1308"],
+      "source": "洁尔佩塔",
+      "effects": [
+        {"zone": "fragile", "element": "spell", "bb_key": "rate"}
+      ]
+    },
+    "buff_chr_0003_endminf_talent_1_tirgger": {
+      "cn_name": "管理员本质瓦解攻击共享",
+      "numeric_ids": ["21", "22"],
+      "aliases": ["buff_chr_0003_endminf_talent_1"],
+      "source": "管理员",
+      "value_source": "runtime_packet",
+      "note": "静态直接属性修改在 tirgger 叶子 buff 上；云端旧解析常把父级 buff_chr_0003_endminf_talent_1 投影成同一条攻击力收益，二者按同一手工条目处理，不能重复入账。",
+      "effects": [
+        {"zone": "atk", "element": "all", "bb_key": "atk_up"}
+      ]
+    },
+    "buff_chr_0003_endminf_talent_0": {
+      "cn_name": "管理员现实静滞物理承伤易伤",
+      "numeric_ids": ["20"],
+      "source": "管理员",
+      "value_source": "runtime_packet",
+      "note": "静态文本当前显示0.0%，但实包会在 20/991 上携带 dmg=0.1/0.2/0.3；仅当目标处于 buff_common_originum_frozen 且本次伤害为物理时生效。991 是光环/分发器，不直接入账。",
+      "effects": [
+        {"zone": "vuln_taken", "element": "physical", "bb_key": "dmg"}
+      ]
+    },
+    "buff_chr_0007_ikut_atk_buff_talent": {
+      "cn_name": "弧光荒野游人全队电磁增伤",
+      "numeric_ids": ["56"],
+      "source": "弧光",
+      "value_source": "runtime_packet",
+      "note": "战技「疾风迅雷」成功触发3次额外效果后，根据弧光智识提升全队电磁伤害；中间计数 buff_chr_0007_ikut_normal_skill_extra_count 不直接入账。",
+      "effects": [
+        {"zone": "dmg_inc", "element": "pulse", "bb_key": "pulse_up"}
+      ]
+    },
+    "buff_chr_0015_lifeng_purify": {
+      "cn_name": "黎风战技物理脆弱",
+      "source": "黎风",
+      "value_source": "runtime_packet",
+      "note": "战技「荡浊身」最后一击施加物理脆弱；静态动作是 VulnerableAction subType=Physical，实际倍率读取运行时 rate。",
+      "effects": [
+        {"zone": "fragile", "element": "physical", "bb_key": "rate"}
+      ]
+    },
+    "buff_chr_0021_whiten_combo_skill_physical_vulnerable": {
+      "cn_name": "埃特拉连携物理脆弱",
+      "numeric_ids": ["1983"],
+      "source": "埃特拉",
+      "value_source": "runtime_packet",
+      "guard": {"source_character_key": "chr_0021_whiten"},
+      "note": "连携技「失真」施加物理脆弱；按运行时 rate 入账。",
+      "effects": [
+        {"zone": "fragile", "element": "physical", "bb_key": "rate"}
+      ]
+    },
+    "buff_chr_0024_deepfin_potential_3": {
+      "cn_name": "阿列什愿者上钩全队攻击",
+      "numeric_ids": ["1598"],
+      "source": "阿列什",
+      "value_source": "runtime_packet",
+      "guard": {"source_character_key": "chr_0024_deepfin"},
+      "effects": [
+        {"zone": "atk", "element": "all", "bb_key": "atk_up"}
+      ]
+    },
+    "buff_chr_0011_seraph_ultimate_effect": {
+      "cn_name": "赛希终结技寒冷增幅",
+      "source": "赛希",
+      "value_source": "runtime_packet",
+      "effects": [
+        {"zone": "amp", "element": "cryst", "bb_key": "rate"}
+      ]
+    },
+    "buff_chr_0011_seraph_ultimate_effect_2": {
+      "cn_name": "赛希终结技自然增幅",
+      "source": "赛希",
+      "value_source": "runtime_packet",
+      "effects": [
+        {"zone": "amp", "element": "natural", "bb_key": "rate"}
+      ]
+    },
+    "buff_common_affixes_enhance_spell_default_child": {
+      "cn_name": "赛希战技法术增幅",
+      "source": "赛希",
+      "value_source": "runtime_packet",
+      "guard": {"source_character_key": "chr_0011_seraph"},
+      "effects": [
+        {"zone": "amp", "element": "spell", "bb_key": "rate"}
+      ]
+    },
+    "buff_chr_0011_seraph_talent_1_crystup": {
+      "cn_name": "赛希连携寒冷承伤易伤",
+      "source": "赛希",
+      "value_source": "runtime_packet",
+      "effects": [
+        {"zone": "vuln_taken", "element": "cryst", "bb_key": "cryst_up"}
+      ]
+    },
+    "buff_chr_0026_lastrite_talent_1_vul": {
+      "cn_name": "别礼寒冷脆弱",
+      "source": "别礼",
+      "value_source": "runtime_packet",
+      "guard": {"source_character_key": "chr_0026_lastrite"},
+      "aliases": ["buff_common_affixes_vulnerable_crystal_default_child"],
+      "ignored_bb_keys": ["real_duration"],
+      "effects": [
+        {"zone": "fragile", "element": "cryst", "bb_key": "crystal_vul", "bb_keys": ["crystal_vul", "rate"]}
+      ]
+    },
+    "buff_common_affixes_vulnerable_crystal_lizhiyan_child": {
+      "cn_name": "诀连携寒冷脆弱",
+      "numeric_ids": ["4024"],
+      "source": "诀",
+      "value_source": "runtime_packet",
+      "guard": {"source_character_key": "chr_0032_lizhiyan"},
+      "note": "本地 7/16 BuffData 显示该 child 由诀的连携/天赋 wrapper 创建，运行时 rate 为寒冷脆弱数值。",
+      "ignored_bb_keys": ["duration"],
+      "effects": [
+        {"zone": "fragile", "element": "cryst", "bb_key": "rate"}
+      ]
+    },
+    "buff_common_affixes_vulnerable_natural_lizhiyan_child": {
+      "cn_name": "诀连携自然脆弱",
+      "numeric_ids": ["4025"],
+      "source": "诀",
+      "value_source": "runtime_packet",
+      "guard": {"source_character_key": "chr_0032_lizhiyan"},
+      "note": "本地 7/16 BuffData 显示该 child 由诀的连携/天赋 wrapper 创建，运行时 rate 为自然脆弱数值。",
+      "ignored_bb_keys": ["duration"],
+      "effects": [
+        {"zone": "fragile", "element": "natural", "bb_key": "rate"}
+      ]
+    },
+    "buff_common_affixes_vulnerable_pulse_default_child": {
+      "cn_name": "艾维文娜终结技电磁脆弱",
+      "source": "艾维文娜",
+      "value_source": "runtime_packet",
+      "note": "通用电磁脆弱 child 只能在来源为艾维文娜且父技能族为 chr_0012_avywen_ultimate_skill 时入账；其他来源/技能必须 block。",
+      "guard": {
+        "source_character_key": "chr_0012_avywen",
+        "source_skill_family_key": "chr_0012_avywen_ultimate_skill"
+      },
+      "aliases": ["buff_common_affixes_vulnerable_pulse"],
+      "effects": [
+        {"zone": "fragile", "element": "pulse", "bb_key": "rate"}
+      ]
+    },
+    "buff_chr_0019_karin_potential_3": {
+      "cn_name": "秋栗潜能3全队攻击力",
+      "source": "秋栗",
+      "value_source": "runtime_packet",
+      "note": "潜能「全力协作」：终结技期间全队攻击力提升；实际倍率读取运行时 atk。",
+      "effects": [
+        {"zone": "atk", "element": "all", "bb_key": "atk"}
+      ]
+    },
+    "buff_chr_0023_antal_normal_fragile": {
+      "cn_name": "安塔尔战技电磁/灼热脆弱",
+      "source": "安塔尔",
+      "aliases": [
+        "buff_chr_0023_antal_tageffect"
+      ],
+      "numeric_ids": [
+        "912"
+      ],
+      "guard": {
+        "source_character_key": "chr_0023_antal"
+      },
+      "value_source": "runtime_packet",
+      "dynamic": true,
+      "note": "保留原批准身份。当前父根tageffect(912)的动作0/1施加电磁/灼热脆弱主Buff，主Buff实际rate已包含创建时生效的增强。高规格技术测试通过明确的Keyword增强操作追加；不按delay_time或短暂marker寿命推算，不再给父载体或图标单独记贡献。",
+      "ignored_bb_keys": [
+        "potential_3",
+        "potential_3_atb",
+        "potential_5",
+        "rate_add",
+        "child_buff_id"
+      ],
+      "effects": [
+        {
+          "zone": "fragile",
+          "element": "pulse",
+          "bb_key": "rate",
+          "add_bb_key": "potential_5_rate",
+          "delay_bb_key": "delay_time"
+        },
+        {
+          "zone": "fragile",
+          "element": "fire",
+          "bb_key": "rate",
+          "add_bb_key": "potential_5_rate",
+          "delay_bb_key": "delay_time"
+        }
+      ]
+    },
+    "buff_chr_0023_antal_ultimate_enhance": {
+      "cn_name": "安塔尔终结技电磁/灼热增幅",
+      "source": "安塔尔",
+      "aliases": [
+        "buff_chr_0023_antal_utimate_skill"
+      ],
+      "numeric_ids": [
+        "1074"
+      ],
+      "guard": {
+        "source_character_key": "chr_0023_antal"
+      },
+      "note": "保留原批准身份；当前官方 CharGrowthTable 指定终结技 chr_0023_antal_ultimate_skill，完整 SkillData 动作24明确创建 buff_chr_0023_antal_utimate_skill（官方数表1074），当前父根动作0/1施加电磁/灼热增幅。仅使用实际主Buff的rate，不为父载体或图标另计贡献。",
+      "value_source": "runtime_packet",
+      "ignored_bb_keys": [
+        "healvalue",
+        "multiplier",
+        "child_buff_id"
+      ],
+      "effects": [
+        {
+          "zone": "amp",
+          "element": "pulse",
+          "bb_key": "rate"
+        },
+        {
+          "zone": "amp",
+          "element": "fire",
+          "bb_key": "rate"
+        }
+      ]
+    },
+    "buff_chr_0025_ardelia_dynamic_def_decrease": {
+      "cn_name": "艾尔黛拉强制腐蚀减抗",
+      "source": "艾尔黛拉",
+      "aliases": [
+        "buff_common_natural_natural_corrupt_triggered",
+        "buff_common_natural_natural_corrupt_do"
+      ],
+      "numeric_ids": [
+        "331",
+        "1984"
+      ],
+      "guard": {
+        "source_character_key": "chr_0025_ardelia"
+      },
+      "value_source": "runtime_packet",
+      "dynamic": true,
+      "note": "保留艾尔黛拉强制腐蚀的原批准身份。当前331仅准备参数并创建1984，实际减抗读取1984的def_decrease与additional_def_decrease。与通用腐蚀是同一实际Buff效果，批准键可共同引用但只分配一份；start/tick/max不是独立收益，不按时间积分。",
+      "ignored_bb_keys": [
+        "consumed_layer",
+        "consumed_type",
+        "count",
+        "def_decrease_tick",
+        "duration",
+        "extra_scaling",
+        "max_def_decrease",
+        "start_def_decrease",
+        "tick",
+        "def_decrease_tick_final",
+        "max_def_decrease_final"
+      ],
+      "effects": [
+        {
+          "zone": "res",
+          "element": "all",
+          "bb_key": "def_decrease"
+        },
+        {
+          "zone": "res",
+          "element": "all",
+          "bb_key": "additional_def_decrease"
+        }
+      ]
+    },
+    "buff_chr_0029_pograni_talent1": {
+      "cn_name": "骏卫士气激昂攻击与源石技艺强度提升",
+      "source": "骏卫",
+      "value_source": "runtime_packet",
+      "note": "战术教导使其他干员获得士气激昂；源石技艺强度按异常专用公式处理，不折算为普通增伤。",
+      "effects": [
+        {"zone": "atk", "element": "all", "bb_key": "atk_up"},
+        {"zone": "arts_strength", "element": "all", "bb_key": "physpell_up"}
+      ]
+    },
+    "buff_chr_0006_wolfgd_talent_0_effectbuff": {
+      "cn_name": "狼卫灼热獠牙灼热增伤",
+      "source": "狼卫",
+      "value_source": "runtime_packet",
+      "ignored_bb_keys": ["ratio", "usp_everyone"],
+      "effects": [
+        {"zone": "dmg_inc", "element": "fire", "bb_key": "add"}
+      ]
+    },
+    "buff_wpn_funnel_0005_atk_up": {
+      "cn_name": "悼亡诗攻击提升",
+      "numeric_ids": ["1645"],
+      "source": "武器 wpn_funnel_0005",
+      "guard": {"weapon_id": "wpn_funnel_0005"},
+      "effects": [
+        {"zone": "atk", "element": "all", "bb_key": "atk_up"}
+      ]
+    },
+    "buff_equipsuit_usp_02_AddAttack": {
+      "cn_name": "长息三件套增伤",
+      "numeric_ids": ["1487"],
+      "aliases": ["buff_equipsuit_usp_02_dmgup"],
+      "source": "套装 suit_usp02",
+      "guard": {"suit_id": "suit_usp02", "min_count": 3},
+      "allowed_bb_keys": ["dmg_up", "duration", "hp_up"],
+      "effects": [
+        {"zone": "dmg_inc", "element": "all", "bb_key": "dmg_up"}
+      ]
+    },
+    "buff_wpn_pistol_0011_valid2": {
+      "cn_name": "落草法术承伤易伤",
+      "numeric_ids": ["2588"],
+      "source": "武器 wpn_pistol_0011",
+      "guard": {"weapon_id": "wpn_pistol_0011"},
+      "effects": [
+        {"zone": "vuln_taken", "element": "spell", "bb_key": "spell_damage_taken_up"}
+      ]
+    },
+    "buff_wpn_funnel_0004_up": {
+      "cn_name": "迷失荒野全队物理/电磁增伤",
+      "numeric_ids": ["1784"],
+      "source": "武器 wpn_funnel_0004",
+      "guard": {"weapon_id": "wpn_funnel_0004"},
+      "value_source": "runtime_packet",
+      "effects": [
+        {"zone": "dmg_inc", "element": "physical", "bb_key": "dmg_up"},
+        {"zone": "dmg_inc", "element": "pulse", "bb_key": "dmg_up"}
+      ]
+    },
+    "buff_wpn_funnel_0006_valid": {
+      "cn_name": "作品：蚀迹队友法术增伤",
+      "numeric_ids": ["1790"],
+      "source": "武器 wpn_funnel_0006",
+      "guard": {"weapon_id": "wpn_funnel_0006"},
+      "value_source": "runtime_packet",
+      "note": "atk_up 是装备者自身攻击力。当前 BuffData 的四种法术增伤均读取 spell_dmg_up；spell_dmg_up2 没有当前独立效果引用，不重复分配。",
+      "self_bb_keys": ["atk_up"],
+      "effects": [
+        {"zone": "dmg_inc", "element": "spell", "bb_key": "spell_dmg_up"}
+      ]
+    },
+    "buff_wpn_funnel_0008_magic_damage_taken_up": {
+      "cn_name": "爆破单元法术承伤易伤",
+      "numeric_ids": [
+        "1686"
+      ],
+      "source": "武器 wpn_funnel_0008",
+      "guard": {
+        "weapon_id": "wpn_funnel_0008"
+      },
+      "value_source": "runtime_packet",
+      "effects": [
+        {
+          "zone": "vuln_taken",
+          "element": "spell",
+          "bb_key": "spell_damage_taken_up"
+        }
+      ],
+      "ignored_bb_keys": [
+        "lv"
+      ]
+    },
+    "buff_wpn_funnel_0010_atk_up": {
+      "cn_name": "骑士精神全队攻击提升",
+      "numeric_ids": ["1691"],
+      "source": "武器 wpn_funnel_0010",
+      "guard": {"weapon_id": "wpn_funnel_0010"},
+      "value_source": "runtime_packet",
+      "effects": [
+        {"zone": "atk", "element": "all", "bb_key": "atk_up"}
+      ]
+    },
+    "buff_wpn_funnel_0011_valid": {
+      "cn_name": "使命必达全队法术增伤",
+      "numeric_ids": ["1792"],
+      "source": "武器 wpn_funnel_0011",
+      "guard": {"weapon_id": "wpn_funnel_0011"},
+      "value_source": "runtime_packet",
+      "note": "nature_dmg_up 是装备者自身自然增伤。当前 BuffData 的四种法术增伤均读取 spell_dmg_up；spell_dmg_up2 没有当前独立效果引用，不重复分配。",
+      "self_bb_keys": ["nature_dmg_up", "nature_dmg_up2"],
+      "effects": [
+        {"zone": "dmg_inc", "element": "spell", "bb_key": "spell_dmg_up"}
+      ]
+    },
+    "buff_wpn_funnel_0013_valid": {
+      "cn_name": "沧溟星梦法术承伤易伤",
+      "numeric_ids": ["1793"],
+      "source": "武器 wpn_funnel_0013",
+      "guard": {"weapon_id": "wpn_funnel_0013"},
+      "allowed_bb_keys": ["spell_taken_up", "duration", "lv"],
+      "value_source": "runtime_packet",
+      "effects": [
+        {"zone": "vuln_taken", "element": "spell", "bb_key": "spell_taken_up"}
+      ]
+    },
+    "buff_wpn_funnel_0014_hp": {
+      "cn_name": "O.B.J.术识全队灼热/电磁增伤",
+      "numeric_ids": ["1802"],
+      "source": "武器 wpn_funnel_0014",
+      "guard": {"weapon_id": "wpn_funnel_0014"},
+      "value_source": "runtime_packet",
+      "effects": [
+        {"zone": "dmg_inc", "element": "fire", "bb_key": "dmg_up"},
+        {"zone": "dmg_inc", "element": "pulse", "bb_key": "dmg_up"}
+      ]
+    },
+    "buff_wpn_funnel_0014_up": {
+      "cn_name": "O.B.J.术识全队灼热/电磁增伤",
+      "numeric_ids": ["1803"],
+      "source": "武器 wpn_funnel_0014",
+      "guard": {"weapon_id": "wpn_funnel_0014"},
+      "value_source": "runtime_packet",
+      "effects": [
+        {"zone": "dmg_inc", "element": "fire", "bb_key": "dmg_up"},
+        {"zone": "dmg_inc", "element": "pulse", "bb_key": "dmg_up"}
+      ]
+    },
+    "buff_wpn_pistol_0009_dmg_taken_up_c": {
+      "cn_name": "同类相食寒冷承伤易伤",
+      "numeric_ids": ["1813"],
+      "source": "武器 wpn_pistol_0009",
+      "guard": {"weapon_id": "wpn_pistol_0009"},
+      "value_source": "runtime_packet",
+      "effects": [
+        {"zone": "vuln_taken", "element": "cryst", "bb_key": "damage_taken_up_cryst"}
+      ]
+    },
+    "buff_wpn_pistol_0009_dmg_taken_up_f": {
+      "cn_name": "同类相食灼热承伤易伤",
+      "numeric_ids": ["1814"],
+      "source": "武器 wpn_pistol_0009",
+      "guard": {"weapon_id": "wpn_pistol_0009"},
+      "value_source": "runtime_packet",
+      "effects": [
+        {"zone": "vuln_taken", "element": "fire", "bb_key": "damage_taken_up_fire"}
+      ]
+    },
+    "buff_wpn_pistol_0009_dmg_taken_up_n": {
+      "cn_name": "同类相食自然承伤易伤",
+      "numeric_ids": ["1815"],
+      "source": "武器 wpn_pistol_0009",
+      "guard": {"weapon_id": "wpn_pistol_0009"},
+      "value_source": "runtime_packet",
+      "effects": [
+        {"zone": "vuln_taken", "element": "natural", "bb_key": "damage_taken_up_natural"}
+      ]
+    },
+    "buff_wpn_pistol_0009_dmg_taken_up_p": {
+      "cn_name": "同类相食电磁承伤易伤",
+      "numeric_ids": ["1816"],
+      "source": "武器 wpn_pistol_0009",
+      "guard": {"weapon_id": "wpn_pistol_0009"},
+      "value_source": "runtime_packet",
+      "effects": [
+        {"zone": "vuln_taken", "element": "pulse", "bb_key": "damage_taken_up_pulse"}
+      ]
+    },
+    "buff_wpn_sword_0012_atk_up": {
+      "cn_name": "热熔切割器全队攻击提升",
+      "numeric_ids": ["1699"],
+      "source": "武器 wpn_sword_0012",
+      "guard": {"weapon_id": "wpn_sword_0012"},
+      "allowed_bb_keys": ["atk_up", "atk_up2", "duration", "max_stack", "lv"],
+      "value_source": "runtime_packet",
+      "note": "atk_up 是装备者自身攻击力，外部 rDPS 只使用 atk_up2。",
+      "self_bb_keys": ["atk_up"],
+      "effects": [
+        {"zone": "atk", "element": "all", "bb_key": "atk_up2"}
+      ]
+    },
+    "buff_wpn_sword_0013_atk_up": {
+      "cn_name": "显赫声名队友攻击提升",
+      "numeric_ids": ["1812"],
+      "source": "武器 wpn_sword_0013",
+      "guard": {"weapon_id": "wpn_sword_0013"},
+      "value_source": "runtime_packet_or_formula",
+      "note": "显赫声名不是固定 atk_up：真实生效 child 使用 atk_up_ex；若实包只给公式 BB，则按 atk_up_add + atk_up_mult × consume_layer 计算，其他干员只取一半。",
+      "self_bb_keys": ["atk_up"],
+      "ignored_bb_keys": ["base_atk_up", "atk_up333333"],
+      "effects": [
+        {
+          "zone": "atk",
+          "element": "all",
+          "bb_key": "atk_up_ex",
+          "bb_keys": ["atk_up_ex"],
+          "formula": "atk_add_plus_mult_consume_half_for_other_targets",
+          "add_bb_key": "atk_up_add",
+          "mult_bb_key": "atk_up_mult",
+          "consume_bb_key": "consume_layer",
+          "required_bb_keys": ["atk_up_add", "atk_up_mult", "consume_layer"],
+          "other_target_multiplier": 0.5
+        }
+      ]
+    },
+    "buff_wpn_lance_0007_dmgup2": {
+      "cn_name": "灯火使命全队物理/灼热增伤",
+      "numeric_ids": ["3057"],
+      "source": "武器 wpn_lance_0007",
+      "guard": {"weapon_id": "wpn_lance_0007"},
+      "value_source": "runtime_packet",
+      "note": "装备者施加灼热脆弱后，全队获得物理与灼热增伤；dmgup 是装备者自身效果，外部 rDPS 由 dmgup2 承载。",
+      "effects": [
+        {"zone": "dmg_inc", "element": "physical", "bb_key": "dmg_up2"},
+        {"zone": "dmg_inc", "element": "fire", "bb_key": "dmg_up2"}
+      ]
+    },
+    "buff_wpn_sword_0016_team": {
+      "cn_name": "不知归队友物理增伤",
+      "numeric_ids": ["1684"],
+      "source": "武器 wpn_sword_0016",
+      "guard": {"weapon_id": "wpn_sword_0016"},
+      "value_source": "runtime_packet",
+      "note": "当前 team BuffData 的 NormalCalcZone 读取 pd_up_valid；保留既有旧字段声明，但别名值冲突仍拒绝。phy_dmg_up / phy_dmg_up2 是装备者自身。",
+      "self_bb_keys": ["phy_dmg_up", "phy_dmg_up2"],
+      "effects": [
+        {"zone": "dmg_inc", "element": "physical", "bb_key": "pd_up_valid", "bb_keys": ["phy_dmg_up3", "pd_up", "pd_up_valid"]}
+      ]
+    },
+    "buff_wpn_sword_0016_valid": {
+      "cn_name": "不知归队友物理增伤",
+      "numeric_ids": ["1806"],
+      "source": "武器 wpn_sword_0016",
+      "guard": {"weapon_id": "wpn_sword_0016"},
+      "value_source": "runtime_packet",
+      "self_bb_keys": ["phy_dmg_up", "phy_dmg_up2"],
+      "effects": [
+        {"zone": "dmg_inc", "element": "physical", "bb_key": "phy_dmg_up3", "bb_keys": ["phy_dmg_up3", "pd_up"]}
+      ]
+    },
+    "buff_wpn_sword_0019_up": {
+      "cn_name": "O.B.J.轻芒全队灼热/电磁增伤",
+      "numeric_ids": ["1766"],
+      "source": "武器 wpn_sword_0019",
+      "guard": {"weapon_id": "wpn_sword_0019"},
+      "value_source": "runtime_packet",
+      "effects": [
+        {"zone": "dmg_inc", "element": "fire", "bb_key": "dmg_up"},
+        {"zone": "dmg_inc", "element": "pulse", "bb_key": "dmg_up"}
+      ]
+    },
+    "buff_wpn_sword_0020_cryst": {
+      "cn_name": "逐鳞3.0寒冷承伤易伤",
+      "numeric_ids": ["1769"],
+      "source": "武器 wpn_sword_0020",
+      "guard": {"weapon_id": "wpn_sword_0020"},
+      "value_source": "runtime_packet",
+      "effects": [
+        {"zone": "vuln_taken", "element": "cryst", "bb_key": "cryst_dmg_up"}
+      ]
+    },
+    "buff_equipsuit_combosuit_01_adddamage": {
+      "cn_name": "拓荒三件套全队增伤",
+      "numeric_ids": ["1407"],
+      "source": "套装 suit_atb01",
+      "guard": {"suit_id": "suit_atb01", "min_count": 3},
+      "allowed_bb_keys": ["dmg_up", "duration", "cd"],
+      "value_source": "runtime_packet",
+      "effects": [
+        {"zone": "dmg_inc", "element": "all", "bb_key": "dmg_up"}
+      ]
+    },
+    "buff_chr_0027_tangtang_normalskill_spellvulnerable": {
+      "cn_name": "唐棠战技法术脆弱",
+      "numeric_ids": [
+        "2571"
+      ],
+      "source": "唐棠",
+      "effects": [
+        {
+          "zone": "fragile",
+          "element": "spell",
+          "bb_key": "rate_spellvulnerable",
+          "bb_keys": [
+            "rate_spellvulnerable",
+            "rate"
+          ]
+        }
+      ]
+    },
+    "buff_chr_0028_wulfa_normal_bleed": {
+      "cn_name": "洛茜爪印/斫痕物理与灼热承伤易伤",
+      "numeric_ids": ["2193"],
+      "source": "洛茜",
+      "guard": {"source_character_key": "chr_0028_wulfa"},
+      "value_source": "runtime_packet",
+      "note": "官表原文为目标受到的物理和灼热伤害提高，属于承伤易伤而非脆弱。",
+      "ignored_bb_keys": ["atk_scale", "damage_cd", "damage_interval", "extra_atk_scale", "heal_scale", "talent2_burning_damage_scale", "talent_2"],
+      "effects": [
+        {"zone": "vuln_taken", "element": "physical", "bb_key": "damage_up"},
+        {"zone": "vuln_taken", "element": "fire", "bb_key": "damage_up"}
+      ]
+    },
+    "buff_chr_0031_mifu_vulnerablephysic_comboskill": {
+      "cn_name": "弭弗连携技物理脆弱",
+      "numeric_ids": ["3002"],
+      "source": "弭弗",
+      "guard": {"source_character_key": "chr_0031_mifu"},
+      "value_source": "runtime_packet",
+      "note": "倍率与持续时间只读取运行时数据，以兼容潜能变化。",
+      "effects": [
+        {"zone": "fragile", "element": "physical", "bb_key": "rate"}
+      ]
+    },
+    "buff_chr_0033_camille_talent1_atkup": {
+      "cn_name": "卡缪血涌苏生灼热增伤",
+      "numeric_ids": ["3022"],
+      "source": "卡缪",
+      "value_source": "runtime_packet",
+      "guard": {"source_character_key": "chr_0033_camille"},
+      "note": "玩家文本为灼热伤害提升；运行时 BB key 仍名为 atk_up，不能按攻击力乘区入账。",
+      "effects": [
+        {"zone": "dmg_inc", "element": "fire", "bb_key": "atk_up"}
+      ]
+    },
+    "buff_common_affixes_vulnerable_fire": {
+      "cn_name": "卡缪战技灼热脆弱",
+      "numeric_ids": ["1089"],
+      "source": "卡缪",
+      "value_source": "runtime_packet",
+      "guard": {"source_character_key": "chr_0033_camille"},
+      "note": "卡缪战技父级 2240 同时携带 weak_scale 与 vulnerable_scale；实际可入账灼热脆弱由通用 fire vulnerable child 的 rate 承载。",
+      "effects": [
+        {"zone": "fragile", "element": "fire", "bb_key": "rate"}
+      ]
+    },
+    "buff_wpn_lance_0015_atkup": {
+      "cn_name": "镀红祝福全队攻击",
+      "numeric_ids": ["3053"],
+      "source": "武器 wpn_lance_0015",
+      "value_source": "runtime_packet",
+      "guard": {"weapon_id": "wpn_lance_0015"},
+      "effects": [
+        {"zone": "atk", "element": "all", "bb_key": "atk_up"}
+      ]
+    },
+    "buff_wpn_lance_0015_dmgup": {
+      "cn_name": "镀红祝福全队灼热增伤",
+      "numeric_ids": ["3054"],
+      "source": "武器 wpn_lance_0015",
+      "value_source": "runtime_packet",
+      "guard": {"weapon_id": "wpn_lance_0015"},
+      "effects": [
+        {"zone": "dmg_inc", "element": "fire", "bb_key": "dmg_up"}
+      ]
+    },
+    "buff_wpn_funnel_0016_will_atk": {
+      "cn_name": "四二式·肃阵法术承伤易伤",
+      "numeric_ids": ["3723"],
+      "source": "武器 wpn_funnel_0016",
+      "guard": {"weapon_id": "wpn_funnel_0016"},
+      "value_source": "runtime_packet",
+      "effects": [
+        {"zone": "vuln_taken", "element": "spell", "bb_key": "spell_dmg_taken_up"}
+      ]
+    },
+    "buff_wpn_funnel_0016_will_dmg": {
+      "cn_name": "四二式·肃阵强化法术承伤易伤",
+      "numeric_ids": ["3724"],
+      "source": "武器 wpn_funnel_0016",
+      "guard": {"weapon_id": "wpn_funnel_0016"},
+      "value_source": "runtime_packet",
+      "effects": [
+        {"zone": "vuln_taken", "element": "spell", "bb_key": "spell_dmg_taken_up2"}
+      ]
+    },
+    "buff_wpn_funnel_0018_layer_teammates": {
+      "cn_name": "联结点队友攻击提升",
+      "numeric_ids": [
+        "3606"
+      ],
+      "source": "武器 wpn_funnel_0018",
+      "guard": {
+        "weapon_id": "wpn_funnel_0018",
+        "recipient": "other_character"
+      },
+      "value_source": "runtime_packet",
+      "effects": [
+        {
+          "zone": "atk",
+          "element": "all",
+          "bb_key": "atk_up2"
+        }
+      ],
+      "runtime_bindings": [
+        {
+          "template": "buff_wpn_funnel_0018_layer",
+          "parent_kind": "Skill",
+          "parent_template": "sk_wpn_funnel_0018",
+          "create_actions": [
+            4,
+            9,
+            14,
+            19,
+            23
+          ],
+          "recipient": "other_character",
+          "bb_key_remap": {
+            "atk_up2": "atk_up"
+          },
+          "sourceRootSha256": "1039ef23de16091f78b098aa32c9dce0b9c66867d0aeb1f7dbadc6918930703a",
+          "decoder": {
+            "gameAssemblySha256": "c24495e51b406f03b03890c4788ee618ae022c991405be5d5b8b787cb775ae89",
+            "metadataSha256": "0076743397acadf03d3b0064343a963c7c88863b8160526d397e4b3efb96f02e"
+          }
+        }
+      ],
+      "note": "当前队友创建动作将atk_up2转写为3605/layer的atk_up；只有明确队友创建来源才使用此映射，装备者自身分支不授予外部贡献。"
+    },
+    "buff_wpn_lance_0016_dmgup": {
+      "cn_name": "黄金时代全队法术增伤",
+      "numeric_ids": ["3607"],
+      "source": "武器 wpn_lance_0016",
+      "guard": {"weapon_id": "wpn_lance_0016"},
+      "value_source": "runtime_packet",
+      "effects": [
+        {"zone": "dmg_inc", "element": "spell", "bb_key": "spell_dmg_up"}
+      ]
+    },
+    "buff_wpn_sword_0026_celebration": {
+      "cn_name": "遥望全队伤害与源石技艺强度提升",
+      "numeric_ids": ["3740"],
+      "source": "武器 wpn_sword_0026",
+      "guard": {"weapon_id": "wpn_sword_0026"},
+      "value_source": "runtime_packet",
+      "ignored_bb_keys": ["def_up", "hp_up", "hp_up_c"],
+      "note": "憧憬的源石技艺强度仅进入异常专用公式，不折算为普通增伤。",
+      "effects": [
+        {"zone": "dmg_inc", "element": "all", "bb_key": "dmg_up"},
+        {"zone": "arts_strength", "element": "all", "bb_key": "phy_spell_up"}
+      ]
+    },
+    "buff_chr_0035_liino_atkup": {
+      "cn_name": "梨诺演唱/高歌姿态全队攻击提升",
+      "numeric_ids": ["3705", "3706"],
+      "aliases": ["buff_chr_0035_liino_atkup_finishtime"],
+      "source": "梨诺",
+      "guard": {"source_character_key": "chr_0035_liino"},
+      "allowed_bb_keys": ["atk_up", "duration", "spellenhance_rate"],
+      "value_source": "runtime_packet",
+      "note": "只分配给梨诺以外的受益队友；3058/3707 是施加与姿态生命周期父级，不重复入账。",
+      "effects": [
+        {"zone": "atk", "element": "all", "bb_key": "atk_up"}
+      ]
+    },
+
+    "buff_chr_0034_typhoea_combo_enemy_debuff": {
+      "cn_name": "提弗洛斯箭阵自然爆发承伤易伤",
+      "numeric_ids": [
+        "3619"
+      ],
+      "source": "提弗洛斯",
+      "guard": {
+        "source_character_key": "chr_0034_typhoea"
+      },
+      "value_source": "runtime_packet",
+      "ignored_bb_keys": [
+        "slow_down",
+        "duration"
+      ],
+      "note": "R-20260902-01：野棘丛生箭阵只提高敌人受到的自然爆发伤害；基础随技能等级为 6%-10%，潜能3额外 +6%。仅匹配官方自然爆发伤害 family，普通自然伤害不入账。",
+      "effects": [
+        {
+          "zone": "vuln_taken",
+          "element": "all",
+          "bb_key": "damage_up",
+          "condition": {
+            "type": "damage_decorate_mask",
+            "source": "CheckDamageDecorateMask",
+            "mask": 33554432,
+            "check": "HasAll"
+          }
+        }
+      ],
+      "condition_evidence": {
+        "catalog": "data/local_static/buff/typed_roots.json.gz",
+        "resource_id": "buff_chr_0034_typhoea_combo_enemy_debuff",
+        "path": "damageModifier[0].condition.actionData[0]"
+      }
+    },
+    "buff_wpn_lance_0014_damageup": {
+      "cn_name": "曜夜的首演受治疗队友攻击提升",
+      "numeric_ids": ["3493"],
+      "source": "武器 wpn_lance_0014",
+      "guard": {"weapon_id": "wpn_lance_0014"},
+      "value_source": "runtime_packet",
+      "stack_limit": 4,
+      "note": "只分配给被装备者治疗的其他干员；最多四层且每层独立持续，3494 触发/监听父级不重复入账。",
+      "effects": [
+        {"zone": "atk", "element": "all", "bb_key": "atk_up"}
+      ]
+    },
+    "buff_equipsuit_fninflict_01_firedamageadd": {
+      "cn_name": "动火用燃烧触发灼热增伤",
+      "numeric_ids": [],
+      "source": "套装 suit_fire_natr01",
+      "guard": {
+        "suit_id": "suit_fire_natr01",
+        "min_count": 3,
+        "recipient": "self"
+      },
+      "value_source": "runtime_packet",
+      "allowed_bb_keys": [
+        "fire_dmg_up",
+        "duration"
+      ],
+      "effects": [
+        {
+          "zone": "dmg_inc",
+          "element": "fire",
+          "bb_key": "fire_dmg_up"
+        }
+      ]
+    },
+    "buff_equipsuit_fninflict_01_poisedamageadd": {
+      "cn_name": "动火用腐蚀触发自然增伤",
+      "numeric_ids": [],
+      "source": "套装 suit_fire_natr01",
+      "guard": {
+        "suit_id": "suit_fire_natr01",
+        "min_count": 3,
+        "recipient": "self"
+      },
+      "value_source": "runtime_packet",
+      "allowed_bb_keys": [
+        "nature_dmg_up",
+        "duration"
+      ],
+      "effects": [
+        {
+          "zone": "dmg_inc",
+          "element": "natural",
+          "bb_key": "nature_dmg_up"
+        }
+      ]
+    },
+    "buff_wpn_sword_0006_valid": {
+      "cn_name": "熔铸火焰终结技触发普通攻击增伤",
+      "numeric_ids": [],
+      "source": "武器 wpn_sword_0006",
+      "guard": {
+        "weapon_id": "wpn_sword_0006",
+        "recipient": "self"
+      },
+      "value_source": "runtime_packet",
+      "allowed_bb_keys": [
+        "normal_atk_up_valid",
+        "duration"
+      ],
+      "effects": [
+        {
+          "zone": "dmg_inc",
+          "element": "all",
+          "bb_key": "normal_atk_up_valid"
+        }
+      ]
+    },
+    "buff_wpn_pistol_0012_natural": {
+      "cn_name": "O.B.J.迅极消耗法术附着后自然增伤",
+      "numeric_ids": [],
+      "source": "武器 wpn_pistol_0012",
+      "guard": {
+        "weapon_id": "wpn_pistol_0012",
+        "recipient": "self"
+      },
+      "value_source": "runtime_packet",
+      "allowed_bb_keys": [
+        "nature_dmg_up_mult",
+        "duration"
+      ],
+      "effects": [
+        {
+          "zone": "dmg_inc",
+          "element": "natural",
+          "bb_key": "nature_dmg_up_mult"
+        }
+      ]
+    },
+    "buff_common_affixes_enhance_pulse": {
+      "cn_name": "梨诺姿态电磁增幅",
+      "numeric_ids": [],
+      "source": "梨诺",
+      "guard": {"source_character_key": "chr_0035_liino"},
+      "value_source": "runtime_packet",
+      "allowed_bb_keys": ["rate", "duration", "child_buff_id"],
+      "effects": [{"zone": "amp", "element": "pulse", "bb_key": "rate"}]
+    },
+    "buff_common_affixes_enhance_natural": {
+      "cn_name": "梨诺姿态自然增幅",
+      "numeric_ids": [],
+      "source": "梨诺",
+      "guard": {"source_character_key": "chr_0035_liino"},
+      "value_source": "runtime_packet",
+      "allowed_bb_keys": ["rate", "duration", "child_buff_id"],
+      "effects": [{"zone": "amp", "element": "natural", "bb_key": "rate"}]
+    },
+    "buff_wpn_funnel_0017_layer": {
+      "cn_name": "雾中微光电磁触发增伤",
+      "numeric_ids": [],
+      "source": "武器 wpn_funnel_0017",
+      "guard": {
+        "weapon_id": "wpn_funnel_0017",
+        "recipient": "self"
+      },
+      "value_source": "runtime_packet",
+      "allowed_bb_keys": [
+        "pulse_dmg_up2",
+        "duration",
+        "max_stack"
+      ],
+      "effects": [
+        {
+          "zone": "dmg_inc",
+          "element": "pulse",
+          "bb_key": "pulse_dmg_up2"
+        }
+      ]
+    }
+  },
+  "verified_prefixes": [
+    {
+      "prefix": "buff_common_affixes_combo_trigger::",
+      "cn_name": "通用连击增伤投影",
+      "source": "连击机制",
+      "value_source": "parser_combo_projection",
+      "note": "原始 combo_trigger/skillimbue 只提供来源与消费证据；具体技能投影键由统一解析核心生成，白名单只确认 combo/all 性质。",
+      "effects": [
+        {"zone": "combo", "element": "all"}
+      ]
+    }
+  ],
+  "known_non_rdps": {
+    "exact_buff_ids": {
+      "buff_common_poise_break_damage_taken_scale": {
+        "cn_name": "破韧全局承伤倍率",
+        "category": "neutral_game_mechanic",
+        "suppress_zone_effects": true,
+        "allowed_bb_keys": ["dmg_up"],
+        "reason": "当前 BuffData 的 dmg_up=0.3 是破韧阶段的全局承伤机制；来源角色只是触发者，不能作为玩家 rDPS 归因。"
+      },
+      "buff_chr_0025_ardelia_affixes_vulnerable_spell_child": {
+        "cn_name": "艾尔黛拉法术脆弱视觉子标记",
+        "category": "visual_child_marker",
+        "suppress_zone_effects": true,
+        "allowed_bb_keys": ["rate", "duration"],
+        "reason": "当前 BuffData 仅创建 buff_common_vfx_eny_def_down，且没有属性或 DamageModifier；它不是实际脆弱乘区。"
+      },
+      "buff_chr_0025_ardelia_affixes_vulnerable_physic_child": {
+        "cn_name": "艾尔黛拉物理脆弱视觉子标记",
+        "category": "visual_child_marker",
+        "suppress_zone_effects": true,
+        "allowed_bb_keys": ["rate", "duration"],
+        "reason": "当前 BuffData 仅创建 buff_common_vfx_eny_def_down，且没有属性或 DamageModifier；它不是实际脆弱乘区。"
+      },
+      "buff_common_affixes_combo_trigger": {
+        "cn_name": "连击来源标记",
+        "category": "combo_evidence_marker",
+        "allowed_bb_keys": ["duration", "imbue_scale"],
+        "reason": "rDPS effect is represented by projected buff_common_affixes_combo_trigger::<skill>; raw trigger rows only provide source/stack evidence."
+      },
+      "buff_common_affixes_skillimbue": {
+        "cn_name": "连击消费标记",
+        "suppress_zone_effects": true,
+        "category": "combo_evidence_marker",
+        "allowed_bb_keys": ["duration", "count", "imbue_scale", "real_imbue_scale"],
+        "reason": "Consumption evidence for projected combo windows; not a direct multiplier row."
+      },
+      "buff_common_affixes_skillimbue_atk": {
+        "cn_name": "连击消费攻击标记",
+        "suppress_zone_effects": true,
+        "category": "combo_evidence_marker",
+        "allowed_bb_keys": ["count", "imbue_scale", "real_imbue_scale"],
+        "reason": "Consumption evidence for projected combo windows; dynamic hit values are handled by the unified combo parser."
+      },
+      "buff_common_affixes_weak": {
+        "cn_name": "通用虚弱",
+        "category": "control_or_marker",
+        "allowed_bb_keys": ["rate", "duration", "child_buff_id"],
+        "reason": "卡缪战技会创建 rate=0.94 的虚弱子链；这是敌方弱化/控制效果，不是我方 rDPS 增伤。"
+      },
+      "buff_chr_0033_camille_normal_skill_weak": {
+        "cn_name": "卡缪战技虚弱/脆弱父级",
+        "category": "wrapper",
+        "allowed_bb_keys": ["weak_scale", "vulnerable_scale", "duration"],
+        "reason": "父级同时携带虚弱和灼热脆弱参数；实际可入账的灼热脆弱由 buff_common_affixes_vulnerable_fire/rate 承载，父级不直接入账。"
+      },
+      "buff_chr_0033_camille_normal_skill_weak_child": {
+        "cn_name": "卡缪战技虚弱/脆弱内部 child",
+        "category": "internal_child",
+        "allowed_bb_keys": ["rate", "duration"],
+        "reason": "该 child 被虚弱和灼热脆弱通用 wrapper 复用；不能仅凭自身 id 判断 rDPS。"
+      },
+      "buff_chr_0033_camille_normal_skill_listen_target_dead": {
+        "cn_name": "卡缪战技目标死亡监听",
+        "category": "listener",
+        "allowed_bb_keys": [],
+        "reason": "目标死亡监听器，不提供直接伤害乘区。"
+      },
+      "buff_chr_0032_lizhiyan_combo_skill_spell_vulnerable": {
+        "cn_name": "诀连携法术脆弱父级",
+        "category": "wrapper",
+        "suppress_zone_effects": true,
+        "allowed_bb_keys": ["rate", "duration", "duration_vul", "isWisd", "cd_reduce", "atk_scale_calc", "atk_scale_laser1", "atk_scale_laser2", "poise_final"],
+        "reason": "父级负责创建寒冷/自然脆弱 child；直接入账由两个 buff_common_affixes_vulnerable_*_lizhiyan_child 承载，避免重复计算。"
+      },
+      "buff_chr_0032_lizhiyan_combo_skill_spell_vulnerable_pre": {
+        "cn_name": "诀连携法术脆弱预备父级",
+        "category": "wrapper",
+        "suppress_zone_effects": true,
+        "allowed_bb_keys": ["rate", "duration", "duration_vul", "isWisd"],
+        "reason": "预备 wrapper 与正式父级共享寒冷/自然 child；本行只提供生命周期和参数。"
+      },
+      "buff_chr_0032_lizhiyan_talent1_vulnerable": {
+        "cn_name": "诀天赋法术脆弱父级",
+        "category": "wrapper",
+        "suppress_zone_effects": true,
+        "allowed_bb_keys": ["rate", "duration"],
+        "reason": "天赋 wrapper 复用诀的寒冷/自然脆弱 child；直接入账由 child 承载。"
+      },
+      "buff_wpn_funnel_0016": {
+        "cn_name": "四二式·肃阵父级",
+        "category": "wrapper",
+        "allowed_bb_keys": ["duration", "will", "wisd"],
+        "reason": "父级只负责按意志/智识分支创建子效果；可入账法术承伤易伤由 will_atk / will_dmg 子 Buff 承载。"
+      },
+      "buff_wpn_funnel_0016_will": {
+        "cn_name": "四二式·肃阵意志分支",
+        "category": "wrapper",
+        "allowed_bb_keys": ["duration"],
+        "reason": "意志分支生命周期标记，不直接提供乘区。"
+      },
+      "buff_wpn_funnel_0016_wisd": {
+        "cn_name": "四二式·肃阵智识分支",
+        "category": "wrapper",
+        "allowed_bb_keys": ["duration"],
+        "reason": "智识分支生命周期标记，不直接提供乘区。"
+      },
+      "buff_wpn_funnel_0016_wisd_atkup": {
+        "cn_name": "四二式·肃阵装备者攻击提升",
+        "category": "self_buff",
+        "allowed_bb_keys": ["atk_up", "duration"],
+        "reason": "智识分支的装备者自用攻击提升，不产生外部 rDPS。"
+      },
+      "buff_wpn_funnel_0016_wisd_natureup": {
+        "cn_name": "四二式·肃阵装备者自然增伤",
+        "category": "self_buff",
+        "allowed_bb_keys": ["nature_dmg_up", "duration"],
+        "reason": "智识分支的装备者自用自然增伤，不产生外部 rDPS。"
+      },
+      "buff_wpn_funnel_0016_will_icon": {
+        "cn_name": "四二式·肃阵意志状态图标",
+        "category": "display_marker",
+        "allowed_bb_keys": ["duration"],
+        "reason": "状态图标与展示标记，不提供直接伤害乘区。"
+      },
+      "buff_wpn_funnel_0018_layer": {
+        "cn_name": "联结点装备者攻击提升",
+        "category": "self_buff",
+        "allowed_bb_keys": ["atk_up", "duration", "count", "max_stack"],
+        "reason": "装备者自用叠层攻击提升；队友外部 rDPS 由 layer_teammates 承载。"
+      },
+      "buff_wpn_lance_0016_heal": {
+        "cn_name": "黄金时代装备者治疗",
+        "category": "self_heal",
+        "allowed_bb_keys": ["heal", "heal_scale", "duration"],
+        "reason": "武器装备者治疗效果，不产生外部 rDPS。"
+      },
+      "buff_wpn_funnel_0011": {
+        "cn_name": "使命必达父级/叠层触发器",
+        "category": "wrapper",
+        "allowed_bb_keys": ["count", "duration", "max_stack", "nature_dmg_up", "nature_dmg_up2", "spell_dmg_up", "spell_dmg_up2", "spell_dmg_up_final"],
+        "reason": "Parent/layer evidence for wpn_funnel_0011. Direct rDPS credit is carried by buff_wpn_funnel_0011_valid; counting both would duplicate the same spell damage buff."
+      },
+      "buff_wpn_sword_0016": {
+        "cn_name": "不知归父级触发器",
+        "category": "wrapper",
+        "allowed_bb_keys": ["duration", "max_stack", "phy_dmg_up", "phy_dmg_up2"],
+        "reason": "Parent evidence for wpn_sword_0016. External rDPS must land on buff_wpn_sword_0016_team or buff_wpn_sword_0016_valid; the parent is not directly credited."
+      },
+      "buff_wpn_lance_0007_dmgup": {
+        "cn_name": "职责所在装备者自用增伤",
+        "category": "self_buff",
+        "allowed_bb_keys": ["dmg_up", "duration"],
+        "reason": "wpn_lance_0007_dmgup is the weapon carrier self-side damage buff. Teammate rDPS credit is carried by buff_wpn_lance_0007_dmgup2."
+      },
+      "buff_wpn_claym_0017_dmgup": {
+        "cn_name": "弭弗武器自用物法增伤",
+        "category": "self_buff",
+        "allowed_bb_keys": ["duration", "phy_spell_up"],
+        "reason": "wpn_claym_0017_dmgup is a self-side weapon effect for Mifu and must not create external rDPS credit."
+      },
+      "buff_wpn_claym_0017_dmgup2": {
+        "cn_name": "弭弗武器自用物理增伤",
+        "category": "self_buff",
+        "allowed_bb_keys": ["duration2", "phy_dmg_up_mult"],
+        "reason": "wpn_claym_0017_dmgup2 is a self-side weapon effect for Mifu and must not create external rDPS credit."
+      },
+      "buff_equipsuit_combosuit_01": {
+        "cn_name": "拓荒套父级触发器",
+        "category": "wrapper",
+        "allowed_bb_keys": ["cd", "comboskill_cooldown", "dmg_up", "duration"],
+        "reason": "Parent/listener for the suit_atb01 team damage buff. Direct rDPS credit is carried by buff_equipsuit_combosuit_01_adddamage."
+      },
+      "buff_chr_0004_pelica_potential_3_atkup": {
+        "cn_name": "角色：佩丽卡；来源：佩丽卡",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": ["atk_up", "atk_duration"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_chr_0005_chen_potential_1": {
+        "cn_name": "角色：陈千语；来源：陈千语",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": ["extra_dmg", "hp_remain"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_chr_0015_lifeng_talent_1": {
+        "cn_name": "角色：黎风；来源：黎风",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": ["atk_up"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_chr_0016_laevat_ignore_fire_resist": {
+        "cn_name": "角色：莱万汀；来源：莱万汀",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": ["ignore_fire_resist", "ignore_fire_resist_duration"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_chr_0017_yvonne_talent_1_valid_up": {
+        "cn_name": "角色：伊冯；来源：伊冯",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": ["dmg_up"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_chr_0018_dapan_potential_1": {
+        "cn_name": "角色：大潘；来源：洛茜、佩丽卡",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": ["dmg_up", "duration"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_chr_0019_karin_potential_5_combo::chr_0019_karin_normal_skill": {
+        "cn_name": "角色：秋栗；来源：秋栗",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": [],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_chr_0019_karin_talent_2_combo::chr_0019_karin_normal_skill": {
+        "cn_name": "角色：秋栗；来源：秋栗",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": [],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_chr_0030_zhuangfy_potential5": {
+        "cn_name": "角色：庄方宜；来源：庄方宜",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": ["ignore_pulse_resist"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_common_affixes_enhance_pulse_default_child": {
+        "cn_name": "通用词缀：电磁增幅；来源：庄方宜",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": ["rate", "duration"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_eny_0081_ruanyi_P1_weakness_2": {
+        "cn_name": "敌人/副本机制；来源：洁尔佩塔、秋栗、弧光、骏卫",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": ["num", "duration"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_equipsuit_atk_02": {
+        "cn_name": "套装：50式应龙；来源：埃特拉、陈千语",
+        "category": "manual_excluded",
+        "allowed_bb_keys": ["atk_up", "dmg_up", "max_stack"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_equipsuit_atk_02_addcombodamage_buff": {
+        "cn_name": "来源：陈千语、埃特拉",
+        "category": "manual_excluded",
+        "allowed_bb_keys": ["dmg_up"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_equipsuit_attrisuit_01": {
+        "cn_name": "套装：碾骨；来源：汤汤",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": ["atk_up", "dmg_up", "max_stack"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_equipsuit_burst_01_spelldmgup": {
+        "cn_name": "套装：潮涌；来源：别礼、昼雪",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": ["skill_dmg_up", "stack_cond", "spell_dmg_up", "duration"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_equipsuit_combo_cd01_spellup": {
+        "cn_name": "套装：清波；来源：佩丽卡、汤汤、安塔尔、骏卫",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": ["spell_up", "max_stack", "duration"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_equipsuit_cpinflict_01": {
+        "cn_name": "套装：脉冲式；来源：佩丽卡、骏卫",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": ["phy_spell_up", "pulse_dmg_up", "cryst_dmg_up", "duration", "duration2"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_equipsuit_cpinflict_01_elecdamageadd": {
+        "cn_name": "套装：脉冲式；来源：佩丽卡",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": ["pulse_dmg_up", "duration"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_equipsuit_critsuit_01": {
+        "cn_name": "套装：M.I.警用；来源：伊冯、洛茜",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": ["atk_up", "duration", "crit_up", "crit_up2", "max_stack"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_equipsuit_expend_spelldamage": {
+        "cn_name": "套装：壤流；来源：庄方宜",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": ["spell_dmg_up", "max_stack", "duration"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_equipsuit_fninflict_01": {
+        "cn_name": "套装：动火用；来源：莱万汀、骏卫、狼卫、佩丽卡",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": ["phy_spell_up", "fire_dmg_up", "nature_dmg_up", "duration", "duration2"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_equipsuit_fninflict_01_firedamageadd": {
+        "cn_name": "套装：动火用；来源：狼卫、莱万汀",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": ["fire_dmg_up", "duration"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_equipsuit_poisedmg_01": {
+        "cn_name": "套装：轻超域；来源：余烬、大潘",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": ["atk_up", "phy_dmg_up", "duration", "stack_cond", "phy_dmg_up2", "duration2", "max_stack"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_wpn_claym_0004_phy_damage_up": {
+        "cn_name": "武器：典范；来源：余烬、大潘、昼雪",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": ["phy_damage_up2", "duration", "max_stack"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_wpn_claym_0008_atk_up": {
+        "cn_name": "武器：破碎君王；来源：别礼、卡契尔",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": ["duration", "atk_up"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_wpn_funnel_0009_magic_up_combo": {
+        "cn_name": "武器：遗忘；来源：佩丽卡",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": ["spell_dmg_up2", "duration2"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_wpn_funnel_0009_magic_up_ult": {
+        "cn_name": "武器：遗忘；来源：佩丽卡",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": ["spell_dmg_up", "duration"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_wpn_funnel_0015_combo": {
+        "cn_name": "武器：孤舟；来源：庄方宜",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": ["pulse_dmg_up", "max_stack", "duration"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_wpn_funnel_0015_ultimate": {
+        "cn_name": "武器：孤舟；来源：庄方宜",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": ["pulse_dmg_up", "duration"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_wpn_lance_0012_noguard": {
+        "cn_name": "武器：负山；来源：黎风",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": ["dmg_up"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_wpn_pistol_0004_atk_up": {
+        "cn_name": "武器：理性告别；来源：狼卫",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": ["atk_up", "duration"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_wpn_pistol_0007_valid": {
+        "cn_name": "武器：望乡；来源：汤汤",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": ["dmg_up", "duration", "max_stack"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_wpn_pistol_0008_extra_valid": {
+        "cn_name": "武器：楔子；来源：伊冯",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": ["dmg_up_final", "duration"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_wpn_pistol_0010_valid": {
+        "cn_name": "武器：艺术暴君；来源：伊冯",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": ["cryst_dmg_up_valid", "duration", "max_stack"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_wpn_sword_0006_valid": {
+        "cn_name": "武器：熔铸火焰；来源：莱万汀",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": ["normal_atk_up_valid", "duration"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_wpn_sword_0008": {
+        "cn_name": "武器：显锋；来源：骏卫",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": ["atk_up", "duration"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_wpn_sword_0011": {
+        "cn_name": "武器：扶摇；来源：陈千语",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": ["phy_dmg_up", "dmg_up"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_wpn_sword_0017_valid": {
+        "cn_name": "武器：光荣记忆；来源：陈千语",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": ["dmg_up"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_wpn_sword_0021_valid": {
+        "cn_name": "武器：宏愿；来源：管理员",
+        "category": "manual_not_in_rdps_whitelist",
+        "allowed_bb_keys": ["phy_dmg_up"],
+        "reason": "Confirmed by manual whitelist audit as non-rDPS; keep as noise suppression only."
+      },
+      "buff_wpn_sword_0022_layer": {
+        "cn_name": "狼之绯装备者自用叠层增伤",
+        "category": "self_buff",
+        "allowed_bb_keys": ["dmg_up", "duration", "max_stack"],
+        "suppress_zone_effects": true,
+        "reason": "官表只描述装备者自身物理与灼热增伤，不产生外部 rDPS。"
+      },
+      "buff_chr_0013_aglina_talent_0_effectbuff_Add": {
+        "cn_name": "洁尔佩塔天赋终结技能量/充能",
+        "category": "ultimate_sp_gain",
+        "allowed_bb_keys": ["add"],
+        "reason": "The add key modifies ultimate/resource gain, not a damage multiplier zone."
+      },
+      "buff_common_originum_frozen": {
+        "cn_name": "源石结晶封印状态",
+        "category": "condition_marker",
+        "allowed_bb_keys": ["duration"],
+        "reason": "Condition marker used by administrator Reality Stasis; it is not a direct rDPS multiplier row."
+      },
+      "buff_chr_0003_endminf_talent_0_aura": {
+        "cn_name": "管理员现实静滞光环分发器",
+        "category": "wrapper",
+        "allowed_bb_keys": ["dmg"],
+        "reason": "Aura/wrapper that distributes buff_chr_0003_endminf_talent_0 to allies; the child buff carries the allocatable physical taken-damage modifier."
+      },
+      "buff_chr_0004_pelica_combo_skill_tutorial_marker": {
+        "cn_name": "佩丽卡连携教程标记",
+        "category": "marker",
+        "allowed_bb_keys": ["count", "duration", "extra_scaling", "real_duration"]
+      },
+      "buff_chr_0027_tangtang_comboskill_spelllnfliction": {
+        "cn_name": "唐棠战技法术附着计数",
+        "category": "status_counter",
+        "allowed_bb_keys": ["hit_spellduration", "hit_spelllnflictionmax"]
+      },
+      "buff_chr_0027_tangtang_comboskill_waterbuff_vfx": {
+        "cn_name": "唐棠水球 VFX",
+        "category": "vfx",
+        "allowed_bb_keys": []
+      },
+      "buff_chr_0027_tangtang_water_icon": {
+        "cn_name": "唐棠水球/水附着图标",
+        "category": "ui_marker",
+        "allowed_bb_keys": ["duration", "rate"]
+      },
+      "buff_chr_0015_lifeng_purify_icon": {
+        "cn_name": "黎风战技物理脆弱图标",
+        "category": "ui_marker",
+        "allowed_bb_keys": ["duration", "rate"],
+        "reason": "Actual rDPS effect is carried by parent buff_chr_0015_lifeng_purify; this child is the visible physical-vulnerable icon."
+      },
+      "buff_common_pulse_pulse_conduct_triggered": {
+        "cn_name": "导电父级/状态触发器",
+        "category": "status_marker",
+        "allowed_bb_keys": ["duration"],
+        "reason": "The allocatable conductive taken-damage effect is carried by buff_common_pulse_pulse_conduct_triggered_do; this parent row is status/lifecycle evidence."
+      },
+      "buff_common_energy_shard_attached_cryst": {
+        "cn_name": "晶化能量碎片附着",
+        "category": "status_marker",
+        "allowed_bb_keys": ["count", "duration"],
+        "reason": "Tracks cryst shard attachment/condition state; direct rDPS effects are represented by child damage/trigger rows."
+      },
+      "buff_common_cryst_cryst_frozen_triggered": {
+        "cn_name": "冻结触发父级状态",
+        "category": "status_marker",
+        "allowed_bb_keys": ["count", "duration", "extra_duration"],
+        "reason": "Condition/lifecycle marker for frozen/cryst triggered effects; not a direct external multiplier row."
+      },
+      "buff_common_cryst_triggered_start": {
+        "cn_name": "晶化触发开始标记",
+        "category": "status_marker",
+        "allowed_bb_keys": ["count", "duration"],
+        "reason": "Start marker for cryst-triggered lifecycle; no direct rDPS multiplier."
+      },
+      "buff_common_cryst_triggered_fx": {
+        "cn_name": "晶化触发 VFX",
+        "category": "vfx",
+        "allowed_bb_keys": []
+      },
+      "buff_common_affixes_enhance_spell": {
+        "cn_name": "通用法术增幅父级空壳",
+        "category": "wrapper",
+        "allowed_bb_keys": [],
+        "reason": "The runtime rDPS value, when valid, is carried by a guarded child such as buff_common_affixes_enhance_spell_default_child."
+      },
+      "buff_common_affixes_enhance_spell_default_child": {
+        "cn_name": "通用法术增幅 child 空壳",
+        "category": "empty_runtime_child",
+        "allowed_bb_keys": [],
+        "reason": "Empty child rows are lifecycle noise; child rows with rate remain subject to the verified-effect source guard."
+      },
+      "buff_common_enemy_patrolregen": {
+        "cn_name": "敌人巡逻回血",
+        "category": "enemy_utility",
+        "allowed_bb_keys": ["duration"]
+      },
+      "buff_common_enemy_patrolregen_cd": {
+        "cn_name": "敌人巡逻回血 CD",
+        "category": "enemy_utility",
+        "allowed_bb_keys": ["duration"]
+      },
+      "buff_chr_0027_tangtang_skillappear_effect": {
+        "cn_name": "唐棠登场/表现效果",
+        "category": "vfx_or_marker",
+        "allowed_bb_keys": []
+      },
+      "buff_chr_0028_wulfa_tut_normalskill_failure": {
+        "cn_name": "洛茜教程战技失败标记",
+        "category": "tutorial_marker",
+        "allowed_bb_keys": []
+      },
+      "buff_equipsuit_attrisuitup_01": {
+        "cn_name": "属性套自身增伤状态",
+        "category": "self_buff_or_marker",
+        "allowed_bb_keys": ["cryst_dmg_up", "cryst_dmg_up2", "duration", "pulse_dmg_up", "pulse_dmg_up2"]
+      },
+      "buff_equipsuit_attrisuitup_02": {
+        "cn_name": "属性套自身增伤子状态",
+        "category": "self_buff_or_marker",
+        "allowed_bb_keys": []
+      },
+      "buff_chr_0017_yvonne_normal_skill_frozen": {
+        "cn_name": "伊冯战技冻结内部参数",
+        "category": "internal_damage_driver",
+        "allowed_bb_keys": ["atk_scale", "atk_scale2", "count", "duration"]
+      },
+      "buff_chr_0017_yvonne_ultimate_skill_wepl": {
+        "cn_name": "伊冯终结技左武器/投射物参数",
+        "category": "internal_damage_driver",
+        "allowed_bb_keys": []
+      },
+      "buff_chr_0017_yvonne_ultimate_skill_wepr": {
+        "cn_name": "伊冯终结技右武器/投射物参数",
+        "category": "internal_damage_driver",
+        "allowed_bb_keys": []
+      },
+      "buff_chr_0027_tangtang_normalskill_abilityentity_1": {
+        "cn_name": "唐棠战技 ability entity",
+        "category": "internal_damage_driver",
+        "allowed_bb_keys": ["atk_scale", "duration"]
+      },
+      "buff_chr_0027_tangtang_ultskill_buff_damage": {
+        "cn_name": "唐棠终结技伤害内部窗",
+        "category": "internal_damage_driver",
+        "allowed_bb_keys": ["duration"]
+      },
+      "buff_chr_0027_tangtang_ultskill_vfx": {
+        "cn_name": "唐棠终结技 VFX",
+        "category": "vfx",
+        "allowed_bb_keys": []
+      },
+      "buff_chr_0023_antal_talent_1_combotrigger": {
+        "cn_name": "安塔尔天赋连击触发监听",
+        "category": "listener_or_counter",
+        "allowed_bb_keys": []
+      },
+      "buff_chr_0028_wulfa_normal_wolf_timer": {
+        "cn_name": "洛茜战技狼影计时器",
+        "category": "internal_timer",
+        "allowed_bb_keys": []
+      },
+      "buff_chr_0028_wulfa_passive_cape_stack_effect": {
+        "cn_name": "洛茜披风被动层数效果",
+        "category": "internal_counter",
+        "allowed_bb_keys": []
+      },
+      "buff_chr_0028_wulfa_ult_crit_damage_up_to_bleed": {
+        "cn_name": "洛茜终结技暴伤转爪印内部效果",
+        "category": "internal_damage_driver",
+        "allowed_bb_keys": []
+      },
+      "buff_chr_0028_wulfa_talent2_heal_effect": {
+        "cn_name": "洛茜天赋2治疗效果",
+        "category": "heal_or_internal",
+        "allowed_bb_keys": []
+      },
+      "buff_chr_0028_wulfa_tut_normalskill_success": {
+        "cn_name": "洛茜教程战技成功标记",
+        "category": "tutorial_marker",
+        "allowed_bb_keys": []
+      },
+      "buff_chr_0029_pograni_ultimate_skill_finall_rush": {
+        "cn_name": "骏卫终结技最终冲刺内部参数",
+        "category": "internal_damage_driver",
+        "allowed_bb_keys": ["atb_final", "atk_scale_final", "count", "duration", "poise_final"],
+        "reason": "These fields parameterize the ultimate hit/poise behavior and are not external rDPS multipliers."
+      },
+      "buff_eny_0051_rodin_skill13": {
+        "cn_name": "罗丹技能13内部参数",
+        "category": "enemy_skill_driver",
+        "allowed_bb_keys": ["atk_scale", "duration"]
+      },
+      "540": {
+        "cn_name": "罗丹技能13内部参数数字包",
+        "category": "enemy_skill_driver",
+        "allowed_bb_keys": ["atk_scale", "duration"],
+        "reason": "Old traces can leave this enemy buff as numeric 540; it is the same non-rDPS enemy skill driver as buff_eny_0051_rodin_skill13."
+      },
+      "536": {
+        "cn_name": "罗丹击退/吹飞控制数字包",
+        "category": "enemy_control",
+        "allowed_bb_keys": [],
+        "reason": "Old traces can leave this enemy control buff as numeric 536; no direct rDPS multiplier."
+      },
+      "539": {
+        "cn_name": "罗丹技能09内部效果数字包",
+        "category": "enemy_skill_driver",
+        "allowed_bb_keys": [],
+        "reason": "Old traces can leave this enemy skill driver as numeric 539; no direct rDPS multiplier."
+      },
+      "buff_eny_0051_rodin_skill09_effect": {
+        "cn_name": "罗丹技能09内部效果",
+        "category": "enemy_skill_driver",
+        "allowed_bb_keys": []
+      },
+      "buff_eny_0051_rodin_blowoffcharacter": {
+        "cn_name": "罗丹击退/吹飞控制",
+        "category": "enemy_control",
+        "allowed_bb_keys": []
+      },
+      "1345": {
+        "cn_name": "旧日志空壳数字包 1345",
+        "category": "empty_runtime",
+        "allowed_bb_keys": [],
+        "reason": "Numeric 1345 is only allocatable when it carries Wolf Guard's add BB under the character guard; empty collision rows are ignored."
+      },
+      "1699": {
+        "cn_name": "旧日志空壳数字包 1699",
+        "category": "empty_runtime",
+        "allowed_bb_keys": [],
+        "reason": "Numeric 1699 is only allocatable when it carries 热熔切割器 atk_up2 under the weapon guard; empty collision rows are ignored."
+      },
+    "buff_chr_0029_pograni_ultimate_skill_count": {
+      "cn_name": "骏卫终结技计数",
+      "category": "internal_counter",
+      "allowed_bb_keys": ["count", "duration"],
+      "reason": "Tracks shieldguard/ultimate count state; no direct rDPS multiplier zone."
+    },
+      "buff_common_cryst_triggered_physical_break": {
+        "cn_name": "物理猛击/破防触发标记",
+        "category": "status_marker",
+        "allowed_bb_keys": ["atk_scale", "count", "duration"],
+        "reason": "Marker for the physical-break/cryst-triggered state; no damage multiplier blackboard."
+      },
+      "buff_chr_0029_pograni_ultimate_skill_abilityentity_inaura": {
+        "cn_name": "骏卫终结技盾卫光环内部驱动",
+        "category": "internal_damage_driver",
+        "allowed_bb_keys": ["atb_final", "atb_trigger", "atk_scale_final", "atk_scale_trigger", "duration", "interval", "poise_final", "radius"],
+        "reason": "Drives ultimate ability-entity hits and poise/energy parameters; atk_scale fields are hit parameters, not external rDPS multiplier zones."
+      },
+      "buff_common_damage_immune_medium": {
+        "cn_name": "中等无敌/免伤状态",
+        "category": "control_or_defensive_state",
+        "allowed_bb_keys": ["burning_atk_scale", "count", "duration", "extra_scaling"]
+      },
+      "buff_common_burning_status": {
+        "cn_name": "燃烧状态",
+        "category": "status_marker",
+        "allowed_bb_keys": ["atk_scale", "burning_atk_scale", "consumed_layer", "count", "duration", "extra_scaling", "final_phy_dmg_up", "phy_dmg_up", "shatter_dmg"]
+      },
+      "buff_common_fire_triggered_fx": {
+        "cn_name": "灼热触发 VFX",
+        "category": "vfx",
+        "allowed_bb_keys": []
+      },
+      "buff_common_fire_fire_burst_dmg_marker": {
+        "cn_name": "燃烧爆发伤害 marker",
+        "category": "internal_damage_marker",
+        "allowed_bb_keys": []
+      },
+      "buff_chr_0016_laevat_combo_skill_hitstop": {
+        "cn_name": "莱万汀连携技 hitstop",
+        "category": "control_or_marker",
+        "allowed_bb_keys": []
+      },
+      "buff_chr_0016_laevat_passive_teammate": {
+        "cn_name": "莱万汀被动队友监听",
+        "category": "listener_or_counter",
+        "allowed_bb_keys": ["max_stack"]
+      },
+      "buff_chr_0011_seraph_atk_buff_2": {
+        "cn_name": "赛希攻击监听/空壳",
+        "category": "listener_or_empty_runtime",
+        "allowed_bb_keys": []
+      },
+      "buff_chr_0013_aglina_combo_skill_tutorial_marker": {
+        "cn_name": "洁尔佩塔连携教程标记",
+        "category": "tutorial_marker",
+        "allowed_bb_keys": []
+      },
+      "buff_chr_0016_laevat_absorb_fire_inflict": {
+        "cn_name": "莱万汀灼热吸收/附着监听",
+        "category": "listener_or_counter",
+        "allowed_bb_keys": []
+      },
+      "buff_chr_0017_yvonne_normal_skill_projectile": {
+        "cn_name": "伊冯战技投射物参数",
+        "category": "internal_damage_driver",
+        "allowed_bb_keys": ["atb_return", "atk_scale", "atk_scale2", "atk_scale_layer", "poise", "usp_base", "usp_layer"]
+      },
+      "buff_chr_0017_yvonne_ultimate_skill_layer_effect": {
+        "cn_name": "伊冯终结技层数参数",
+        "category": "internal_counter",
+        "allowed_bb_keys": ["recycle_time"]
+      },
+      "buff_chr_0017_yvonne_ultimate_skill_shield": {
+        "cn_name": "伊冯终结技护盾/短暂无敌",
+        "category": "control_or_defensive_state",
+        "allowed_bb_keys": ["effect_duration"]
+      },
+      "buff_chr_0026_lastrite_normal_skill_phantom_main": {
+        "cn_name": "别礼战技幻影主体",
+        "category": "internal_damage_driver",
+        "allowed_bb_keys": ["atk_scale1"]
+      },
+      "buff_chr_0026_lastrite_normal_skill_phantom": {
+        "cn_name": "别礼战技幻影",
+        "category": "internal_damage_driver",
+        "allowed_bb_keys": ["atk_scale"]
+      },
+      "buff_chr_0026_lastrite_combo_skill_hitstop": {
+        "cn_name": "别礼连携 hitstop",
+        "category": "control_or_marker",
+        "allowed_bb_keys": []
+      },
+      "buff_common_affixes_speedup": {
+        "cn_name": "通用加速",
+        "category": "speed_utility",
+        "allowed_bb_keys": []
+      },
+      "1540": {
+        "cn_name": "旧日志空壳数字包 1540",
+        "category": "empty_runtime",
+        "allowed_bb_keys": []
+      },
+      "1691": {
+        "cn_name": "旧日志空壳数字包 1691",
+        "category": "empty_runtime",
+        "allowed_bb_keys": []
+      },
+      "2394": {
+        "cn_name": "狼之绯叠层空壳数字包",
+        "category": "empty_runtime",
+        "allowed_bb_keys": []
+      },
+      "buff_wpn_pistol_0011_valid": {
+        "cn_name": "落草自身寒冷增伤",
+        "category": "self_buff",
+        "allowed_bb_keys": ["cryst_dmg_up2", "duration"]
+      },
+      "buff_wpn_claym_0013_normal_skill": {
+        "cn_name": "赫拉芬格战技寒冷增伤",
+        "category": "manual_table_excluded",
+        "allowed_bb_keys": ["cryst_dmg_up", "duration"],
+        "reason": "装备者通过战技触发后自身获得寒冷伤害提升；自用增伤，不是给队友/敌人的外部 rDPS 乘区。"
+      },
+      "buff_wpn_claym_0013_combo_skill": {
+        "cn_name": "赫拉芬格连携寒冷增伤",
+        "category": "manual_table_excluded",
+        "allowed_bb_keys": ["cryst_dmg_up2", "duration", "duration2"],
+        "reason": "装备者对寒冷附着敌人造成连携技伤害时自身获得寒冷伤害提升；自用增伤，不是外部 rDPS 乘区。"
+      },
+      "2439": {
+        "cn_name": "赫拉芬格/旧日志数字包 2439",
+        "category": "manual_table_excluded_or_empty_runtime",
+        "allowed_bb_keys": [],
+        "reason": "数字 2439 对应的赫拉芬格效果是装备者自用寒冷增伤；旧日志空壳碰撞也不应进入 rDPS。"
+      },
+      "buff_equipsuit_poisedmg_01_damagebuff": {
+        "cn_name": "轻超域自身增伤",
+        "category": "self_buff",
+        "allowed_bb_keys": ["duration", "max_stack", "phy_dmg_up"]
+      },
+      "buff_chr_0023_antal_normal_icon": {
+        "cn_name": "安塔尔聚焦图标",
+        "category": "ui_marker",
+        "allowed_bb_keys": ["duration", "rate"]
+      },
+      "buff_chr_0023_antal_normal_icon_2": {
+        "cn_name": "安塔尔聚焦图标2",
+        "category": "ui_marker",
+        "allowed_bb_keys": ["duration", "rate"]
+      },
+      "buff_chr_0025_ardelia_combo_skill_trigger_listener": {
+        "cn_name": "艾尔黛拉连携触发监听",
+        "category": "listener_or_counter",
+        "allowed_bb_keys": []
+      },
+      "buff_chr_0025_ardelia_combo_skill_trigger_timer": {
+        "cn_name": "艾尔黛拉连携触发计时器",
+        "category": "listener_or_counter",
+        "allowed_bb_keys": []
+      },
+      "buff_chr_0025_ardelia_normal_skill_fragile": {
+        "cn_name": "艾尔黛拉战技脆弱父 buff",
+        "category": "wrapper",
+        "allowed_bb_keys": ["duration", "rate"],
+        "reason": "The child buffs carry the physical/spell fragile rows used for rDPS; the parent is a wrapper and must not be double-counted."
+      },
+      "buff_chr_0027_tangtang_ultskill_debuff": {
+        "cn_name": "唐棠终结技时停/状态参数",
+        "category": "control_or_marker",
+        "allowed_bb_keys": ["timedilation_duration", "ultskill_debuff_duration"]
+      },
+      "buff_chr_0027_tangtang_comboskill_waterbuff": {
+        "cn_name": "唐棠水域加速父 buff",
+        "category": "speed_utility",
+        "allowed_bb_keys": ["duration_talent1buff", "duration_waterbuff", "ratio_speed"]
+      },
+      "buff_chr_0027_tangtang_comboskill_waterbuff_outaura": {
+        "cn_name": "唐棠水域加速外环",
+        "category": "speed_utility",
+        "allowed_bb_keys": ["duration_talent1buff", "duration_waterbuff", "ratio_speed"]
+      },
+      "buff_chr_0027_tangtang_comboskill_waterdebuff": {
+        "cn_name": "唐棠水域缓速",
+        "category": "speed_utility",
+        "allowed_bb_keys": ["duration_talent1buff", "duration_waterdebuff", "ratio_speedreduction"]
+      },
+      "buff_chr_0027_tangtang_comboskill_waterdebuff_outaura": {
+        "cn_name": "唐棠水域缓速外环",
+        "category": "speed_utility",
+        "allowed_bb_keys": ["duration_talent1buff", "duration_waterdebuff", "ratio_speedreduction"]
+      },
+      "buff_chr_0028_wulfa_normal_smarttarget": {
+        "cn_name": "洛茜爪印目标选择 helper",
+        "category": "internal_damage_helper",
+        "allowed_bb_keys": ["atk_scale", "damage_cd", "damage_interval", "duration", "extra_atk_scale"]
+      },
+      "buff_chr_0028_wulfa_normal_bleed_effect": {
+        "cn_name": "洛茜爪印周期伤害 helper",
+        "category": "internal_damage_helper",
+        "allowed_bb_keys": ["atk_scale", "damage_cd", "damage_interval", "duration", "extra_atk_scale"]
+      },
+      "buff_chr_0028_wulfa_combo_2_damagewait": {
+        "cn_name": "洛茜连携第二段等待 helper",
+        "category": "internal_damage_helper",
+        "allowed_bb_keys": ["atk_scale", "damage_interval", "duration", "trigger_times"]
+      },
+      "buff_chr_0028_wulfa_combo_2_damage": {
+        "cn_name": "洛茜连携第二段伤害 helper",
+        "category": "internal_damage_helper",
+        "allowed_bb_keys": ["atk_scale", "damage_interval", "duration", "trigger_times"]
+      },
+      "buff_chr_0028_wulfa_ult_addtional_battleshape": {
+        "cn_name": "洛茜终结技表现/状态 helper",
+        "category": "marker",
+        "allowed_bb_keys": ["duration"]
+      },
+      "buff_common_pulse_triggered_start": {
+        "cn_name": "导电触发开始 marker",
+        "category": "marker",
+        "allowed_bb_keys": []
+      },
+      "buff_common_pulse_triggered_fx": {
+        "cn_name": "导电触发 VFX",
+        "category": "vfx",
+        "allowed_bb_keys": []
+      },
+      "buff_common_natural_triggered_fx": {
+        "cn_name": "腐蚀触发 VFX",
+        "category": "vfx",
+        "allowed_bb_keys": []
+      },
+      "buff_common_enemy_spell_cryst_triggered_fx": {
+        "cn_name": "腐蚀减抗重复 FX 投影",
+        "category": "duplicate_fx_projection",
+        "allowed_bb_keys": ["additional_def_decrease", "atk_scale", "burning_atk_scale", "consumed_layer", "corrupt_duration", "count", "def_decrease", "def_decrease_tick", "duration", "frozen_duration", "max_def_decrease", "shatter_dmg", "start_def_decrease", "tick"],
+        "suppress_zone_effects": true,
+        "reason": "实包会与 buff_common_natural_cryst_triggered 同时携带同一组减抗字段；真正腐蚀键唯一入账，避免重复分配。"
+      },
+      "buff_common_enemy_spell_status_do_frozen": {
+        "cn_name": "敌人法术/冻结状态 marker",
+        "category": "status_marker",
+        "allowed_bb_keys": ["atk_scale", "count", "duration", "physical_res_down"],
+        "suppress_zone_effects": true,
+        "reason": "旧数字映射曾把本状态误投影为碎甲；真正碎甲只由 buff_physical_do_fracture 承载。"
+      },
+      "buff_common_do_frozen": {
+        "cn_name": "冻结/碎冰状态 marker",
+        "category": "status_marker",
+        "allowed_bb_keys": []
+      },
+      "buff_common_frozen": {
+        "cn_name": "冻结/碎冰触发 helper",
+        "category": "internal_damage_helper",
+        "allowed_bb_keys": ["atk_scale", "consumed_layer", "count", "duration", "final_phy_dmg_up", "phy_dmg_up", "shatter_dmg"]
+      },
+      "buff_common_cryst_fire_triggered": {
+        "cn_name": "碎冰/灼热触发伤害 helper",
+        "category": "internal_damage_helper",
+        "allowed_bb_keys": ["atk_scale", "consumed_layer", "count", "frozen_duration", "shatter_dmg"]
+      },
+      "buff_common_natural_cryst_triggered": {
+        "cn_name": "腐蚀触发伤害 helper",
+        "category": "internal_damage_helper",
+        "allowed_bb_keys": ["atk_scale"]
+      },
+      "buff_chr_0027_tangtang_normalskill_spellvulnerable": {
+        "cn_name": "唐棠战技法术脆弱生命周期空行",
+        "category": "lifecycle_alias",
+        "allowed_bb_keys": [],
+        "reason": "实际 5% 数值由 buff_common_affixes_vulnerable_spell_default_child/rate 承载；无 BB 的同 UID 生命周期行不单独产生 rDPS 乘区。"
+      },
+      "buff_common_weakness_triggered": {
+        "cn_name": "弱点/失衡触发 marker",
+        "category": "control_or_marker",
+        "allowed_bb_keys": []
+      },
+      "buff_common_interrupted_face_to_attacker": {
+        "cn_name": "受击转向攻击者/失衡表现",
+        "category": "control_or_marker",
+        "allowed_bb_keys": ["poise_value"]
+      },
+      "buff_common_cryst_cryst_triggered": {
+        "cn_name": "晶化触发持续时间 marker",
+        "category": "status_marker",
+        "allowed_bb_keys": ["duration"]
+      },
+      "buff_common_poise_can_be_breaking_attacked": {
+        "cn_name": "可被破韧攻击 marker",
+        "category": "control_or_marker",
+        "allowed_bb_keys": []
+      },
+      "buff_equipsuit_critsuitatk_01": {
+        "cn_name": "暴击套装监听器/标记",
+        "category": "equipment_wrapper",
+        "allowed_bb_keys": []
+      },
+      "buff_chr_0035_liino_normalskill_buff_atkup": {
+        "cn_name": "梨诺演唱姿态攻击提升父级",
+        "category": "wrapper",
+        "allowed_bb_keys": ["atk_up", "duration", "finish_duration", "spellenhance_rate"],
+        "suppress_zone_effects": true,
+        "reason": "3058 只创建 3705/3706 子效果并控制生命周期；实际攻击提升由 buff_chr_0035_liino_atkup 入账。"
+      },
+      "buff_chr_0035_liino_ultskill_buff_atkup": {
+        "cn_name": "梨诺高歌姿态增幅父级",
+        "category": "wrapper",
+        "allowed_bb_keys": ["atk_up", "duration", "finish_duration", "spellenhance_rate", "spellenhance_will_rate"],
+        "suppress_zone_effects": true,
+        "reason": "3707 只创建 3525/3526 子效果并控制生命周期；实际电磁/自然增幅由 buff_chr_0035_liino_spellenhance 入账。"
+      },
+      "buff_wpn_lance_0014_sign": {
+        "cn_name": "曜夜的首演治疗触发监听器",
+        "category": "weapon_wrapper",
+        "allowed_bb_keys": ["duration", "duration2", "max_stack", "spell_dmg_up"],
+        "suppress_zone_effects": true,
+        "reason": "3494 只监听装备者治疗其他干员并创建 3493；实际队友攻击提升由 buff_wpn_lance_0014_damageup 入账。"
+      },
+      "buff_chr_0034_typhoea_floatingmode": {
+        "cn_name": "提弗洛斯浮空状态自身强化",
+        "category": "self_buff",
+        "allowed_bb_keys": ["atk_up", "potential_atkup", "duration"],
+        "suppress_zone_effects": true,
+        "reason": "R-20260902-05：浮空攻击提升只作用于提弗洛斯自身，不产生外部 rDPS。"
+      },
+      "buff_chr_0034_typhoea_normal_skill_arrow_energy": {
+        "cn_name": "提弗洛斯启示计数",
+        "category": "self_resource",
+        "allowed_bb_keys": ["auto_enhance_rate", "count", "recover_time", "duration"],
+        "suppress_zone_effects": true,
+        "reason": "R-20260902-05：自身猎矢/启示强化资源，不产生外部 rDPS。"
+      },
+      "buff_chr_0034_typhoea_normal_skill_arrow_energy_buffer_1": {
+        "cn_name": "提弗洛斯启示缓冲1",
+        "category": "self_resource",
+        "allowed_bb_keys": ["auto_enhance_rate", "count", "recover_time", "duration"],
+        "suppress_zone_effects": true,
+        "reason": "R-20260902-05：自身启示计数缓冲，不产生外部 rDPS。"
+      },
+      "buff_chr_0034_typhoea_normal_skill_arrow_energy_buffer_2": {
+        "cn_name": "提弗洛斯启示缓冲2",
+        "category": "self_resource",
+        "allowed_bb_keys": ["auto_enhance_rate", "count", "recover_time", "duration"],
+        "suppress_zone_effects": true,
+        "reason": "R-20260902-05：自身启示计数缓冲，不产生外部 rDPS。"
+      },
+      "buff_chr_0034_typhoea_normal_skill_arrow_energy_buffer_3": {
+        "cn_name": "提弗洛斯启示缓冲3",
+        "category": "self_resource",
+        "allowed_bb_keys": ["auto_enhance_rate", "count", "recover_time", "duration"],
+        "suppress_zone_effects": true,
+        "reason": "R-20260902-05：自身启示计数缓冲，不产生外部 rDPS。"
+      },
+      "buff_chr_0034_typhoea_normal_skill_arrow_num": {
+        "cn_name": "提弗洛斯猎矢计数",
+        "category": "self_resource",
+        "allowed_bb_keys": ["arrowrecover_speedup", "auto_enhance_rate", "count", "recover_time", "duration"],
+        "suppress_zone_effects": true,
+        "reason": "R-20260902-05：自身猎矢数量与强化射击状态，不产生外部 rDPS。"
+      },
+      "buff_chr_0034_typhoea_passitive_enemy_listennaturalspellbrust": {
+        "cn_name": "提弗洛斯自然爆发监听",
+        "category": "listener",
+        "allowed_bb_keys": ["auto_enhance_rate", "count", "recover_time", "duration"],
+        "suppress_zone_effects": true,
+        "reason": "R-20260902-05：只监听敌人触发自然爆发并给提弗洛斯增加启示，不改变队友伤害。"
+      },
+      "buff_chr_0034_typhoea_passive_spellbrust_damageup": {
+        "cn_name": "提弗洛斯强化射击自身增伤",
+        "category": "self_buff",
+        "allowed_bb_keys": ["max_stack", "duration", "damageup_1", "damageup_2", "damageup_3", "damageup_4", "damageup_5", "damageup", "layer", "damage_end"],
+        "suppress_zone_effects": true,
+        "reason": "R-20260902-05：强化射击的自身自然爆发倍率，不产生外部 rDPS。"
+      },
+      "buff_chr_0034_typhoea_potential_atkup": {
+        "cn_name": "提弗洛斯潜能自身攻击提升",
+        "category": "self_buff",
+        "allowed_bb_keys": ["atk_up", "duration"],
+        "suppress_zone_effects": true,
+        "reason": "R-20260902-05：潜能强化只作用于提弗洛斯自身。"
+      },
+      "buff_chr_0034_typhoea_talent_2_damageup": {
+        "cn_name": "提弗洛斯旧天赋自身效果",
+        "category": "inactive_or_self_helper",
+        "allowed_bb_keys": ["damageup", "duration"],
+        "suppress_zone_effects": true,
+        "reason": "R-20260902-05：官表无对队友或敌人的独立增伤描述，也无现行技能挂载证据；不产生外部 rDPS。"
+      }
+    },
+    "prefixes": [
+      {
+        "prefix": "buff_common_vfx_",
+        "category": "vfx",
+        "allowed_bb_keys": ["*"]
+      },
+      {
+        "prefix": "buff_common_normal_skill_fx_",
+        "category": "vfx",
+        "allowed_bb_keys": ["*"]
+      },
+      {
+        "prefix": "buff_wpn_funnel_0019_",
+        "category": "self_weapon_buff",
+        "allowed_bb_keys": ["duration", "phy_spell_up", "spell_dmg_up2"],
+        "suppress_zone_effects": true,
+        "reason": "R-20260902-02：寒夜幽影的全部增益均只作用于装备者。"
+      },
+      {
+        "prefix": "buff_wpn_funnel_0020_",
+        "category": "self_weapon_buff",
+        "allowed_bb_keys": ["duration", "nature_dmg_up", "nature_dmg_up2"],
+        "suppress_zone_effects": true,
+        "reason": "R-20260902-03：苦难的尽头的全部增益均只作用于装备者。"
+      },
+      {
+        "prefix": "buff_equipsuit_spellburst_",
+        "category": "self_equipment_buff",
+        "allowed_bb_keys": ["cd", "duration", "max_stack", "phy_spell_up"],
+        "suppress_zone_effects": true,
+        "reason": "R-20260902-04：险关套装的法术伤害与源石技艺强度只作用于装备者。"
+      },
+      {
+        "prefix": "buff_chr_0034_typhoea_",
+        "category": "character_marker",
+        "allowed_bb_keys": [],
+        "reason": "R-20260902-05：提弗洛斯无 BB 的目标、表现与生命周期标记。具有乘区参数的自身效果均使用上方 exact 条目；3619 外部易伤由 verified_effects 优先匹配。"
+      }
+    ]
+  },
+  "block_rules": [
+    "Unknown character-to-enemy buff blocks strict rDPS.",
+    "Unknown character-to-other-character buff blocks strict rDPS.",
+    "Unknown blackboard keys shaped like atk/dmg/taken/vulnerable/def/res/crit block strict rDPS.",
+    "Known weapon/suit mappings are accepted only when the source loadout guard matches.",
+    "External contribution rows without evidence block strict rDPS."
+  ]
+}

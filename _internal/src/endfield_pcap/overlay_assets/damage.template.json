@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "name": "伤害统计",
+  "entry": "index.html",
+  "subscriptions": [
+    "analysis_summary"
+  ],
+  "font_mode": "css",
+  "settings": [
+    {
+      "key": "bar_mode",
+      "label": "伤害条与排序",
+      "type": "select",
+      "default": "dps",
+      "options": [
+        {
+          "value": "dps",
+          "label": "DMG / DPS"
+        },
+        {
+          "value": "rdps",
+          "label": "rDMG / rDPS"
+        }
+      ],
+      "legacy_field": "bar_mode"
+    },
+    {
+      "key": "columns",
+      "label": "显示列",
+      "type": "multiselect",
+      "default": [
+        "damage",
+        "damage_rate",
+        "rdamage",
+        "rdamage_rate"
+      ],
+      "options": [
+        {
+          "value": "damage",
+          "label": "DMG"
+        },
+        {
+          "value": "damage_rate",
+          "label": "DMG rate"
+        },
+        {
+          "value": "rdamage",
+          "label": "rDMG"
+        },
+        {
+          "value": "rdamage_rate",
+          "label": "rDMG rate"
+        }
+      ],
+      "legacy_field": "visible_columns"
+    },
+    {
+      "key": "theme",
+      "label": "背景模式",
+      "type": "select",
+      "default": "light",
+      "options": [
+        {
+          "value": "light",
+          "label": "浅色"
+        },
+        {
+          "value": "dark",
+          "label": "深色"
+        },
+        {
+          "value": "transparent",
+          "label": "透明背景"
+        }
+      ],
+      "legacy_field": "overlay_theme"
+    }
+  ],
+  "window": {
+    "min_width": 320,
+    "min_height": 160,
+    "default_width": 800,
+    "default_height": 380
+  }
+}

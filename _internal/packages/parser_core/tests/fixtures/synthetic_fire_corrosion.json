@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "kind": "synthetic",
+  "generator": "_development/tools/generate_test_fixtures.py",
+  "fixtureSha256": "fa1873b91a45fe9b254571b6aa02c36abe259693ab1b961dcebf349b8ee551bd",
+  "lines": 34,
+  "evidence_scope": "Parser regression only; does not prove real game behavior or upload eligibility."
+}

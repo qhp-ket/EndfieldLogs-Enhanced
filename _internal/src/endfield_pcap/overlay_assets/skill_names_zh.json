@@ -1,0 +1,1080 @@
+{
+  "v": "1.6.4@11123848-6",
+  "gen": "2026-10-21",
+  "cats": [
+    "普攻",
+    "战技",
+    "大招",
+    "连携"
+  ],
+  "chars": {
+    "chr_0002_endminm": {
+      "n": "管理员",
+      "p": ""
+    },
+    "chr_0015_lifeng": {
+      "n": "黎风",
+      "p": ""
+    },
+    "chr_0003_endminf": {
+      "n": "管理员",
+      "p": ""
+    },
+    "chr_0004_pelica": {
+      "n": "佩丽卡",
+      "p": 5
+    },
+    "chr_0005_chen": {
+      "n": "陈千语",
+      "p": ""
+    },
+    "chr_0012_avywen": {
+      "n": "艾维文娜",
+      "p": 8
+    },
+    "chr_0031_mifu": {
+      "n": "弭弗",
+      "p": ""
+    },
+    "chr_0032_lizhiyan": {
+      "n": "诀",
+      "p": 5
+    },
+    "chr_0006_wolfgd": {
+      "n": "狼卫",
+      "p": 5
+    },
+    "chr_0033_camille": {
+      "n": "卡缪",
+      "p": 7
+    },
+    "chr_0007_ikut": {
+      "n": "弧光",
+      "p": 7
+    },
+    "chr_0013_aglina": {
+      "n": "洁尔佩塔",
+      "p": 4
+    },
+    "chr_0009_azrila": {
+      "n": "余烬",
+      "p": 2
+    },
+    "chr_0011_seraph": {
+      "n": "赛希",
+      "p": 4
+    },
+    "chr_0038_purrche": {
+      "n": "噗切娜",
+      "p": 2
+    },
+    "chr_0014_aurora": {
+      "n": "昼雪",
+      "p": 2
+    },
+    "chr_0018_dapan": {
+      "n": "大潘",
+      "p": 8
+    },
+    "chr_0016_laevat": {
+      "n": "莱万汀",
+      "p": 8
+    },
+    "chr_0026_lastrite": {
+      "n": "别礼",
+      "p": 8
+    },
+    "chr_0017_yvonne": {
+      "n": "伊冯",
+      "p": 8
+    },
+    "chr_0021_whiten": {
+      "n": "埃特拉",
+      "p": ""
+    },
+    "chr_0027_tangtang": {
+      "n": "汤汤",
+      "p": 5
+    },
+    "chr_0036_jsspsi": {
+      "n": "祀",
+      "p": 4
+    },
+    "chr_0019_karin": {
+      "n": "秋栗",
+      "p": 7
+    },
+    "chr_0020_meurs": {
+      "n": "卡契尔",
+      "p": 2
+    },
+    "chr_0022_bounda": {
+      "n": "萤石",
+      "p": 5
+    },
+    "chr_0023_antal": {
+      "n": "安塔尔",
+      "p": 4
+    },
+    "chr_0025_ardelia": {
+      "n": "艾尔黛拉",
+      "p": 4
+    },
+    "chr_0024_deepfin": {
+      "n": "阿列什",
+      "p": 7
+    },
+    "chr_0028_wulfa": {
+      "n": "洛茜",
+      "p": ""
+    },
+    "chr_0029_pograni": {
+      "n": "骏卫",
+      "p": 7
+    },
+    "chr_0030_zhuangfy": {
+      "n": "庄方宜",
+      "p": 8
+    },
+    "chr_0034_typhoea": {
+      "n": "提弗洛斯",
+      "p": 8
+    },
+    "chr_0035_liino": {
+      "n": "梨诺",
+      "p": 4
+    },
+    "chr_9000_endmin": {
+      "n": "管理员",
+      "p": ""
+    }
+  },
+  "groups": {
+    "chr_0002_endminm_ComboSkill": [
+      "锁闭序列",
+      3
+    ],
+    "chr_0002_endminm_NormalAttack": [
+      "毁伤序列",
+      0
+    ],
+    "chr_0002_endminm_NormalSkill": [
+      "构成序列",
+      1
+    ],
+    "chr_0002_endminm_UltimateSkill": [
+      "轰击序列",
+      2
+    ],
+    "chr_0015_lifeng_ComboSkill": [
+      "忿怒相",
+      3
+    ],
+    "chr_0015_lifeng_NormalAttack": [
+      "摧破",
+      0
+    ],
+    "chr_0015_lifeng_NormalSkill": [
+      "荡浊身",
+      1
+    ],
+    "chr_0015_lifeng_UltimateSkill": [
+      "不动心",
+      2
+    ],
+    "chr_0003_endminf_ComboSkill": [
+      "锁闭序列",
+      3
+    ],
+    "chr_0003_endminf_NormalAttack": [
+      "毁伤序列",
+      0
+    ],
+    "chr_0003_endminf_NormalSkill": [
+      "构成序列",
+      1
+    ],
+    "chr_0003_endminf_UltimateSkill": [
+      "轰击序列",
+      2
+    ],
+    "chr_0004_pelica_ComboSkill": [
+      "即时协议·闪链",
+      3
+    ],
+    "chr_0004_pelica_NormalAttack": [
+      "协议α·突破",
+      0
+    ],
+    "chr_0004_pelica_NormalSkill": [
+      "协议ω·雷击",
+      1
+    ],
+    "chr_0004_pelica_UltimateSkill": [
+      "协议ε·70.41κ",
+      2
+    ],
+    "chr_0005_chen_ComboSkill": [
+      "见天河",
+      3
+    ],
+    "chr_0005_chen_NormalAttack": [
+      "破飞霞",
+      0
+    ],
+    "chr_0005_chen_NormalSkill": [
+      "归穹宇",
+      1
+    ],
+    "chr_0005_chen_UltimateSkill": [
+      "冽风霜",
+      2
+    ],
+    "chr_0012_avywen_ComboSkill": [
+      "雷枪·掣击",
+      3
+    ],
+    "chr_0012_avywen_NormalAttack": [
+      "雷枪·疾袭",
+      0
+    ],
+    "chr_0012_avywen_NormalSkill": [
+      "雷枪·截回",
+      1
+    ],
+    "chr_0012_avywen_UltimateSkill": [
+      "雷枪·决颤",
+      2
+    ],
+    "chr_0031_mifu_ComboSkill": [
+      "拳出无悔",
+      3
+    ],
+    "chr_0031_mifu_NormalAttack": [
+      "剑行拳意",
+      0
+    ],
+    "chr_0031_mifu_NormalSkill": [
+      "清波三艺",
+      1
+    ],
+    "chr_0031_mifu_UltimateSkill": [
+      "绝心",
+      2
+    ],
+    "chr_0032_lizhiyan_ComboSkill": [
+      "应龙四式",
+      3
+    ],
+    "chr_0032_lizhiyan_NormalAttack": [
+      "重火力截击",
+      0
+    ],
+    "chr_0032_lizhiyan_NormalSkill": [
+      "摧玉网格",
+      1
+    ],
+    "chr_0032_lizhiyan_UltimateSkill": [
+      "破晦",
+      2
+    ],
+    "chr_0006_wolfgd_ComboSkill": [
+      "爆裂手雷·β型",
+      3
+    ],
+    "chr_0006_wolfgd_NormalAttack": [
+      "多重连射",
+      0
+    ],
+    "chr_0006_wolfgd_NormalSkill": [
+      "灼热弹痕",
+      1
+    ],
+    "chr_0006_wolfgd_UltimateSkill": [
+      "狼之怒",
+      2
+    ],
+    "chr_0033_camille_ComboSkill": [
+      "锥心之棘",
+      3
+    ],
+    "chr_0033_camille_NormalAttack": [
+      "歃血涤罪",
+      0
+    ],
+    "chr_0033_camille_NormalSkill": [
+      "驱火焚影",
+      1
+    ],
+    "chr_0033_camille_UltimateSkill": [
+      "猩红坠雨",
+      2
+    ],
+    "chr_0007_ikut_ComboSkill": [
+      "鸣雷",
+      3
+    ],
+    "chr_0007_ikut_NormalAttack": [
+      "循迹逐猎",
+      0
+    ],
+    "chr_0007_ikut_NormalSkill": [
+      "疾风迅雷",
+      1
+    ],
+    "chr_0007_ikut_UltimateSkill": [
+      "轰雷掣电",
+      2
+    ],
+    "chr_0013_aglina_ComboSkill": [
+      "秘杖·矩阵位移",
+      3
+    ],
+    "chr_0013_aglina_NormalAttack": [
+      "秘杖·束能技艺",
+      0
+    ],
+    "chr_0013_aglina_NormalSkill": [
+      "秘杖·引力模式",
+      1
+    ],
+    "chr_0013_aglina_UltimateSkill": [
+      "秘杖·重力场",
+      2
+    ],
+    "chr_0009_azrila_ComboSkill": [
+      "前线援护",
+      3
+    ],
+    "chr_0009_azrila_NormalAttack": [
+      "陷阵剑术",
+      0
+    ],
+    "chr_0009_azrila_NormalSkill": [
+      "进军",
+      1
+    ],
+    "chr_0009_azrila_UltimateSkill": [
+      "重燃誓约",
+      2
+    ],
+    "chr_0011_seraph_ComboSkill": [
+      "压力测试",
+      3
+    ],
+    "chr_0011_seraph_NormalAttack": [
+      "冷却",
+      0
+    ],
+    "chr_0011_seraph_NormalSkill": [
+      "分布式拒绝服务",
+      1
+    ],
+    "chr_0011_seraph_UltimateSkill": [
+      "栈溢出",
+      2
+    ],
+    "chr_0038_purrche_ComboSkill": [
+      "点心还是“礼物”",
+      3
+    ],
+    "chr_0038_purrche_NormalAttack": [
+      "点心，尝尝！",
+      0
+    ],
+    "chr_0038_purrche_NormalSkill": [
+      "我没有睡着！",
+      1
+    ],
+    "chr_0038_purrche_UltimateSkill": [
+      "不许干坏事！",
+      2
+    ],
+    "chr_0014_aurora_ComboSkill": [
+      "极地救援",
+      3
+    ],
+    "chr_0014_aurora_NormalAttack": [
+      "失温猛击",
+      0
+    ],
+    "chr_0014_aurora_NormalSkill": [
+      "饱和性防御",
+      1
+    ],
+    "chr_0014_aurora_UltimateSkill": [
+      "凛冽寒霜",
+      2
+    ],
+    "chr_0018_dapan_ComboSkill": [
+      "加料！",
+      3
+    ],
+    "chr_0018_dapan_NormalAttack": [
+      "滚刀切！",
+      0
+    ],
+    "chr_0018_dapan_NormalSkill": [
+      "颠勺！",
+      1
+    ],
+    "chr_0018_dapan_UltimateSkill": [
+      "切丝入锅！",
+      2
+    ],
+    "chr_0016_laevat_ComboSkill": [
+      "沸腾",
+      3
+    ],
+    "chr_0016_laevat_NormalAttack": [
+      "燃烬",
+      0
+    ],
+    "chr_0016_laevat_NormalSkill": [
+      "焚灭",
+      1
+    ],
+    "chr_0016_laevat_UltimateSkill": [
+      "黄昏",
+      2
+    ],
+    "chr_0026_lastrite_ComboSkill": [
+      "噬冬",
+      3
+    ],
+    "chr_0026_lastrite_NormalAttack": [
+      "严霜之舞",
+      0
+    ],
+    "chr_0026_lastrite_NormalSkill": [
+      "塞什卡的秘传",
+      1
+    ],
+    "chr_0026_lastrite_UltimateSkill": [
+      "临终别礼",
+      2
+    ],
+    "chr_0017_yvonne_ComboSkill": [
+      "速冻仔·υ37",
+      3
+    ],
+    "chr_0017_yvonne_NormalAttack": [
+      "雀跃扳机",
+      0
+    ],
+    "chr_0017_yvonne_NormalSkill": [
+      "冰冰弹·β型",
+      1
+    ],
+    "chr_0017_yvonne_UltimateSkill": [
+      "冷冻射手",
+      2
+    ],
+    "chr_0021_whiten_ComboSkill": [
+      "失真",
+      3
+    ],
+    "chr_0021_whiten_NormalAttack": [
+      "噪点",
+      0
+    ],
+    "chr_0021_whiten_NormalSkill": [
+      "凝声",
+      1
+    ],
+    "chr_0021_whiten_UltimateSkill": [
+      "震音",
+      2
+    ],
+    "chr_0027_tangtang_ComboSkill": [
+      "河水，助我！",
+      3
+    ],
+    "chr_0027_tangtang_NormalAttack": [
+      "崩你脑壳！",
+      0
+    ],
+    "chr_0027_tangtang_NormalSkill": [
+      "踏潮卷浪！",
+      1
+    ],
+    "chr_0027_tangtang_UltimateSkill": [
+      "大当家盯着呢！",
+      2
+    ],
+    "chr_0036_jsspsi_ComboSkill": [
+      "成竹在胸",
+      3
+    ],
+    "chr_0036_jsspsi_NormalAttack": [
+      "乘兴起笔",
+      0
+    ],
+    "chr_0036_jsspsi_NormalSkill": [
+      "河山共影",
+      1
+    ],
+    "chr_0036_jsspsi_UltimateSkill": [
+      "谁都不许扫兴",
+      2
+    ],
+    "chr_0019_karin_ComboSkill": [
+      "快闪冲击",
+      3
+    ],
+    "chr_0019_karin_NormalAttack": [
+      "进取剑锋",
+      0
+    ],
+    "chr_0019_karin_NormalSkill": [
+      "热情迸发",
+      1
+    ],
+    "chr_0019_karin_UltimateSkill": [
+      "小队，集结！",
+      2
+    ],
+    "chr_0020_meurs_ComboSkill": [
+      "即时压制",
+      3
+    ],
+    "chr_0020_meurs_NormalAttack": [
+      "基础战术",
+      0
+    ],
+    "chr_0020_meurs_NormalSkill": [
+      "刚性阻击",
+      1
+    ],
+    "chr_0020_meurs_UltimateSkill": [
+      "教科书式猛攻",
+      2
+    ],
+    "chr_0022_bounda_ComboSkill": [
+      "免费赠礼",
+      3
+    ],
+    "chr_0022_bounda_NormalAttack": [
+      "独门射击法",
+      0
+    ],
+    "chr_0022_bounda_NormalSkill": [
+      "小惊喜",
+      1
+    ],
+    "chr_0022_bounda_UltimateSkill": [
+      "巅峰闹剧",
+      2
+    ],
+    "chr_0023_antal_ComboSkill": [
+      "磁暴试验场",
+      3
+    ],
+    "chr_0023_antal_NormalAttack": [
+      "交换电流",
+      0
+    ],
+    "chr_0023_antal_NormalSkill": [
+      "指定研究对象",
+      1
+    ],
+    "chr_0023_antal_UltimateSkill": [
+      "超频时刻",
+      2
+    ],
+    "chr_0025_ardelia_ComboSkill": [
+      "火山蘑菇云",
+      3
+    ],
+    "chr_0025_ardelia_NormalAttack": [
+      "岩石的轻语",
+      0
+    ],
+    "chr_0025_ardelia_NormalSkill": [
+      "奔腾的多利",
+      1
+    ],
+    "chr_0025_ardelia_UltimateSkill": [
+      "毛茸茸派对",
+      2
+    ],
+    "chr_0024_deepfin_ComboSkill": [
+      "凿孔底钓术",
+      3
+    ],
+    "chr_0024_deepfin_NormalAttack": [
+      "基本挥竿法",
+      0
+    ],
+    "chr_0024_deepfin_NormalSkill": [
+      "非常规路亚",
+      1
+    ],
+    "chr_0024_deepfin_UltimateSkill": [
+      "大鳞，上钩！",
+      2
+    ],
+    "chr_0028_wulfa_ComboSkill": [
+      "燎影时刻",
+      3
+    ],
+    "chr_0028_wulfa_NormalAttack": [
+      "沸腾狼血",
+      0
+    ],
+    "chr_0028_wulfa_NormalSkill": [
+      "血红之影",
+      1
+    ],
+    "chr_0028_wulfa_UltimateSkill": [
+      "“利爪”奇袭",
+      2
+    ],
+    "chr_0029_pograni_ComboSkill": [
+      "盈月邀击",
+      3
+    ],
+    "chr_0029_pograni_NormalAttack": [
+      "全面攻势",
+      0
+    ],
+    "chr_0029_pograni_NormalSkill": [
+      "粉碎阵线",
+      1
+    ],
+    "chr_0029_pograni_UltimateSkill": [
+      "盾卫旗队，上前",
+      2
+    ],
+    "chr_0030_zhuangfy_ComboSkill": [
+      "一息万变",
+      3
+    ],
+    "chr_0030_zhuangfy_NormalAttack": [
+      "疾电法",
+      0
+    ],
+    "chr_0030_zhuangfy_NormalSkill": [
+      "惊霆诀",
+      1
+    ],
+    "chr_0030_zhuangfy_UltimateSkill": [
+      "万钧风雷",
+      2
+    ],
+    "chr_0034_typhoea_ComboSkill": [
+      "野棘丛生",
+      3
+    ],
+    "chr_0034_typhoea_NormalAttack": [
+      "追猎荒原",
+      0
+    ],
+    "chr_0034_typhoea_NormalSkill": [
+      "风矢穿林",
+      1
+    ],
+    "chr_0034_typhoea_UltimateSkill": [
+      "冰山呼告",
+      2
+    ],
+    "chr_0035_liino_ComboSkill": [
+      "悦心音调",
+      3
+    ],
+    "chr_0035_liino_NormalAttack": [
+      "怦然星动",
+      0
+    ],
+    "chr_0035_liino_NormalSkill": [
+      "闪耀焦点",
+      1
+    ],
+    "chr_0035_liino_UltimateSkill": [
+      "晨星的协奏曲",
+      2
+    ],
+    "chr_9000_endmin_ComboSkill": [
+      "锁闭序列",
+      3
+    ],
+    "chr_9000_endmin_NormalAttack": [
+      "毁伤序列",
+      0
+    ],
+    "chr_9000_endmin_NormalSkill": [
+      "构成序列",
+      1
+    ],
+    "chr_9000_endmin_UltimateSkill": [
+      "轰击序列",
+      2
+    ]
+  },
+  "skillIndex": {
+    "chr_0002_endminm_combo_skill": "chr_9000_endmin_ComboSkill",
+    "chr_0002_endminm_attack1": "chr_9000_endmin_NormalAttack",
+    "chr_0002_endminm_attack2": "chr_9000_endmin_NormalAttack",
+    "chr_0002_endminm_attack3": "chr_9000_endmin_NormalAttack",
+    "chr_0002_endminm_attack4": "chr_9000_endmin_NormalAttack",
+    "chr_0002_endminm_attack5": "chr_9000_endmin_NormalAttack",
+    "chr_0002_endminm_power_attack": "chr_9000_endmin_NormalAttack",
+    "chr_0002_endminm_plunging_attack_end": "chr_9000_endmin_NormalAttack",
+    "chr_0002_endminm_normal_skill": "chr_9000_endmin_NormalSkill",
+    "chr_0002_endminm_ultimate_skill": "chr_9000_endmin_UltimateSkill",
+    "chr_0015_lifeng_combo_skill": "chr_0015_lifeng_ComboSkill",
+    "chr_0015_lifeng_attack1": "chr_0015_lifeng_NormalAttack",
+    "chr_0015_lifeng_attack2": "chr_0015_lifeng_NormalAttack",
+    "chr_0015_lifeng_attack3": "chr_0015_lifeng_NormalAttack",
+    "chr_0015_lifeng_attack5": "chr_0015_lifeng_NormalAttack",
+    "chr_0015_lifeng_power_attack": "chr_0015_lifeng_NormalAttack",
+    "chr_0015_lifeng_plunging_attack_end": "chr_0015_lifeng_NormalAttack",
+    "chr_0015_lifeng_normal_skill": "chr_0015_lifeng_NormalSkill",
+    "chr_0015_lifeng_ultimate_skill": "chr_0015_lifeng_UltimateSkill",
+    "chr_0003_endminf_combo_skill": "chr_9000_endmin_ComboSkill",
+    "chr_0003_endminf_attack1": "chr_9000_endmin_NormalAttack",
+    "chr_0003_endminf_attack2": "chr_9000_endmin_NormalAttack",
+    "chr_0003_endminf_attack3": "chr_9000_endmin_NormalAttack",
+    "chr_0003_endminf_attack4": "chr_9000_endmin_NormalAttack",
+    "chr_0003_endminf_attack5": "chr_9000_endmin_NormalAttack",
+    "chr_0003_endminf_power_attack2": "chr_9000_endmin_NormalAttack",
+    "chr_0003_endminf_plunging_attack_end": "chr_9000_endmin_NormalAttack",
+    "chr_0003_endminf_normal_skill": "chr_9000_endmin_NormalSkill",
+    "chr_0003_endminf_ultimate_skill": "chr_9000_endmin_UltimateSkill",
+    "chr_0004_pelica_combo_skill": "chr_0004_pelica_ComboSkill",
+    "chr_0004_pelica_attack1": "chr_0004_pelica_NormalAttack",
+    "chr_0004_pelica_attack2": "chr_0004_pelica_NormalAttack",
+    "chr_0004_pelica_attack3": "chr_0004_pelica_NormalAttack",
+    "chr_0004_pelica_attack4": "chr_0004_pelica_NormalAttack",
+    "chr_0004_pelica_power_attack": "chr_0004_pelica_NormalAttack",
+    "chr_0004_pelica_plunging_attack_end": "chr_0004_pelica_NormalAttack",
+    "chr_0004_pelica_normal_skill": "chr_0004_pelica_NormalSkill",
+    "chr_0004_pelica_ultimate_skill": "chr_0004_pelica_UltimateSkill",
+    "chr_0005_chen_combo_skill": "chr_0005_chen_ComboSkill",
+    "chr_0005_chen_attack1": "chr_0005_chen_NormalAttack",
+    "chr_0005_chen_attack2": "chr_0005_chen_NormalAttack",
+    "chr_0005_chen_attack3": "chr_0005_chen_NormalAttack",
+    "chr_0005_chen_attack4": "chr_0005_chen_NormalAttack",
+    "chr_0005_chen_attack5": "chr_0005_chen_NormalAttack",
+    "chr_0005_chen_power_attack": "chr_0005_chen_NormalAttack",
+    "chr_0005_chen_plunging_attack_end": "chr_0005_chen_NormalAttack",
+    "chr_0005_chen_normal_skill": "chr_0005_chen_NormalSkill",
+    "chr_0005_chen_ultimate_skill": "chr_0005_chen_UltimateSkill",
+    "chr_0012_avywen_combo_skill": "chr_0012_avywen_ComboSkill",
+    "chr_0012_avywen_attack1": "chr_0012_avywen_NormalAttack",
+    "chr_0012_avywen_attack2": "chr_0012_avywen_NormalAttack",
+    "chr_0012_avywen_attack3": "chr_0012_avywen_NormalAttack",
+    "chr_0012_avywen_attack4": "chr_0012_avywen_NormalAttack",
+    "chr_0012_avywen_attack5": "chr_0012_avywen_NormalAttack",
+    "chr_0012_avywen_power_attack": "chr_0012_avywen_NormalAttack",
+    "chr_0012_avywen_plunging_attack_end": "chr_0012_avywen_NormalAttack",
+    "chr_0012_avywen_normal_skill": "chr_0012_avywen_NormalSkill",
+    "chr_0012_avywen_ultimate_skill": "chr_0012_avywen_UltimateSkill",
+    "chr_0031_mifu_combo_skill": "chr_0031_mifu_ComboSkill",
+    "chr_0031_mifu_attack1": "chr_0031_mifu_NormalAttack",
+    "chr_0031_mifu_attack2": "chr_0031_mifu_NormalAttack",
+    "chr_0031_mifu_attack3": "chr_0031_mifu_NormalAttack",
+    "chr_0031_mifu_attack4": "chr_0031_mifu_NormalAttack",
+    "chr_0031_mifu_plunging_attack_end": "chr_0031_mifu_NormalAttack",
+    "chr_0031_mifu_powerattack": "chr_0031_mifu_NormalAttack",
+    "chr_0031_mifu_normalskill_1": "chr_0031_mifu_NormalSkill",
+    "chr_0031_mifu_normalskill_2": "chr_0031_mifu_NormalSkill",
+    "chr_0031_mifu_normalskill_3": "chr_0031_mifu_NormalSkill",
+    "chr_0031_mifu_ultimate_skill": "chr_0031_mifu_UltimateSkill",
+    "chr_0032_lizhiyan_combo_skill": "chr_0032_lizhiyan_ComboSkill",
+    "chr_0032_lizhiyan_attack1": "chr_0032_lizhiyan_NormalAttack",
+    "chr_0032_lizhiyan_attack2": "chr_0032_lizhiyan_NormalAttack",
+    "chr_0032_lizhiyan_attack3": "chr_0032_lizhiyan_NormalAttack",
+    "chr_0032_lizhiyan_attack4": "chr_0032_lizhiyan_NormalAttack",
+    "chr_0032_lizhiyan_attack5": "chr_0032_lizhiyan_NormalAttack",
+    "chr_0032_lizhiyan_power_attack": "chr_0032_lizhiyan_NormalAttack",
+    "chr_0032_lizhiyan_plunging_attack_end": "chr_0032_lizhiyan_NormalAttack",
+    "chr_0032_lizhiyan_normal_skill": "chr_0032_lizhiyan_NormalSkill",
+    "chr_0032_lizhiyan_ultimate_skill": "chr_0032_lizhiyan_UltimateSkill",
+    "chr_0032_lizhiyan_ultimate_skill2": "chr_0032_lizhiyan_UltimateSkill",
+    "chr_0006_wolfgd_combo_skill": "chr_0006_wolfgd_ComboSkill",
+    "chr_0006_wolfgd_attack1": "chr_0006_wolfgd_NormalAttack",
+    "chr_0006_wolfgd_attack2": "chr_0006_wolfgd_NormalAttack",
+    "chr_0006_wolfgd_attack3": "chr_0006_wolfgd_NormalAttack",
+    "chr_0006_wolfgd_attack4": "chr_0006_wolfgd_NormalAttack",
+    "chr_0006_wolfgd_power_attack": "chr_0006_wolfgd_NormalAttack",
+    "chr_0006_wolfgd_plunging_attack_end": "chr_0006_wolfgd_NormalAttack",
+    "chr_0006_wolfgd_normal_skill": "chr_0006_wolfgd_NormalSkill",
+    "chr_0006_wolfgd_ultimate_skill": "chr_0006_wolfgd_UltimateSkill",
+    "chr_0033_camille_combo_skill": "chr_0033_camille_ComboSkill",
+    "chr_0033_camille_combo_skill_2": "chr_0033_camille_ComboSkill",
+    "chr_0033_camille_normal_skill_2": "chr_0033_camille_ComboSkill",
+    "chr_0033_camille_attack1": "chr_0033_camille_NormalAttack",
+    "chr_0033_camille_attack2": "chr_0033_camille_NormalAttack",
+    "chr_0033_camille_attack3": "chr_0033_camille_NormalAttack",
+    "chr_0033_camille_attack4": "chr_0033_camille_NormalAttack",
+    "chr_0033_camille_attack5": "chr_0033_camille_NormalAttack",
+    "chr_0033_camille_power_attack": "chr_0033_camille_NormalAttack",
+    "chr_0033_camille_plunging_attack_end": "chr_0033_camille_NormalAttack",
+    "chr_0033_camille_normal_skill": "chr_0033_camille_NormalSkill",
+    "chr_0033_camille_ultimate_skill": "chr_0033_camille_UltimateSkill",
+    "chr_0007_ikut_combo_skill": "chr_0007_ikut_ComboSkill",
+    "chr_0007_ikut_attack1": "chr_0007_ikut_NormalAttack",
+    "chr_0007_ikut_attack2": "chr_0007_ikut_NormalAttack",
+    "chr_0007_ikut_attack3": "chr_0007_ikut_NormalAttack",
+    "chr_0007_ikut_attack4": "chr_0007_ikut_NormalAttack",
+    "chr_0007_ikut_attack5": "chr_0007_ikut_NormalAttack",
+    "chr_0007_ikut_power_attack": "chr_0007_ikut_NormalAttack",
+    "chr_0007_ikut_plunging_attack_end": "chr_0007_ikut_NormalAttack",
+    "chr_0007_ikut_normal_skill": "chr_0007_ikut_NormalSkill",
+    "chr_0007_ikut_ultimate_skill": "chr_0007_ikut_UltimateSkill",
+    "chr_0013_aglina_combo_skill": "chr_0013_aglina_ComboSkill",
+    "chr_0013_aglina_attack1": "chr_0013_aglina_NormalAttack",
+    "chr_0013_aglina_attack2": "chr_0013_aglina_NormalAttack",
+    "chr_0013_aglina_attack3": "chr_0013_aglina_NormalAttack",
+    "chr_0013_aglina_attack4": "chr_0013_aglina_NormalAttack",
+    "chr_0013_aglina_power_attack": "chr_0013_aglina_NormalAttack",
+    "chr_0013_aglina_plunging_attack_end": "chr_0013_aglina_NormalAttack",
+    "chr_0013_aglina_normal_skill": "chr_0013_aglina_NormalSkill",
+    "chr_0013_aglina_ultimate_skill": "chr_0013_aglina_UltimateSkill",
+    "chr_0009_azrila_combo_skill": "chr_0009_azrila_ComboSkill",
+    "chr_0009_azrila_attack1": "chr_0009_azrila_NormalAttack",
+    "chr_0009_azrila_attack2": "chr_0009_azrila_NormalAttack",
+    "chr_0009_azrila_attack3": "chr_0009_azrila_NormalAttack",
+    "chr_0009_azrila_attack4": "chr_0009_azrila_NormalAttack",
+    "chr_0009_azrila_power_attack": "chr_0009_azrila_NormalAttack",
+    "chr_0009_azrila_plunging_attack_end": "chr_0009_azrila_NormalAttack",
+    "chr_0009_azrila_normal_skill": "chr_0009_azrila_NormalSkill",
+    "chr_0009_azrila_ultimate_skill": "chr_0009_azrila_UltimateSkill",
+    "chr_0011_seraph_combo_skill": "chr_0011_seraph_ComboSkill",
+    "chr_0011_seraph_attack1": "chr_0011_seraph_NormalAttack",
+    "chr_0011_seraph_attack2": "chr_0011_seraph_NormalAttack",
+    "chr_0011_seraph_attack3": "chr_0011_seraph_NormalAttack",
+    "chr_0011_seraph_attack4": "chr_0011_seraph_NormalAttack",
+    "chr_0011_seraph_attack5": "chr_0011_seraph_NormalAttack",
+    "chr_0011_seraph_power_attack": "chr_0011_seraph_NormalAttack",
+    "chr_0011_seraph_plunging_attack_end": "chr_0011_seraph_NormalAttack",
+    "chr_0011_seraph_normal_skill": "chr_0011_seraph_NormalSkill",
+    "chr_0011_seraph_ultimate_skill": "chr_0011_seraph_UltimateSkill",
+    "chr_0038_purrche_combo_skill": "chr_0038_purrche_ComboSkill",
+    "chr_0038_purrche_attack1": "chr_0038_purrche_NormalAttack",
+    "chr_0038_purrche_attack2": "chr_0038_purrche_NormalAttack",
+    "chr_0038_purrche_attack3": "chr_0038_purrche_NormalAttack",
+    "chr_0038_purrche_power_attack": "chr_0038_purrche_NormalAttack",
+    "chr_0038_purrche_plunging_attack_end": "chr_0038_purrche_NormalAttack",
+    "chr_0038_purrche_normal_skill": "chr_0038_purrche_NormalSkill",
+    "chr_0038_purrche_normal_skill_counter": "chr_0038_purrche_NormalSkill",
+    "chr_0038_purrche_ultimate_skill": "chr_0038_purrche_UltimateSkill",
+    "chr_0014_aurora_combo_skill": "chr_0014_aurora_ComboSkill",
+    "chr_0014_aurora_attack1": "chr_0014_aurora_NormalAttack",
+    "chr_0014_aurora_attack2": "chr_0014_aurora_NormalAttack",
+    "chr_0014_aurora_attack3": "chr_0014_aurora_NormalAttack",
+    "chr_0014_aurora_power_attack": "chr_0014_aurora_NormalAttack",
+    "chr_0014_aurora_plunging_attack_end": "chr_0014_aurora_NormalAttack",
+    "chr_0014_aurora_normal_skill": "chr_0014_aurora_NormalSkill",
+    "chr_0014_aurora_ultimate_skill": "chr_0014_aurora_UltimateSkill",
+    "chr_0018_dapan_combo_skill": "chr_0018_dapan_ComboSkill",
+    "chr_0018_dapan_attack1": "chr_0018_dapan_NormalAttack",
+    "chr_0018_dapan_attack2": "chr_0018_dapan_NormalAttack",
+    "chr_0018_dapan_attack3": "chr_0018_dapan_NormalAttack",
+    "chr_0018_dapan_attack4": "chr_0018_dapan_NormalAttack",
+    "chr_0018_dapan_power_attack": "chr_0018_dapan_NormalAttack",
+    "chr_0018_dapan_plunging_attack_end": "chr_0018_dapan_NormalAttack",
+    "chr_0018_dapan_normal_skill": "chr_0018_dapan_NormalSkill",
+    "chr_0018_dapan_ultimate_skill": "chr_0018_dapan_UltimateSkill",
+    "chr_0016_laevat_combo_skill": "chr_0016_laevat_ComboSkill",
+    "chr_0016_laevat_attack1": "chr_0016_laevat_NormalAttack",
+    "chr_0016_laevat_attack2": "chr_0016_laevat_NormalAttack",
+    "chr_0016_laevat_attack3": "chr_0016_laevat_NormalAttack",
+    "chr_0016_laevat_attack4": "chr_0016_laevat_NormalAttack",
+    "chr_0016_laevat_attack5": "chr_0016_laevat_NormalAttack",
+    "chr_0016_laevat_power_attack": "chr_0016_laevat_NormalAttack",
+    "chr_0016_laevat_plunging_attack_end": "chr_0016_laevat_NormalAttack",
+    "chr_0016_laevat_normal_skill": "chr_0016_laevat_NormalSkill",
+    "chr_0016_laevat_normal_skill_during_ult": "chr_0016_laevat_NormalSkill",
+    "chr_0016_laevat_ultimate_skill": "chr_0016_laevat_UltimateSkill",
+    "chr_0016_laevat_ult_attack1": "chr_0016_laevat_UltimateSkill",
+    "chr_0016_laevat_ult_attack2": "chr_0016_laevat_UltimateSkill",
+    "chr_0016_laevat_ult_attack3": "chr_0016_laevat_UltimateSkill",
+    "chr_0016_laevat_ult_attack4": "chr_0016_laevat_UltimateSkill",
+    "chr_0026_lastrite_combo_skill": "chr_0026_lastrite_ComboSkill",
+    "chr_0026_lastrite_attack1": "chr_0026_lastrite_NormalAttack",
+    "chr_0026_lastrite_attack2": "chr_0026_lastrite_NormalAttack",
+    "chr_0026_lastrite_attack3": "chr_0026_lastrite_NormalAttack",
+    "chr_0026_lastrite_attack4": "chr_0026_lastrite_NormalAttack",
+    "chr_0026_lastrite_power_attack": "chr_0026_lastrite_NormalAttack",
+    "chr_0026_lastrite_plunging_attack_end": "chr_0026_lastrite_NormalAttack",
+    "chr_0026_lastrite_normal_skill": "chr_0026_lastrite_NormalSkill",
+    "chr_0026_lastrite_ultimate_skill": "chr_0026_lastrite_UltimateSkill",
+    "chr_0017_yvonne_combo_skill": "chr_0017_yvonne_ComboSkill",
+    "chr_0017_yvonne_attack1": "chr_0017_yvonne_NormalAttack",
+    "chr_0017_yvonne_attack2": "chr_0017_yvonne_NormalAttack",
+    "chr_0017_yvonne_attack3": "chr_0017_yvonne_NormalAttack",
+    "chr_0017_yvonne_attack4": "chr_0017_yvonne_NormalAttack",
+    "chr_0017_yvonne_attack5": "chr_0017_yvonne_NormalAttack",
+    "chr_0017_yvonne_power_attack": "chr_0017_yvonne_NormalAttack",
+    "chr_0017_yvonne_plunging_attack_end": "chr_0017_yvonne_NormalAttack",
+    "chr_0017_yvonne_normal_skill": "chr_0017_yvonne_NormalSkill",
+    "chr_0017_yvonne_ultimate_skill": "chr_0017_yvonne_UltimateSkill",
+    "chr_0017_yvonne_ult_attack1_1": "chr_0017_yvonne_UltimateSkill",
+    "chr_0017_yvonne_ult_attack2_1": "chr_0017_yvonne_UltimateSkill",
+    "chr_0017_yvonne_ult_attack2_2": "chr_0017_yvonne_UltimateSkill",
+    "chr_0017_yvonne_ult_attack3_1": "chr_0017_yvonne_UltimateSkill",
+    "chr_0017_yvonne_ult_attack3_2": "chr_0017_yvonne_UltimateSkill",
+    "chr_0017_yvonne_ult_attack_end": "chr_0017_yvonne_UltimateSkill",
+    "chr_0021_whiten_combo_skill": "chr_0021_whiten_ComboSkill",
+    "chr_0021_whiten_attack1": "chr_0021_whiten_NormalAttack",
+    "chr_0021_whiten_attack2": "chr_0021_whiten_NormalAttack",
+    "chr_0021_whiten_attack3": "chr_0021_whiten_NormalAttack",
+    "chr_0021_whiten_attack4": "chr_0021_whiten_NormalAttack",
+    "chr_0021_whiten_power_attack": "chr_0021_whiten_NormalAttack",
+    "chr_0021_whiten_plunging_attack_end": "chr_0021_whiten_NormalAttack",
+    "chr_0021_whiten_normal_skill": "chr_0021_whiten_NormalSkill",
+    "chr_0021_whiten_ultimate_skill": "chr_0021_whiten_UltimateSkill",
+    "chr_0027_tangtang_combo_skill": "chr_0027_tangtang_ComboSkill",
+    "chr_0027_tangtang_attack1": "chr_0027_tangtang_NormalAttack",
+    "chr_0027_tangtang_attack2": "chr_0027_tangtang_NormalAttack",
+    "chr_0027_tangtang_attack3": "chr_0027_tangtang_NormalAttack",
+    "chr_0027_tangtang_attack4": "chr_0027_tangtang_NormalAttack",
+    "chr_0027_tangtang_attack5": "chr_0027_tangtang_NormalAttack",
+    "chr_0027_tangtang_power_attack": "chr_0027_tangtang_NormalAttack",
+    "chr_0027_tangtang_plunging_attack_end": "chr_0027_tangtang_NormalAttack",
+    "chr_0027_tangtang_normal_skill": "chr_0027_tangtang_NormalSkill",
+    "chr_0027_tangtang_passive_0": "chr_0027_tangtang_NormalSkill",
+    "chr_0027_tangtang_ultimate_skill": "chr_0027_tangtang_UltimateSkill",
+    "chr_0036_jsspsi_combo_skill": "chr_0036_jsspsi_ComboSkill",
+    "chr_0036_jsspsi_attack1": "chr_0036_jsspsi_NormalAttack",
+    "chr_0036_jsspsi_attack2": "chr_0036_jsspsi_NormalAttack",
+    "chr_0036_jsspsi_attack3": "chr_0036_jsspsi_NormalAttack",
+    "chr_0036_jsspsi_attack4": "chr_0036_jsspsi_NormalAttack",
+    "chr_0036_jsspsi_attack5": "chr_0036_jsspsi_NormalAttack",
+    "chr_0036_jsspsi_plunging_attack_end": "chr_0036_jsspsi_NormalAttack",
+    "chr_0036_jsspsi_power_attack": "chr_0036_jsspsi_NormalAttack",
+    "chr_0036_jsspsi_normal_skill": "chr_0036_jsspsi_NormalSkill",
+    "chr_0036_jsspsi_normal_skill_1": "chr_0036_jsspsi_NormalSkill",
+    "chr_0036_jsspsi_ultimate_skill": "chr_0036_jsspsi_UltimateSkill",
+    "chr_0019_karin_combo_skill": "chr_0019_karin_ComboSkill",
+    "chr_0019_karin_attack1": "chr_0019_karin_NormalAttack",
+    "chr_0019_karin_attack2": "chr_0019_karin_NormalAttack",
+    "chr_0019_karin_attack3": "chr_0019_karin_NormalAttack",
+    "chr_0019_karin_attack4": "chr_0019_karin_NormalAttack",
+    "chr_0019_karin_power_attack": "chr_0019_karin_NormalAttack",
+    "chr_0019_karin_plunging_attack_end": "chr_0019_karin_NormalAttack",
+    "chr_0019_karin_normal_skill": "chr_0019_karin_NormalSkill",
+    "chr_0019_karin_ultimate_skill": "chr_0019_karin_UltimateSkill",
+    "chr_0020_meurs_combo_skill": "chr_0020_meurs_ComboSkill",
+    "chr_0020_meurs_attack1": "chr_0020_meurs_NormalAttack",
+    "chr_0020_meurs_attack2": "chr_0020_meurs_NormalAttack",
+    "chr_0020_meurs_attack3": "chr_0020_meurs_NormalAttack",
+    "chr_0020_meurs_attack4": "chr_0020_meurs_NormalAttack",
+    "chr_0020_meurs_power_attack": "chr_0020_meurs_NormalAttack",
+    "chr_0020_meurs_plunging_attack_end": "chr_0020_meurs_NormalAttack",
+    "chr_0020_meurs_normal_skill": "chr_0020_meurs_NormalSkill",
+    "chr_0020_meurs_ultimate_skill": "chr_0020_meurs_UltimateSkill",
+    "chr_0022_bounda_combo_skill": "chr_0022_bounda_ComboSkill",
+    "chr_0022_bounda_attack1": "chr_0022_bounda_NormalAttack",
+    "chr_0022_bounda_attack2": "chr_0022_bounda_NormalAttack",
+    "chr_0022_bounda_attack3": "chr_0022_bounda_NormalAttack",
+    "chr_0022_bounda_attack4": "chr_0022_bounda_NormalAttack",
+    "chr_0022_bounda_attack4_1": "chr_0022_bounda_NormalAttack",
+    "chr_0022_bounda_power_attack": "chr_0022_bounda_NormalAttack",
+    "chr_0022_bounda_plunging_attack_end": "chr_0022_bounda_NormalAttack",
+    "chr_0022_bounda_normal_skill": "chr_0022_bounda_NormalSkill",
+    "chr_0022_bounda_ultimate_skill": "chr_0022_bounda_UltimateSkill",
+    "chr_0023_antal_combo_skill": "chr_0023_antal_ComboSkill",
+    "chr_0023_antal_attack1": "chr_0023_antal_NormalAttack",
+    "chr_0023_antal_attack2": "chr_0023_antal_NormalAttack",
+    "chr_0023_antal_attack3": "chr_0023_antal_NormalAttack",
+    "chr_0023_antal_attack4": "chr_0023_antal_NormalAttack",
+    "chr_0023_antal_power_attack": "chr_0023_antal_NormalAttack",
+    "chr_0023_antal_plunging_attack_end": "chr_0023_antal_NormalAttack",
+    "chr_0023_antal_normal_skill": "chr_0023_antal_NormalSkill",
+    "chr_0023_antal_ultimate_skill": "chr_0023_antal_UltimateSkill",
+    "chr_0025_ardelia_combo_skill": "chr_0025_ardelia_ComboSkill",
+    "chr_0025_ardelia_attack1": "chr_0025_ardelia_NormalAttack",
+    "chr_0025_ardelia_attack2": "chr_0025_ardelia_NormalAttack",
+    "chr_0025_ardelia_attack3": "chr_0025_ardelia_NormalAttack",
+    "chr_0025_ardelia_attack4": "chr_0025_ardelia_NormalAttack",
+    "chr_0025_ardelia_power_attack": "chr_0025_ardelia_NormalAttack",
+    "chr_0025_ardelia_plunging_attack_end": "chr_0025_ardelia_NormalAttack",
+    "chr_0025_ardelia_normal_skill": "chr_0025_ardelia_NormalSkill",
+    "chr_0025_ardelia_ultimate_skill": "chr_0025_ardelia_UltimateSkill",
+    "chr_0024_deepfin_combo_skill": "chr_0024_deepfin_ComboSkill",
+    "chr_0024_deepfin_attack1": "chr_0024_deepfin_NormalAttack",
+    "chr_0024_deepfin_attack2": "chr_0024_deepfin_NormalAttack",
+    "chr_0024_deepfin_attack3": "chr_0024_deepfin_NormalAttack",
+    "chr_0024_deepfin_attack4": "chr_0024_deepfin_NormalAttack",
+    "chr_0024_deepfin_attack5": "chr_0024_deepfin_NormalAttack",
+    "chr_0024_deepfin_power_attack": "chr_0024_deepfin_NormalAttack",
+    "chr_0024_deepfin_plunging_attack_end": "chr_0024_deepfin_NormalAttack",
+    "chr_0024_deepfin_normal_skill": "chr_0024_deepfin_NormalSkill",
+    "chr_0024_deepfin_ultimate_skill": "chr_0024_deepfin_UltimateSkill",
+    "chr_0028_wulfa_combo_2_skill": "chr_0028_wulfa_ComboSkill",
+    "chr_0028_wulfa_combo_3_skill": "chr_0028_wulfa_ComboSkill",
+    "chr_0028_wulfa_attack1": "chr_0028_wulfa_NormalAttack",
+    "chr_0028_wulfa_attack2": "chr_0028_wulfa_NormalAttack",
+    "chr_0028_wulfa_attack3": "chr_0028_wulfa_NormalAttack",
+    "chr_0028_wulfa_attack4": "chr_0028_wulfa_NormalAttack",
+    "chr_0028_wulfa_attack5": "chr_0028_wulfa_NormalAttack",
+    "chr_0028_wulfa_power_attack": "chr_0028_wulfa_NormalAttack",
+    "chr_0028_wulfa_plunging_attack_end": "chr_0028_wulfa_NormalAttack",
+    "chr_0028_wulfa_normal_skill": "chr_0028_wulfa_NormalSkill",
+    "chr_0028_wulfa_ultimate_skill": "chr_0028_wulfa_UltimateSkill",
+    "chr_0029_pograni_combo_skill": "chr_0029_pograni_ComboSkill",
+    "chr_0029_pograni_attack1": "chr_0029_pograni_NormalAttack",
+    "chr_0029_pograni_attack2": "chr_0029_pograni_NormalAttack",
+    "chr_0029_pograni_attack3": "chr_0029_pograni_NormalAttack",
+    "chr_0029_pograni_attack4": "chr_0029_pograni_NormalAttack",
+    "chr_0029_pograni_attack5": "chr_0029_pograni_NormalAttack",
+    "chr_0029_pograni_power_attack": "chr_0029_pograni_NormalAttack",
+    "chr_0029_pograni_plunging_attack_end": "chr_0029_pograni_NormalAttack",
+    "chr_0029_pograni_normal_skill": "chr_0029_pograni_NormalSkill",
+    "chr_0029_pograni_ultimate_skill": "chr_0029_pograni_UltimateSkill",
+    "chr_0030_zhuangfy_combo_skill": "chr_0030_zhuangfy_ComboSkill",
+    "chr_0030_zhuangfy_combo_skill_ult": "chr_0030_zhuangfy_ComboSkill",
+    "chr_0030_zhuangfy_attack1": "chr_0030_zhuangfy_NormalAttack",
+    "chr_0030_zhuangfy_attack2": "chr_0030_zhuangfy_NormalAttack",
+    "chr_0030_zhuangfy_attack3": "chr_0030_zhuangfy_NormalAttack",
+    "chr_0030_zhuangfy_attack4": "chr_0030_zhuangfy_NormalAttack",
+    "chr_0030_zhuangfy_attack5": "chr_0030_zhuangfy_NormalAttack",
+    "chr_0030_zhuangfy_power_attack": "chr_0030_zhuangfy_NormalAttack",
+    "chr_0030_zhuangfy_plunging_attack_end": "chr_0030_zhuangfy_NormalAttack",
+    "chr_0030_zhuangfy_normal_skill": "chr_0030_zhuangfy_NormalSkill",
+    "chr_0030_zhuangfy_normal_skill_ult": "chr_0030_zhuangfy_NormalSkill",
+    "chr_0030_zhuangfy_ultimate_skill": "chr_0030_zhuangfy_UltimateSkill",
+    "chr_0030_zhuangfy_attack1_ult": "chr_0030_zhuangfy_UltimateSkill",
+    "chr_0030_zhuangfy_attack2_ult": "chr_0030_zhuangfy_UltimateSkill",
+    "chr_0030_zhuangfy_attack3_ult": "chr_0030_zhuangfy_UltimateSkill",
+    "chr_0034_typhoea_combo_skill": "chr_0034_typhoea_ComboSkill",
+    "chr_0034_typhoea_combo_skillfloating": "chr_0034_typhoea_ComboSkill",
+    "chr_0034_typhoea_attack1": "chr_0034_typhoea_NormalAttack",
+    "chr_0034_typhoea_attack2": "chr_0034_typhoea_NormalAttack",
+    "chr_0034_typhoea_attack3": "chr_0034_typhoea_NormalAttack",
+    "chr_0034_typhoea_attack4": "chr_0034_typhoea_NormalAttack",
+    "chr_0034_typhoea_attack5": "chr_0034_typhoea_NormalAttack",
+    "chr_0034_typhoea_power_attack": "chr_0034_typhoea_NormalAttack",
+    "chr_0034_typhoea_plunging_attack_end": "chr_0034_typhoea_NormalAttack",
+    "chr_0034_typhoea_normal_skill_floating_start": "chr_0034_typhoea_NormalSkill",
+    "chr_0034_typhoea_normal_skill_floating_loop": "chr_0034_typhoea_NormalSkill",
+    "chr_0034_typhoea_normal_skill_floating_end": "chr_0034_typhoea_NormalSkill",
+    "chr_0034_typhoea_floating_attack1": "chr_0034_typhoea_NormalSkill",
+    "chr_0034_typhoea_floating_attack2": "chr_0034_typhoea_NormalSkill",
+    "chr_0034_typhoea_floating_attack3": "chr_0034_typhoea_NormalSkill",
+    "chr_0034_typhoea_floating_attack4": "chr_0034_typhoea_NormalSkill",
+    "chr_0034_typhoea_floating_attack5": "chr_0034_typhoea_NormalSkill",
+    "chr_0034_typhoea_ultimate_skillfloating": "chr_0034_typhoea_UltimateSkill",
+    "chr_0035_liino_combo_skill": "chr_0035_liino_ComboSkill",
+    "chr_0035_liino_attack1": "chr_0035_liino_NormalAttack",
+    "chr_0035_liino_attack2": "chr_0035_liino_NormalAttack",
+    "chr_0035_liino_attack3": "chr_0035_liino_NormalAttack",
+    "chr_0035_liino_attack4": "chr_0035_liino_NormalAttack",
+    "chr_0035_liino_attack5": "chr_0035_liino_NormalAttack",
+    "chr_0035_liino_power_attack": "chr_0035_liino_NormalAttack",
+    "chr_0035_liino_plunging_attack_end": "chr_0035_liino_NormalAttack",
+    "chr_0035_liino_normal_skill": "chr_0035_liino_NormalSkill",
+    "chr_0035_liino_normal_skill_end": "chr_0035_liino_NormalSkill",
+    "chr_0035_liino_normal_skill_combo": "chr_0035_liino_NormalSkill",
+    "chr_0035_liino_ultimate_skill": "chr_0035_liino_UltimateSkill"
+  },
+  "_source": {
+    "file": "zmdlogs技能中文化油猴脚本.js",
+    "sha256": "d7b60bd1c96898c24c81cc282322342417abeebbca714dd04095ddd342b462f9",
+    "method": "JSONDecoder.raw_decode of const DICT only; JavaScript not executed",
+    "upstream": "AKEData CharGrowthTable / I18nTextTable_CN / CharacterTable (as stated in supplied dictionary)"
+  }
+}

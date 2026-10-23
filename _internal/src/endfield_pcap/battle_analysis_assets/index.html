@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' qrc:; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'">
+<title>本地战斗分析</title><link rel="stylesheet" href="analysis.css">
+</head><body>
+<main>
+  <header class="hero"><div class="eyebrow">ENDFIELD · LOCAL ANALYSIS</div>
+    <div class="heading"><h1 id="record-name">正在读取战斗数据…</h1><div id="metrics"></div></div>
+    <div id="roster" class="roster"></div>
+  </header>
+  <nav class="tabs" aria-label="分析页面"><button data-tab="timeline" class="active">战斗时间轴</button><button data-tab="skills">角色技能构成</button><button data-tab="enemy">敌方数据</button></nav>
+  <section id="timeline" class="panel page">
+    <div class="panel-heading"><div><div class="eyebrow">BATTLE TIMELINE</div><h2>轨道时间轴</h2></div>
+      <div class="controls"><label>角色 <select id="character"></select></label><label><input id="buffs" type="checkbox">BUFF 轨道</label><label title="完整技能起止直接使用日志；只有缺失起止时，按首个实际命中点 + 固定配置时长显示虚线回退块。"><input id="fallback" type="checkbox">固定起止配置回退</label><output id="hover-time">时间 —</output><button id="toggle-details">展开详情 ▸</button><button class="help" id="timeline-help" aria-label="时间轴说明">?</button></div>
+    </div>
+    <div class="toolbar"><label>时间范围 <input id="zoom" type="range" min="100" max="1000" step="10" value="100"></label><button id="fit">适合窗口</button><label>单位 <select id="unit"><option value="seconds">秒</option><option value="frames">帧（30F/s）</option></select></label><label>图形大小 <input id="graphics" type="range" min="75" max="250" step="5" value="100"><output id="graphics-value">100%</output></label><label>伤害曲线 <select id="curve"><option value="damage">累计 DMG</option><option value="rdamage">累计 rDMG</option><option value="dps">DPS</option><option value="rdps">rDPS</option><option value="none">隐藏</option></select></label></div>
+    <div id="timeline-scroll" tabindex="0" aria-label="战斗时间轴图"><div id="timeline-grid"></div></div>
+    <details id="inspector"><summary>技能 / BUFF 证据详情</summary><div class="inspector-header"><div class="inspector-tabs"><button data-detail="overview" class="active">事件概况</button><button data-detail="allocation">贡献分配</button><button data-detail="hits">逐击证据</button><button data-detail="raw">原始证据</button></div><div class="inspector-actions"><button id="maximize-details" title="最大化详情" aria-label="最大化详情">□</button><button id="collapse-details" title="收起详情" aria-label="收起详情">×</button></div></div><div id="inspector-body">点击技能块或伤害点查看现有核心证据。</div></details>
+  </section>
+  <section id="skills" class="panel page" hidden><div class="panel-heading"><div><div class="eyebrow">SKILL BREAKDOWN</div><h2>角色技能构成</h2></div><label>角色 <select id="skill-character"></select></label></div><div id="skill-composition" class="composition"></div><div id="skill-table" class="table-wrap"></div></section>
+  <section id="enemy" class="panel page" hidden><div class="panel-heading"><div><div class="eyebrow">ENEMY EVIDENCE</div><h2>敌方数据</h2></div></div><p class="muted">实体抗性为 ENTITY_STATS 记录时刻的观测点数，不等同于每一击的有效抗性。本击抗性仅在 PKT_ATTR 有一致证据时展示；缺失显示「未知」。</p><div id="enemy-stats" class="table-wrap"></div><h3>失衡观测</h3><div id="enemy-poise" class="table-wrap"></div><p class="muted">观测峰值不代表真实上限。POISE_V1 没有目标 ID；同刻命中多目标时显示「目标未绑定」。零值采样不等于完整失衡持续时间。曲线及悬浮预览在时间轴下方。</p></section>
+  <details class="panel quality"><summary>快照质量与原始质量字段</summary><pre id="quality"></pre></details>
+</main>
+<div id="tooltip" role="tooltip" hidden></div><div id="failure" hidden></div>
+<script src="qrc:///qtwebchannel/qwebchannel.js"></script><script src="shared.js"></script><script src="charts.js"></script><script src="timeline.js"></script><script src="details.js"></script><script src="app.js"></script>
+</body></html>

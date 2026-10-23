@@ -1,0 +1,12 @@
+# Install missing runtime packages; existing usable versions may be reused.
+PySide6
+PySide6-Fluent-Widgets
+dpkt
+pycryptodome
+protobuf
+websockets
+psutil
+pydantic
+numpy
+httpx
+pywin32

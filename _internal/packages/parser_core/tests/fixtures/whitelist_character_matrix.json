@@ -1,0 +1,1437 @@
+{
+  "schemaVersion": 1,
+  "scope": "Explicit synthetic observed values and exact current template/action bindings, not gameplay coverage.",
+  "rows": [
+    {
+      "key": "buff_common_affixes_vulnerable_spell",
+      "records": [
+        {
+          "event_key": "buff_common_affixes_vulnerable_spell",
+          "raw_event_key": "buff_common_affixes_vulnerable_spell",
+          "uid": "7001",
+          "source_character_key": "chr_0025_ardelia",
+          "source_actor_id": "2001",
+          "target_character_key": "eny_0051_rodin",
+          "target_actor_id": "3001",
+          "bb_values": {
+            "rate": 0.2,
+            "duration": 10.0,
+            "physpell_up": 30.0
+          }
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "fragile",
+          "element": "fire",
+          "bb_key": "rate"
+        },
+        {
+          "zone": "fragile",
+          "element": "pulse",
+          "bb_key": "rate"
+        },
+        {
+          "zone": "fragile",
+          "element": "cryst",
+          "bb_key": "rate"
+        },
+        {
+          "zone": "fragile",
+          "element": "natural",
+          "bb_key": "rate"
+        }
+      ],
+      "dynamic": false
+    },
+    {
+      "key": "buff_common_affixes_vulnerable_physical",
+      "records": [
+        {
+          "event_key": "buff_common_affixes_vulnerable_physical",
+          "raw_event_key": "buff_common_affixes_vulnerable_physical",
+          "uid": "7001",
+          "source_character_key": "chr_0025_ardelia",
+          "source_actor_id": "2001",
+          "target_character_key": "eny_0051_rodin",
+          "target_actor_id": "3001",
+          "bb_values": {
+            "rate": 0.2,
+            "duration": 10.0,
+            "physpell_up": 30.0
+          }
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "fragile",
+          "element": "physical",
+          "bb_key": "rate"
+        }
+      ],
+      "dynamic": false
+    },
+    {
+      "key": "buff_common_natural_natural_corrupt_do",
+      "records": [
+        {
+          "event_key": "buff_common_natural_natural_corrupt_do",
+          "raw_event_key": "buff_common_natural_natural_corrupt_do",
+          "uid": "7001",
+          "source_character_key": "chr_0025_ardelia",
+          "source_actor_id": "2001",
+          "target_character_key": "eny_0051_rodin",
+          "target_actor_id": "3001",
+          "bb_values": {
+            "def_decrease": 0.2,
+            "additional_def_decrease": 0.2,
+            "duration": 10.0,
+            "physpell_up": 30.0
+          }
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "res",
+          "element": "all",
+          "bb_key": "def_decrease"
+        },
+        {
+          "zone": "res",
+          "element": "all",
+          "bb_key": "additional_def_decrease"
+        }
+      ],
+      "dynamic": true
+    },
+    {
+      "key": "buff_common_pulse_pulse_conduct_triggered_do",
+      "records": [
+        {
+          "event_key": "buff_common_pulse_pulse_conduct_triggered_do",
+          "raw_event_key": "buff_common_pulse_pulse_conduct_triggered_do",
+          "uid": "7001",
+          "source_character_key": "chr_0025_ardelia",
+          "source_actor_id": "2001",
+          "target_character_key": "eny_0051_rodin",
+          "target_actor_id": "3001",
+          "bb_values": {
+            "final_spell_resistance_decrease": 0.2,
+            "duration": 10.0,
+            "physpell_up": 30.0
+          }
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "vuln_taken",
+          "element": "spell",
+          "bb_key": "final_spell_resistance_decrease",
+          "expose_bb_key": true
+        }
+      ],
+      "dynamic": false
+    },
+    {
+      "key": "buff_common_natural_fire_triggered",
+      "records": [
+        {
+          "event_key": "buff_common_natural_fire_triggered",
+          "raw_event_key": "buff_common_natural_fire_triggered",
+          "uid": "7001",
+          "source_character_key": "chr_0032_lizhiyan",
+          "source_actor_id": "2001",
+          "target_character_key": "eny_0051_rodin",
+          "target_actor_id": "3001",
+          "bb_values": {"def_decrease": -10.0, "additional_def_decrease": 0.0, "duration": 25.0}
+        }
+      ],
+      "declaredEffects": [
+        {"zone": "res", "element": "all", "bb_key": "def_decrease"},
+        {"zone": "res", "element": "all", "bb_key": "additional_def_decrease"}
+      ],
+      "dynamic": true
+    },
+    {
+      "key": "buff_common_natural_cryst_triggered",
+      "records": [
+        {
+          "event_key": "buff_common_natural_cryst_triggered",
+          "raw_event_key": "buff_common_natural_cryst_triggered",
+          "uid": "7001",
+          "source_character_key": "chr_0025_ardelia",
+          "source_actor_id": "2001",
+          "target_character_key": "eny_0051_rodin",
+          "target_actor_id": "3001",
+          "bb_values": {
+            "def_decrease": 0.2,
+            "additional_def_decrease": 0.2,
+            "duration": 10.0,
+            "physpell_up": 30.0
+          }
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "res",
+          "element": "all",
+          "bb_key": "def_decrease"
+        },
+        {
+          "zone": "res",
+          "element": "all",
+          "bb_key": "additional_def_decrease"
+        }
+      ],
+      "dynamic": true
+    },
+    {
+      "key": "buff_physical_do_fracture",
+      "records": [
+        {
+          "event_key": "buff_physical_do_fracture",
+          "raw_event_key": "buff_physical_do_fracture",
+          "uid": "7001",
+          "source_character_key": "chr_0025_ardelia",
+          "source_actor_id": "2001",
+          "target_character_key": "eny_0051_rodin",
+          "target_actor_id": "3001",
+          "bb_values": {
+            "physical_res_down": 0.2,
+            "duration": 10.0,
+            "physpell_up": 30.0
+          }
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "vuln_taken",
+          "element": "physical",
+          "bb_key": "physical_res_down"
+        }
+      ],
+      "dynamic": false
+    },
+    {
+      "key": "buff_chr_0013_aglina_ultimate_spell_vulnerable",
+      "records": [
+        {
+          "event_key": "buff_common_affixes_vulnerable_spell",
+          "raw_event_key": "buff_common_affixes_vulnerable_spell",
+          "uid": "7001",
+          "source_character_key": "chr_0013_aglina",
+          "source_actor_id": "2001",
+          "target_character_key": "eny_0051_rodin",
+          "target_actor_id": "3001",
+          "bb_values": {
+            "rate": 0.2
+          },
+          "origin_observations": [
+            {
+              "schemaVersion": 1,
+              "_boundCreateRecord": true,
+              "buffUid": "7001",
+              "buffTemplate": "buff_common_affixes_vulnerable_spell",
+              "sourceActorId": "2001",
+              "targetActorId": "3001",
+              "environmentType": "Buff",
+              "ownerType": "1",
+              "environmentInstId": "7000",
+              "templateStrId": "buff_chr_0013_aglina_ultimate_spell_vulnerable",
+              "templateIntId": null,
+              "actionId": 0,
+              "operationSeq": 1,
+              "triggerType": 0
+            }
+          ]
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "fragile",
+          "element": "spell",
+          "bb_key": "rate"
+        }
+      ],
+      "dynamic": false
+    },
+    {
+      "key": "buff_chr_0003_endminf_talent_1_tirgger",
+      "records": [
+        {
+          "event_key": "buff_chr_0003_endminf_talent_1_tirgger",
+          "raw_event_key": "buff_chr_0003_endminf_talent_1_tirgger",
+          "uid": "7001",
+          "source_character_key": "chr_0002_endminm",
+          "source_actor_id": "2001",
+          "target_character_key": "eny_0051_rodin",
+          "target_actor_id": "3001",
+          "bb_values": {
+            "atk_up": 0.2,
+            "duration": 10.0,
+            "physpell_up": 30.0
+          }
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "atk",
+          "element": "all",
+          "bb_key": "atk_up"
+        }
+      ],
+      "dynamic": false
+    },
+    {
+      "key": "buff_chr_0003_endminf_talent_0",
+      "records": [
+        {
+          "event_key": "buff_chr_0003_endminf_talent_0",
+          "raw_event_key": "buff_chr_0003_endminf_talent_0",
+          "uid": "7001",
+          "source_character_key": "chr_0002_endminm",
+          "source_actor_id": "2001",
+          "target_character_key": "eny_0051_rodin",
+          "target_actor_id": "3001",
+          "bb_values": {
+            "dmg": 0.2,
+            "duration": 10.0,
+            "physpell_up": 30.0
+          }
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "vuln_taken",
+          "element": "physical",
+          "bb_key": "dmg"
+        }
+      ],
+      "dynamic": false
+    },
+    {
+      "key": "buff_chr_0007_ikut_atk_buff_talent",
+      "records": [
+        {
+          "event_key": "buff_chr_0007_ikut_atk_buff_talent",
+          "raw_event_key": "buff_chr_0007_ikut_atk_buff_talent",
+          "uid": "7001",
+          "source_character_key": "chr_0007_ikut",
+          "source_actor_id": "2001",
+          "target_character_key": "eny_0051_rodin",
+          "target_actor_id": "3001",
+          "bb_values": {
+            "pulse_up": 0.2,
+            "duration": 10.0,
+            "physpell_up": 30.0
+          }
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "dmg_inc",
+          "element": "pulse",
+          "bb_key": "pulse_up"
+        }
+      ],
+      "dynamic": false
+    },
+    {
+      "key": "buff_chr_0015_lifeng_purify",
+      "records": [
+        {
+          "event_key": "buff_common_affixes_vulnerable_physical",
+          "raw_event_key": "buff_common_affixes_vulnerable_physical",
+          "uid": "7001",
+          "source_character_key": "chr_0015_lifeng",
+          "source_actor_id": "2001",
+          "target_character_key": "eny_0051_rodin",
+          "target_actor_id": "3001",
+          "bb_values": {
+            "rate": 0.2
+          },
+          "origin_observations": [
+            {
+              "schemaVersion": 1,
+              "_boundCreateRecord": true,
+              "buffUid": "7001",
+              "buffTemplate": "buff_common_affixes_vulnerable_physical",
+              "sourceActorId": "2001",
+              "targetActorId": "3001",
+              "environmentType": "Buff",
+              "ownerType": "1",
+              "environmentInstId": "7000",
+              "templateStrId": "buff_chr_0015_lifeng_purify",
+              "templateIntId": null,
+              "actionId": 0,
+              "operationSeq": 1,
+              "triggerType": 0
+            }
+          ]
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "fragile",
+          "element": "physical",
+          "bb_key": "rate"
+        }
+      ],
+      "dynamic": false
+    },
+    {
+      "key": "buff_chr_0021_whiten_combo_skill_physical_vulnerable",
+      "records": [
+        {
+          "event_key": "buff_common_affixes_vulnerable_physical",
+          "raw_event_key": "buff_common_affixes_vulnerable_physical",
+          "uid": "7001",
+          "source_character_key": "chr_0021_whiten",
+          "source_actor_id": "2001",
+          "target_character_key": "eny_0051_rodin",
+          "target_actor_id": "3001",
+          "bb_values": {
+            "rate": 0.2
+          },
+          "origin_observations": [
+            {
+              "schemaVersion": 1,
+              "_boundCreateRecord": true,
+              "buffUid": "7001",
+              "buffTemplate": "buff_common_affixes_vulnerable_physical",
+              "sourceActorId": "2001",
+              "targetActorId": "3001",
+              "environmentType": "Buff",
+              "ownerType": "1",
+              "environmentInstId": "7000",
+              "templateStrId": "buff_chr_0021_whiten_combo_skill_physical_vulnerable",
+              "templateIntId": null,
+              "actionId": 0,
+              "operationSeq": 1,
+              "triggerType": 0
+            }
+          ]
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "fragile",
+          "element": "physical",
+          "bb_key": "rate"
+        }
+      ],
+      "dynamic": false
+    },
+    {
+      "key": "buff_chr_0024_deepfin_potential_3",
+      "records": [
+        {
+          "event_key": "buff_chr_0024_deepfin_potential_3",
+          "raw_event_key": "buff_chr_0024_deepfin_potential_3",
+          "uid": "7001",
+          "source_character_key": "chr_0024_deepfin",
+          "source_actor_id": "2001",
+          "target_character_key": "eny_0051_rodin",
+          "target_actor_id": "3001",
+          "bb_values": {
+            "atk_up": 0.2,
+            "duration": 10.0,
+            "physpell_up": 30.0
+          }
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "atk",
+          "element": "all",
+          "bb_key": "atk_up"
+        }
+      ],
+      "dynamic": false
+    },
+    {
+      "key": "buff_chr_0011_seraph_ultimate_effect",
+      "records": [
+        {
+          "uid": "9223372036854775901",
+          "event_key": "buff_common_affixes_enhance_crystal",
+          "raw_event_key": "buff_common_affixes_enhance_crystal",
+          "source_actor_id": "18446744073709550001",
+          "target_actor_id": "18446744073709550002",
+          "source_character_key": "chr_0011_seraph",
+          "target_character_key": "chr_0004_pelica",
+          "bb_values": {
+            "rate": 0.37
+          },
+          "origin_observations": [
+            {
+              "schemaVersion": 1,
+              "_boundCreateRecord": true,
+              "buffUid": "9223372036854775901",
+              "buffTemplate": "buff_common_affixes_enhance_crystal",
+              "sourceActorId": "18446744073709550001",
+              "targetActorId": "18446744073709550002",
+              "environmentType": "Buff",
+              "ownerType": "1",
+              "environmentInstId": "9223372036854775900",
+              "templateStrId": "buff_chr_0011_seraph_atk_buff",
+              "templateIntId": null,
+              "actionId": 6,
+              "operationSeq": 7,
+              "triggerType": 0
+            }
+          ]
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "amp",
+          "element": "cryst",
+          "bb_key": "rate"
+        }
+      ],
+      "dynamic": false
+    },
+    {
+      "key": "buff_chr_0011_seraph_ultimate_effect_2",
+      "records": [
+        {
+          "uid": "9223372036854775901",
+          "event_key": "buff_common_affixes_enhance_natural",
+          "raw_event_key": "buff_common_affixes_enhance_natural",
+          "source_actor_id": "18446744073709550001",
+          "target_actor_id": "18446744073709550002",
+          "source_character_key": "chr_0011_seraph",
+          "target_character_key": "chr_0004_pelica",
+          "bb_values": {
+            "rate": 0.37
+          },
+          "origin_observations": [
+            {
+              "schemaVersion": 1,
+              "_boundCreateRecord": true,
+              "buffUid": "9223372036854775901",
+              "buffTemplate": "buff_common_affixes_enhance_natural",
+              "sourceActorId": "18446744073709550001",
+              "targetActorId": "18446744073709550002",
+              "environmentType": "Buff",
+              "ownerType": "1",
+              "environmentInstId": "9223372036854775900",
+              "templateStrId": "buff_chr_0011_seraph_atk_buff",
+              "templateIntId": null,
+              "actionId": 7,
+              "operationSeq": 7,
+              "triggerType": 0
+            }
+          ]
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "amp",
+          "element": "natural",
+          "bb_key": "rate"
+        }
+      ],
+      "dynamic": false
+    },
+    {
+      "key": "buff_common_affixes_enhance_spell_default_child",
+      "records": [
+        {
+          "uid": "9223372036854775901",
+          "event_key": "buff_common_affixes_enhance_spell",
+          "raw_event_key": "buff_common_affixes_enhance_spell",
+          "source_actor_id": "18446744073709550001",
+          "target_actor_id": "18446744073709550002",
+          "source_character_key": "chr_0011_seraph",
+          "target_character_key": "chr_0004_pelica",
+          "bb_values": {
+            "rate": 0.37
+          },
+          "origin_observations": [
+            {
+              "schemaVersion": 1,
+              "_boundCreateRecord": true,
+              "buffUid": "9223372036854775901",
+              "buffTemplate": "buff_common_affixes_enhance_spell",
+              "sourceActorId": "18446744073709550001",
+              "targetActorId": "18446744073709550002",
+              "environmentType": "Buff",
+              "ownerType": "1",
+              "environmentInstId": "9223372036854775900",
+              "templateStrId": "buff_chr_0011_seraph_potential_1_atkup",
+              "templateIntId": null,
+              "actionId": 0,
+              "operationSeq": 7,
+              "triggerType": 0
+            }
+          ]
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "amp",
+          "element": "spell",
+          "bb_key": "rate"
+        }
+      ],
+      "dynamic": false
+    },
+    {
+      "key": "buff_chr_0011_seraph_talent_1_crystup",
+      "records": [
+        {
+          "event_key": "buff_chr_0011_seraph_talent_1_crystup",
+          "raw_event_key": "buff_chr_0011_seraph_talent_1_crystup",
+          "uid": "7001",
+          "source_character_key": "chr_0011_seraph",
+          "source_actor_id": "2001",
+          "target_character_key": "eny_0051_rodin",
+          "target_actor_id": "3001",
+          "bb_values": {
+            "cryst_up": 0.2,
+            "duration": 10.0,
+            "physpell_up": 30.0
+          }
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "vuln_taken",
+          "element": "cryst",
+          "bb_key": "cryst_up"
+        }
+      ],
+      "dynamic": false
+    },
+    {
+      "key": "buff_chr_0026_lastrite_talent_1_vul",
+      "records": [
+        {
+          "event_key": "buff_common_affixes_vulnerable_crystal",
+          "raw_event_key": "buff_common_affixes_vulnerable_crystal",
+          "uid": "7001",
+          "source_character_key": "chr_0026_lastrite",
+          "source_actor_id": "2001",
+          "target_character_key": "eny_0051_rodin",
+          "target_actor_id": "3001",
+          "bb_values": {
+            "rate": 0.2
+          },
+          "origin_observations": [
+            {
+              "schemaVersion": 1,
+              "_boundCreateRecord": true,
+              "buffUid": "7001",
+              "buffTemplate": "buff_common_affixes_vulnerable_crystal",
+              "sourceActorId": "2001",
+              "targetActorId": "3001",
+              "environmentType": "Buff",
+              "ownerType": "1",
+              "environmentInstId": "7000",
+              "templateStrId": "buff_chr_0026_lastrite_talent_1_vul",
+              "templateIntId": null,
+              "actionId": 1,
+              "operationSeq": 1,
+              "triggerType": 0
+            }
+          ]
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "fragile",
+          "element": "cryst",
+          "bb_key": "crystal_vul",
+          "bb_keys": [
+            "crystal_vul",
+            "rate"
+          ]
+        }
+      ],
+      "dynamic": false
+    },
+    {
+      "key": "buff_common_affixes_vulnerable_crystal_lizhiyan_child",
+      "records": [
+        {
+          "uid": "9223372036854775901",
+          "event_key": "buff_common_affixes_vulnerable_crystal",
+          "raw_event_key": "buff_common_affixes_vulnerable_crystal",
+          "source_actor_id": "18446744073709550001",
+          "target_actor_id": "18446744073709550002",
+          "source_character_key": "chr_0032_lizhiyan",
+          "target_character_key": "chr_0004_pelica",
+          "bb_values": {
+            "rate": 0.37
+          },
+          "origin_observations": [
+            {
+              "schemaVersion": 1,
+              "_boundCreateRecord": true,
+              "buffUid": "9223372036854775901",
+              "buffTemplate": "buff_common_affixes_vulnerable_crystal",
+              "sourceActorId": "18446744073709550001",
+              "targetActorId": "18446744073709550002",
+              "environmentType": "Buff",
+              "ownerType": "1",
+              "environmentInstId": "9223372036854775900",
+              "templateStrId": "buff_chr_0032_lizhiyan_combo_skill_spell_vulnerable",
+              "templateIntId": null,
+              "actionId": 2,
+              "operationSeq": 7,
+              "triggerType": 0
+            }
+          ]
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "fragile",
+          "element": "cryst",
+          "bb_key": "rate"
+        }
+      ],
+      "dynamic": false
+    },
+    {
+      "key": "buff_common_affixes_vulnerable_natural_lizhiyan_child",
+      "records": [
+        {
+          "uid": "9223372036854775901",
+          "event_key": "buff_common_affixes_vulnerable_natural",
+          "raw_event_key": "buff_common_affixes_vulnerable_natural",
+          "source_actor_id": "18446744073709550001",
+          "target_actor_id": "18446744073709550002",
+          "source_character_key": "chr_0032_lizhiyan",
+          "target_character_key": "chr_0004_pelica",
+          "bb_values": {
+            "rate": 0.37
+          },
+          "origin_observations": [
+            {
+              "schemaVersion": 1,
+              "_boundCreateRecord": true,
+              "buffUid": "9223372036854775901",
+              "buffTemplate": "buff_common_affixes_vulnerable_natural",
+              "sourceActorId": "18446744073709550001",
+              "targetActorId": "18446744073709550002",
+              "environmentType": "Buff",
+              "ownerType": "1",
+              "environmentInstId": "9223372036854775900",
+              "templateStrId": "buff_chr_0032_lizhiyan_combo_skill_spell_vulnerable",
+              "templateIntId": null,
+              "actionId": 1,
+              "operationSeq": 7,
+              "triggerType": 0
+            }
+          ]
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "fragile",
+          "element": "natural",
+          "bb_key": "rate"
+        }
+      ],
+      "dynamic": false
+    },
+    {
+      "key": "buff_common_affixes_vulnerable_pulse_default_child",
+      "records": [
+        {
+          "uid": "9223372036854775901",
+          "event_key": "buff_common_affixes_vulnerable_pulse",
+          "raw_event_key": "buff_common_affixes_vulnerable_pulse",
+          "source_actor_id": "18446744073709550001",
+          "target_actor_id": "18446744073709550002",
+          "source_character_key": "chr_0012_avywen",
+          "target_character_key": "chr_0004_pelica",
+          "bb_values": {
+            "rate": 0.37
+          },
+          "origin_observations": [
+            {
+              "schemaVersion": 1,
+              "_boundCreateRecord": true,
+              "buffUid": "9223372036854775901",
+              "buffTemplate": "buff_common_affixes_vulnerable_pulse",
+              "sourceActorId": "18446744073709550001",
+              "targetActorId": "18446744073709550002",
+              "environmentType": "Buff",
+              "ownerType": "1",
+              "environmentInstId": "9223372036854775900",
+              "templateStrId": "buff_chr_0012_avywen_ultimate_skill_debuff",
+              "templateIntId": null,
+              "actionId": 0,
+              "operationSeq": 7,
+              "triggerType": 0
+            }
+          ],
+          "source_skill_family_key": "chr_0012_avywen_ultimate_skill"
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "fragile",
+          "element": "pulse",
+          "bb_key": "rate"
+        }
+      ],
+      "dynamic": false
+    },
+    {
+      "key": "buff_chr_0019_karin_potential_3",
+      "records": [
+        {
+          "event_key": "buff_chr_0019_karin_potential_3",
+          "raw_event_key": "buff_chr_0019_karin_potential_3",
+          "uid": "7001",
+          "source_character_key": "chr_0019_karin",
+          "source_actor_id": "2001",
+          "target_character_key": "eny_0051_rodin",
+          "target_actor_id": "3001",
+          "bb_values": {
+            "atk": 0.2,
+            "duration": 10.0,
+            "physpell_up": 30.0
+          }
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "atk",
+          "element": "all",
+          "bb_key": "atk"
+        }
+      ],
+      "dynamic": false
+    },
+    {
+      "key": "buff_chr_0023_antal_normal_fragile",
+      "records": [
+        {
+          "event_key": "buff_common_affixes_vulnerable_fire",
+          "raw_event_key": "buff_common_affixes_vulnerable_fire",
+          "uid": "9223372036854776111",
+          "source_character_key": "chr_0023_antal",
+          "source_actor_id": "9223372036854776113",
+          "target_character_key": "eny_0051_rodin",
+          "target_actor_id": "9223372036854776112",
+          "bb_values": {
+            "rate": 0.2
+          },
+          "origin_observations": [
+            {
+              "schemaVersion": 1,
+              "_boundCreateRecord": true,
+              "buffUid": "9223372036854776111",
+              "buffTemplate": "buff_common_affixes_vulnerable_fire",
+              "sourceActorId": "9223372036854776113",
+              "targetActorId": "9223372036854776112",
+              "environmentType": "Buff",
+              "ownerType": "1",
+              "environmentInstId": "9223372036854776114",
+              "templateIntId": 912,
+              "templateStrId": null,
+              "actionId": 1,
+              "operationSeq": 10,
+              "triggerType": 0
+            }
+          ]
+        },
+        {
+          "event_key": "buff_common_affixes_vulnerable_pulse",
+          "raw_event_key": "buff_common_affixes_vulnerable_pulse",
+          "uid": "9223372036854776111",
+          "source_character_key": "chr_0023_antal",
+          "source_actor_id": "9223372036854776113",
+          "target_character_key": "eny_0051_rodin",
+          "target_actor_id": "9223372036854776112",
+          "bb_values": {
+            "rate": 0.2
+          },
+          "origin_observations": [
+            {
+              "schemaVersion": 1,
+              "_boundCreateRecord": true,
+              "buffUid": "9223372036854776111",
+              "buffTemplate": "buff_common_affixes_vulnerable_pulse",
+              "sourceActorId": "9223372036854776113",
+              "targetActorId": "9223372036854776112",
+              "environmentType": "Buff",
+              "ownerType": "1",
+              "environmentInstId": "9223372036854776114",
+              "templateIntId": 912,
+              "templateStrId": null,
+              "actionId": 0,
+              "operationSeq": 10,
+              "triggerType": 0
+            }
+          ]
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "fragile",
+          "element": "pulse",
+          "bb_key": "rate",
+          "add_bb_key": "potential_5_rate",
+          "delay_bb_key": "delay_time"
+        },
+        {
+          "zone": "fragile",
+          "element": "fire",
+          "bb_key": "rate",
+          "add_bb_key": "potential_5_rate",
+          "delay_bb_key": "delay_time"
+        }
+      ],
+      "dynamic": true
+    },
+    {
+      "key": "buff_chr_0023_antal_ultimate_enhance",
+      "records": [
+        {
+          "uid": "9223372036854776011",
+          "event_key": "buff_common_affixes_enhance_fire",
+          "raw_event_key": "buff_common_affixes_enhance_fire",
+          "source_character_key": "chr_0023_antal",
+          "target_character_key": "chr_0004_pelica",
+          "source_actor_id": "9223372036854776012",
+          "target_actor_id": "9223372036854776013",
+          "bb_values": {
+            "rate": 0.25
+          },
+          "origin_observations": [
+            {
+              "schemaVersion": 1,
+              "_boundCreateRecord": true,
+              "buffUid": "9223372036854776011",
+              "buffTemplate": "buff_common_affixes_enhance_fire",
+              "sourceActorId": "9223372036854776012",
+              "targetActorId": "9223372036854776013",
+              "environmentType": "Buff",
+              "ownerType": "1",
+              "environmentInstId": "9223372036854776010",
+              "templateStrId": "buff_chr_0023_antal_utimate_skill",
+              "templateIntId": null,
+              "actionId": 1,
+              "operationSeq": 21,
+              "triggerType": 0
+            }
+          ]
+        },
+        {
+          "uid": "9223372036854776011",
+          "event_key": "buff_common_affixes_enhance_pulse",
+          "raw_event_key": "buff_common_affixes_enhance_pulse",
+          "source_character_key": "chr_0023_antal",
+          "target_character_key": "chr_0004_pelica",
+          "source_actor_id": "9223372036854776012",
+          "target_actor_id": "9223372036854776013",
+          "bb_values": {
+            "rate": 0.25
+          },
+          "origin_observations": [
+            {
+              "schemaVersion": 1,
+              "_boundCreateRecord": true,
+              "buffUid": "9223372036854776011",
+              "buffTemplate": "buff_common_affixes_enhance_pulse",
+              "sourceActorId": "9223372036854776012",
+              "targetActorId": "9223372036854776013",
+              "environmentType": "Buff",
+              "ownerType": "1",
+              "environmentInstId": "9223372036854776010",
+              "templateStrId": "buff_chr_0023_antal_utimate_skill",
+              "templateIntId": null,
+              "actionId": 0,
+              "operationSeq": 21,
+              "triggerType": 0
+            }
+          ]
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "amp",
+          "element": "pulse",
+          "bb_key": "rate"
+        },
+        {
+          "zone": "amp",
+          "element": "fire",
+          "bb_key": "rate"
+        }
+      ],
+      "dynamic": false
+    },
+    {
+      "key": "buff_chr_0025_ardelia_dynamic_def_decrease",
+      "records": [
+        {
+          "event_key": "buff_common_natural_natural_corrupt_do",
+          "raw_event_key": "buff_common_natural_natural_corrupt_do",
+          "uid": "7001",
+          "source_character_key": "chr_0025_ardelia",
+          "source_actor_id": "2001",
+          "target_character_key": "eny_0051_rodin",
+          "target_actor_id": "3001",
+          "bb_values": {
+            "def_decrease": -10.0,
+            "additional_def_decrease": 0.0
+          }
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "res",
+          "element": "all",
+          "bb_key": "def_decrease"
+        },
+        {
+          "zone": "res",
+          "element": "all",
+          "bb_key": "additional_def_decrease"
+        }
+      ],
+      "dynamic": true
+    },
+    {
+      "key": "buff_chr_0029_pograni_talent1",
+      "records": [
+        {
+          "event_key": "buff_chr_0029_pograni_talent1",
+          "raw_event_key": "buff_chr_0029_pograni_talent1",
+          "uid": "7001",
+          "source_character_key": "chr_0029_pograni",
+          "source_actor_id": "2001",
+          "target_character_key": "eny_0051_rodin",
+          "target_actor_id": "3001",
+          "bb_values": {
+            "physpell_up": 30.0,
+            "atk_up": 0.2,
+            "duration": 10.0
+          }
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "atk",
+          "element": "all",
+          "bb_key": "atk_up"
+        },
+        {
+          "zone": "arts_strength",
+          "element": "all",
+          "bb_key": "physpell_up"
+        }
+      ],
+      "dynamic": false
+    },
+    {
+      "key": "buff_chr_0006_wolfgd_talent_0_effectbuff",
+      "records": [
+        {
+          "event_key": "buff_chr_0006_wolfgd_talent_0_effectbuff",
+          "raw_event_key": "buff_chr_0006_wolfgd_talent_0_effectbuff",
+          "uid": "7001",
+          "source_character_key": "chr_0006_wolfgd",
+          "source_actor_id": "2001",
+          "target_character_key": "eny_0051_rodin",
+          "target_actor_id": "3001",
+          "bb_values": {
+            "add": 0.2,
+            "duration": 10.0,
+            "physpell_up": 30.0
+          }
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "dmg_inc",
+          "element": "fire",
+          "bb_key": "add"
+        }
+      ],
+      "dynamic": false
+    },
+    {
+      "key": "buff_chr_0027_tangtang_normalskill_spellvulnerable",
+      "records": [
+        {
+          "event_key": "buff_common_affixes_vulnerable_spell",
+          "raw_event_key": "buff_common_affixes_vulnerable_spell",
+          "uid": "7001",
+          "source_character_key": "chr_0027_tangtang",
+          "source_actor_id": "2001",
+          "target_character_key": "eny_0051_rodin",
+          "target_actor_id": "3001",
+          "bb_values": {
+            "rate": 0.2
+          },
+          "origin_observations": [
+            {
+              "schemaVersion": 1,
+              "_boundCreateRecord": true,
+              "buffUid": "7001",
+              "buffTemplate": "buff_common_affixes_vulnerable_spell",
+              "sourceActorId": "2001",
+              "targetActorId": "3001",
+              "environmentType": "Buff",
+              "ownerType": "1",
+              "environmentInstId": "7000",
+              "templateStrId": "buff_chr_0027_tangtang_normalskill_spellvulnerable",
+              "templateIntId": null,
+              "actionId": 1,
+              "operationSeq": 1,
+              "triggerType": 0
+            }
+          ]
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "fragile",
+          "element": "spell",
+          "bb_key": "rate_spellvulnerable",
+          "bb_keys": [
+            "rate_spellvulnerable",
+            "rate"
+          ]
+        }
+      ],
+      "dynamic": false
+    },
+    {
+      "key": "buff_chr_0028_wulfa_normal_bleed",
+      "records": [
+        {
+          "event_key": "buff_chr_0028_wulfa_normal_bleed",
+          "raw_event_key": "buff_chr_0028_wulfa_normal_bleed",
+          "uid": "7001",
+          "source_character_key": "chr_0028_wulfa",
+          "source_actor_id": "2001",
+          "target_character_key": "eny_0051_rodin",
+          "target_actor_id": "3001",
+          "bb_values": {
+            "damage_up": 0.2,
+            "duration": 10.0,
+            "physpell_up": 30.0
+          }
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "vuln_taken",
+          "element": "physical",
+          "bb_key": "damage_up"
+        },
+        {
+          "zone": "vuln_taken",
+          "element": "fire",
+          "bb_key": "damage_up"
+        }
+      ],
+      "dynamic": false
+    },
+    {
+      "key": "buff_chr_0031_mifu_vulnerablephysic_comboskill",
+      "records": [
+        {
+          "event_key": "buff_common_affixes_vulnerable_physical",
+          "raw_event_key": "buff_common_affixes_vulnerable_physical",
+          "uid": "7001",
+          "source_character_key": "chr_0031_mifu",
+          "source_actor_id": "2001",
+          "target_character_key": "eny_0051_rodin",
+          "target_actor_id": "3001",
+          "bb_values": {
+            "rate": 0.2
+          },
+          "origin_observations": [
+            {
+              "schemaVersion": 1,
+              "_boundCreateRecord": true,
+              "buffUid": "7001",
+              "buffTemplate": "buff_common_affixes_vulnerable_physical",
+              "sourceActorId": "2001",
+              "targetActorId": "3001",
+              "environmentType": "Buff",
+              "ownerType": "1",
+              "environmentInstId": "7000",
+              "templateStrId": "buff_chr_0031_mifu_vulnerablephysic_comboskill",
+              "templateIntId": null,
+              "actionId": 0,
+              "operationSeq": 1,
+              "triggerType": 0
+            }
+          ]
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "fragile",
+          "element": "physical",
+          "bb_key": "rate"
+        }
+      ],
+      "dynamic": false
+    },
+    {
+      "key": "buff_chr_0033_camille_talent1_atkup",
+      "records": [
+        {
+          "event_key": "buff_chr_0033_camille_talent1_atkup",
+          "raw_event_key": "buff_chr_0033_camille_talent1_atkup",
+          "uid": "7001",
+          "source_character_key": "chr_0033_camille",
+          "source_actor_id": "2001",
+          "target_character_key": "eny_0051_rodin",
+          "target_actor_id": "3001",
+          "bb_values": {
+            "atk_up": 0.2,
+            "duration": 10.0,
+            "physpell_up": 30.0
+          }
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "dmg_inc",
+          "element": "fire",
+          "bb_key": "atk_up"
+        }
+      ],
+      "dynamic": false
+    },
+    {
+      "key": "buff_common_affixes_vulnerable_fire",
+      "records": [
+        {
+          "event_key": "buff_common_affixes_vulnerable_fire",
+          "raw_event_key": "buff_common_affixes_vulnerable_fire",
+          "uid": "7001",
+          "source_character_key": "chr_0033_camille",
+          "source_actor_id": "2001",
+          "target_character_key": "eny_0051_rodin",
+          "target_actor_id": "3001",
+          "bb_values": {
+            "rate": 0.2,
+            "duration": 10.0,
+            "physpell_up": 30.0
+          }
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "fragile",
+          "element": "fire",
+          "bb_key": "rate"
+        }
+      ],
+      "dynamic": false
+    },
+    {
+      "key": "buff_chr_0035_liino_atkup",
+      "records": [
+        {
+          "event_key": "buff_chr_0035_liino_atkup",
+          "raw_event_key": "buff_chr_0035_liino_atkup",
+          "uid": "7001",
+          "source_character_key": "chr_0035_liino",
+          "source_actor_id": "2001",
+          "target_character_key": "eny_0051_rodin",
+          "target_actor_id": "3001",
+          "bb_values": {
+            "atk_up": 0.2,
+            "duration": 10.0,
+            "physpell_up": 30.0
+          }
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "atk",
+          "element": "all",
+          "bb_key": "atk_up"
+        }
+      ],
+      "dynamic": false
+    },
+    {
+      "key": "buff_chr_0034_typhoea_combo_enemy_debuff",
+      "records": [
+        {
+          "event_key": "buff_chr_0034_typhoea_combo_enemy_debuff",
+          "raw_event_key": "buff_chr_0034_typhoea_combo_enemy_debuff",
+          "uid": "7001",
+          "source_character_key": "chr_0034_typhoea",
+          "source_actor_id": "2001",
+          "target_character_key": "eny_0051_rodin",
+          "target_actor_id": "3001",
+          "bb_values": {
+            "damage_up": 0.2,
+            "duration": 10.0,
+            "physpell_up": 30.0
+          }
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "vuln_taken",
+          "element": "all",
+          "bb_key": "damage_up",
+          "condition": {
+            "type": "damage_decorate_mask",
+            "source": "CheckDamageDecorateMask",
+            "mask": 33554432,
+            "check": "HasAll"
+          }
+        }
+      ],
+      "dynamic": false
+    },
+    {
+      "key": "buff_common_affixes_enhance_pulse",
+      "records": [
+        {
+          "event_key": "buff_common_affixes_enhance_pulse",
+          "raw_event_key": "buff_common_affixes_enhance_pulse",
+          "uid": "7001",
+          "source_character_key": "chr_0035_liino",
+          "source_actor_id": "2001",
+          "target_character_key": "eny_0051_rodin",
+          "target_actor_id": "3001",
+          "bb_values": {
+            "rate": 0.2,
+            "duration": 10.0,
+            "physpell_up": 30.0
+          }
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "amp",
+          "element": "pulse",
+          "bb_key": "rate"
+        }
+      ],
+      "dynamic": false
+    },
+    {
+      "key": "buff_common_affixes_enhance_natural",
+      "records": [
+        {
+          "event_key": "buff_common_affixes_enhance_natural",
+          "raw_event_key": "buff_common_affixes_enhance_natural",
+          "uid": "7001",
+          "source_character_key": "chr_0035_liino",
+          "source_actor_id": "2001",
+          "target_character_key": "eny_0051_rodin",
+          "target_actor_id": "3001",
+          "bb_values": {
+            "rate": 0.2,
+            "duration": 10.0,
+            "physpell_up": 30.0
+          }
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "amp",
+          "element": "natural",
+          "bb_key": "rate"
+        }
+      ],
+      "dynamic": false
+    },
+    {
+      "key": "buff_chr_0036_jsspsi_atk_buff_2",
+      "records": [
+        {
+          "uid": "9223372036854776011",
+          "event_key": "buff_common_affixes_enhance_fire",
+          "raw_event_key": "buff_common_affixes_enhance_fire",
+          "source_character_key": "chr_0036_jsspsi",
+          "target_character_key": "chr_0004_pelica",
+          "source_actor_id": "9223372036854776012",
+          "target_actor_id": "9223372036854776013",
+          "bb_values": {
+            "rate": 0.25
+          },
+          "origin_observations": [
+            {
+              "schemaVersion": 1,
+              "_boundCreateRecord": true,
+              "buffUid": "9223372036854776011",
+              "buffTemplate": "buff_common_affixes_enhance_fire",
+              "sourceActorId": "9223372036854776012",
+              "targetActorId": "9223372036854776013",
+              "environmentType": "Buff",
+              "ownerType": "1",
+              "environmentInstId": "9223372036854776010",
+              "templateStrId": "buff_chr_0036_jsspsi_atk_buff_2",
+              "templateIntId": null,
+              "actionId": 1,
+              "operationSeq": 21,
+              "triggerType": 0
+            }
+          ]
+        },
+        {
+          "uid": "9223372036854776011",
+          "event_key": "buff_common_affixes_enhance_crystal",
+          "raw_event_key": "buff_common_affixes_enhance_crystal",
+          "source_character_key": "chr_0036_jsspsi",
+          "target_character_key": "chr_0004_pelica",
+          "source_actor_id": "9223372036854776012",
+          "target_actor_id": "9223372036854776013",
+          "bb_values": {
+            "rate": 0.25
+          },
+          "origin_observations": [
+            {
+              "schemaVersion": 1,
+              "_boundCreateRecord": true,
+              "buffUid": "9223372036854776011",
+              "buffTemplate": "buff_common_affixes_enhance_crystal",
+              "sourceActorId": "9223372036854776012",
+              "targetActorId": "9223372036854776013",
+              "environmentType": "Buff",
+              "ownerType": "1",
+              "environmentInstId": "9223372036854776010",
+              "templateStrId": "buff_chr_0036_jsspsi_atk_buff_2",
+              "templateIntId": null,
+              "actionId": 2,
+              "operationSeq": 21,
+              "triggerType": 0
+            }
+          ]
+        }
+      ],
+      "declaredEffects": [
+        {
+          "zone": "amp",
+          "element": "fire",
+          "bb_key": "rate",
+          "origin_bb_keys": [
+            "enhance_final"
+          ]
+        },
+        {
+          "zone": "amp",
+          "element": "cryst",
+          "bb_key": "rate",
+          "origin_bb_keys": [
+            "enhance_final"
+          ]
+        }
+      ],
+      "dynamic": false
+    }
+  ]
+}

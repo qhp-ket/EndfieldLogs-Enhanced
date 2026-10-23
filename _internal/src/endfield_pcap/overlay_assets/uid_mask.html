@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><title>UID 遮挡</title>
+<style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent}#mask{position:absolute;inset:0;background:#000}#mask[data-shape="rounded"]{border-radius:6px}</style></head>
+<body><div id="mask"></div><script>
+window.addEventListener('endfield-overlay-config', event => {
+  const settings = event.detail.settings || {};
+  document.getElementById('mask').dataset.shape = settings.shape || 'rectangle';
+});
+</script></body></html>
