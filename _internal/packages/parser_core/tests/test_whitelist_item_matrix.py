@@ -159,8 +159,8 @@ def test_each_item_has_matching_text_current_field_and_approval(case):
         assert parser._load_weapon_catalog()[item]['weapon_skill_ids'][text['skillSlot']] == text['skillId']
         assert TEXT_ANCHORS[item] in text['description']
     else:
-        texts = json.loads((Path(__file__).resolve().parents[3] /
-                            'data/packet_semantics/akedata_rdps_text_snapshot.json').read_text(encoding='utf8'))
+        texts = json.loads((Path(__file__).parent /
+                            'fixtures/runtime_evidence/akedata_rdps_text_snapshot.json').read_text(encoding='utf8'))
         records = [row for row in texts['records'] if row.get('source_id') == item]
         assert any(TEXT_ANCHORS[item] in row.get('description', '') for row in records)
     record = record_for(case)

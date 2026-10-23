@@ -1,12 +1,8 @@
-# Display lookup resources
+# GUI 辅助表
 
-These three inherited JSON files provide character names, skill labels and
-combo-cooldown configuration to the GUI/overlays. They are runtime inputs, not
-personal settings. They are restored from the pinned official ZIP rather than
-committed to Git. Origins and byte hashes are included in
-`../data/resource-manifest.json`; maintenance and external-resource boundaries
-are described in `../data/README.md`.
+`CharacterNameIndex.json`、`ActorImageTable.json`、`Dungeon.json` 分别提供旧角色名称索引、
+头像对应关系和关卡辅助映射。当前角色名称还会合并 data 中的角色 manifest。
 
-Keep canonical IDs stable when changing labels. A display cooldown is an estimate
-from captured triggers and static configuration, not a claim that the skill is
-currently usable. User-specific overlay preferences live in `.dev-gui/` instead.
+这些文件属于精简运行数据的一部分，由源码附带的 `data/runtime-data.zip` 离线恢复，
+大小与哈希记录在 `data/resource-manifest.json`。完整原件只留本地原始数据目录。
+它们不是个人配置；名称、路径与外部资源的维护边界见 [data 说明](../data/README.md)。

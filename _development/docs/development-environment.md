@@ -8,9 +8,9 @@
 
 系统只有部分依赖且没有完整项目环境时，会建立独立 `.venv`，不更改全局或用户级包。
 PySide6 发行物自带 Qt 和 WebEngine，无需另装 Qt SDK 或 Node 服务。
-脚本会为源码克隆恢复缺少的上游运行数据，校验固定官网 ZIP 和逐文件 SHA-256；
-已有完整资源不重复下载，不覆盖开发版规则。脚本不安装 Npcap，不改系统 PATH、注册表、
-游戏目录或抓包私钥。上游大文件不提交 Git。
+脚本从源码附带的精简数据包恢复缺少的运行数据，校验恢复包及逐文件 SHA-256；
+数据准备无需网络，也不恢复原始配置或覆盖开发版规则。脚本不安装 Npcap，不改系统 PATH、注册表、
+游戏目录或抓包私钥。完整原始数据不提交 Git。
 
 ```powershell
 .\Setup-Dev.cmd -Check                 # 只读检查；缺项返回退出码 2
@@ -54,7 +54,7 @@ PySide6 发行物自带 Qt 和 WebEngine，无需另装 Qt SDK 或 Node 服务�
 
 缺少抓包私钥时 GUI 提示后仍可进行离线分析；实时服务另需私钥、Npcap 和自己的游戏安装。
 详见 [运行资源说明](runtime-resources.md)。环境检查只报告资源清单是否存在，
-离线资源恢复可用 `-ResourceArchive "D:/Resources/EndfieldLogsClient_3.0.12_20261016.zip"`，
+运行数据默认离线恢复，无需 `-ResourceArchive`；该参数保留用于官网外部组件。
 单独准备数据用 `python -B _development/tools/prepare_resources.py`。
 完整资源验证另执行：
 

@@ -36,7 +36,8 @@ OFFICIAL_UPLOADER_SHA256 = 'd37373181c92273d379c72bac353f7057373e84bccbc08fadca7
 ROOT_REQUIREMENTS = ('PySide6-Fluent-Widgets', 'dpkt', 'pycryptodome', 'protobuf',
                      'websockets', 'psutil', 'pydantic', 'numpy', 'httpx')
 SKIP_DIRS = {'__pycache__', 'test', 'tests', 'SelfTest', '.git', '.pytest_cache'}
-PRIVATE_NAMES = {'.env', 'credentials.json', 'session.json', 'settings.json', 'rsa_keys.txt', 'embedded_keys.py'}
+PRIVATE_NAMES = {'.env', 'credentials.json', 'session.json', 'settings.json', 'uploader_settings.json',
+                 'rsa_keys.txt', 'embedded_keys.py'}
 
 
 def digest(path):
@@ -171,12 +172,31 @@ def write_manifest(stage, versions):
     (stage / 'BUILD-MANIFEST.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding='utf8')
 
 
+def copy_runtime_data(stage):
+    """Use the reviewed runtime inventory, never a recursive raw-data copy."""
+    manifest_path = ROOT / '_internal/data/resource-manifest.json'
+    manifest = json.loads(manifest_path.read_text(encoding='utf8'))
+    if manifest.get('schema_version') != 2:
+        raise ValueError('Build the compact runtime projection before packaging')
+    for row in manifest['files']:
+        relative = PurePosixPath(row['path'])
+        if relative.is_absolute() or '..' in relative.parts or '\\' in row['path'] or relative.parts[0] not in {'data', 'jsondata'}:
+            raise ValueError('Unsafe runtime-data inventory member')
+        source = ROOT / '_internal' / row['path']
+        if source.stat().st_size != row['bytes'] or digest(source) != row['sha256']:
+            raise ValueError('Changed runtime-data member: ' + row['path'])
+        copy_file(source, stage / '_internal' / row['path'])
+    copy_file(manifest_path, stage / '_internal/data/resource-manifest.json')
+    # The source restore ZIP is deliberately not duplicated in an extracted app.
+
+
 def stage_release(name=None):
     name = name or RELEASE_NAME
     if name != RELEASE_NAME:
         raise ValueError(f'Release name must match the version file: {RELEASE_NAME}')
     from prepare_resources import prepare
-    prepare(ROOT, check=True)
+    if prepare(ROOT, check=True):
+        raise ValueError('Prepare the bundled runtime data before packaging')
     from audit_runtime_data import verify
     verify()
     key = ROOT / '_internal/secrets/client_privkey.pem'
@@ -194,9 +214,10 @@ def stage_release(name=None):
     copy_tree(ROOT / '_development/portable/licenses', stage / 'licenses')
     copy_file(ROOT / 'LICENSE', stage / 'licenses/EndfieldLogs-LICENSE.txt')
     copy_file(ROOT / 'THIRD_PARTY_NOTICES.md', stage / 'licenses/EndfieldLogs-THIRD_PARTY_NOTICES.md')
-    for folder in ('src', 'packages', 'data', 'jsondata'):
+    for folder in ('src', 'packages'):
         print(f'Runtime resources: {folder}', flush=True)
         copy_tree(ROOT / '_internal' / folder, stage / '_internal' / folder)
+    copy_runtime_data(stage)
     if digest(key) != CAPTURE_KEY_SHA256:
         raise ValueError('Refusing to distribute a changed/private capture key')
     copy_file(key, stage / '_internal/secrets/client_privkey.pem')

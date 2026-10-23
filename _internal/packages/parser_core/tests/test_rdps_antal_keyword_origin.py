@@ -61,7 +61,7 @@ def test_antal_binding_preserves_original_approval_and_review_ids():
     assert entry['effects'] == [{'zone': 'amp', 'element': 'pulse', 'bb_key': 'rate'},
                                 {'zone': 'amp', 'element': 'fire', 'bb_key': 'rate'}]
     assert parser._canonical_num_table_buff_number('1074', 'chr_0023_antal') == CURRENT_PARENT
-    catalog_path = Path(__file__).resolve().parents[3] / 'data/packet_semantics/rdps_effect_catalog_review.json'
+    catalog_path = Path(__file__).parent / 'fixtures/runtime_evidence/rdps_effect_catalog_review.json'
     catalog = json.loads(catalog_path.read_text(encoding='utf-8'))
     ids = {row['rdps_effect_id'] for row in catalog['effect_catalog']
            if any(member.get('canonical') == APPROVAL for member in row.get('runtime_members', []))}

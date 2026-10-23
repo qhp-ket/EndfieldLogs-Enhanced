@@ -57,6 +57,7 @@ def main():
     setTheme(Theme.DARK)
     gui_main.MainWindow._ensure_game_directory_ready = lambda self: True
     gui_main.MainWindow._update_overlay_shortcut = lambda self: None
+    gui_main.MainWindow._auto_start_service = lambda self: None
     config_path = launcher.PROFILE / 'settings.json'
     window = gui_main.MainWindow(load_app_config(config_path), config_path)
     window.setMicaEffectEnabled(False)
@@ -122,7 +123,8 @@ def main():
         result['analysis_worker_spawn'] = True
     finally:
         worker.close()
-    result['capture_started'] = False
+    result['capture_started'] = window.service_controller.is_running()
+    assert not result['capture_started']
     (output / 'result.json').write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding='utf8')
     dialog.close()
     window.close()

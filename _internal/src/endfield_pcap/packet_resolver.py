@@ -91,6 +91,7 @@ class PacketResolver:
         self.static_buff_by_numeric: dict[str, str] = {}
         self.static_skill_by_numeric = _load_static_buff_numeric_map(self.root, "skill_id")
         self.buff_content_by_id: dict[str, dict[str, Any]] = {}
+        self.known_buff_ids: set[str] = set()
         self.skill_content_by_id: dict[str, dict[str, Any]] = {}
         self.attribute_type_content_by_id: dict[str, dict[str, Any]] = {}
         self.attribute_type_by_numeric: dict[str, dict[str, Any]] = {}
@@ -114,6 +115,10 @@ class PacketResolver:
                 self.buff_content_by_id = dict(content.get("buffs") or {})
                 self.skill_content_by_id = dict(content.get("skills") or {})
                 self.attribute_type_content_by_id = dict(content.get("attribute_types") or {})
+            self.known_buff_ids = {key for key, row in self.buff_content_by_id.items()
+                                   if isinstance(row, dict) and row}
+            if payload.get('runtime_projection') == 1:
+                self.known_buff_ids.update(payload.get('known_buff_ids') or [])
             indexes = payload.get("indexes") if isinstance(payload, dict) else {}
             if isinstance(indexes, dict):
                 self.semantic_indexes = indexes
@@ -227,6 +232,10 @@ class PacketResolver:
             return "unknown_buff"
         number = str(int(int_id))
         return self.static_buff_by_numeric.get(number, number)
+
+    def has_buff(self, canonical_id: str | None) -> bool:
+        """Identity membership; does not require unused raw BuffData contents."""
+        return bool(canonical_id and canonical_id in self.known_buff_ids)
 
     def buff_content(self, canonical_id: str | None) -> dict[str, Any]:
         if not canonical_id:

@@ -17,7 +17,7 @@
 !/_internal/jsondata/
 !/_internal/secrets/
 
-# Restore unchanged upstream data with prepare_resources.py instead of Git.
+# Install the extracted runtime bundle; raw upstream data remains local.
 /_internal/data/*
 !/_internal/data/README.md
 !/_internal/data/resource-manifest.json
@@ -59,6 +59,8 @@
 !/_development/tools/setup_dev.ps1
 !/_development/tools/dev_environment.py
 !/_development/tools/prepare_resources.py
+!/_development/tools/extract_runtime_data.py
+!/_development/tools/verify_runtime_projection.py
 !/_development/tools/audit_runtime_data.py
 !/_development/tools/audit_repository.py
 !/_development/tools/generate_test_fixtures.py
@@ -81,12 +83,22 @@
 *.p12
 **/credentials.json
 **/session.json
+**/uploader_settings.json
 **/session_token*
 __pycache__/
 *.py[cod]
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.tox/
+.nox/
+.cache/
+.venv*/
+venv/
+build/
+dist/
+tmp/
+temp/
 .coverage*
 htmlcov/
 coverage.xml
@@ -99,6 +111,7 @@ node_modules/
 Thumbs.db
 desktop.ini
 *.log
+*.log.status.json
 *.ndjson
 *.pcap
 *.pcapng
@@ -112,6 +125,9 @@ desktop.ini
 *.dll
 *.pyd
 *.nupkg
+
+# Reviewed runtime data only; all other ZIPs remain local.
+!/_internal/data/runtime-data.zip
 
 # Only reviewed synthetic trace contracts are retained.
 !/_internal/packages/parser_core/tests/fixtures/rdps_snapshot_contract.log

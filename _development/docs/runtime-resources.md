@@ -1,9 +1,15 @@
-# 源码开发需要的外部运行资源
+# 源码开发需要的运行资源
 
-未修改的上游数据不提交 Git，`Setup-Dev.cmd` 会按固定版本恢复并校验。
-单独运行 `python -B _development/tools/prepare_resources.py` 也可准备；
-添加 `--archive PATH --offline` 使用本地官网 3.0.12 ZIP。开发版覆盖规则保留在源码中，
-已有资源不匹配会报错，不直接覆盖。
+源码附带提取后的 `runtime-data.zip`，约 5.8 MB，运行数据共约 16.9 MB。
+`Setup-Dev.cmd` 或 `python -B _development/tools/prepare_resources.py` 会离线恢复并校验，
+不再为普通开发环境下载约 390 MB 的上游原始数据。开发版规则保留在源码中；
+已有资源不匹配会报错，不直接覆盖。便携版包含已解压的同一份运行数据。
+
+完整输入仅供维护提取规则，保存在 Git 忽略的 `_development/raw-resources/_internal/`，
+程序不会从这里回退读取。显式添加 `--raw` 才准备完整输入；
+`--archive PATH --offline` 可指定固定官网 ZIP。
+`--with-uploader` 和 `--with-capture-key` 仍是独立的显式选项。
+提取规则、重建与等价验证见 [data 说明](../../_internal/data/README.md)。
 
 ## 抓包私钥
 

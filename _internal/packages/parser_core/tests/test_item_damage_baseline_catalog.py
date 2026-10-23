@@ -164,12 +164,16 @@ def test_ether55_is_supported_only_by_explicit_typed_card_properties():
 
 
 def test_addition_acceptance_is_bound_to_this_version_and_exact_observed_property():
-    evidence = json.loads((DATA / 'item_damage_baseline_formula_evidence.json').read_text(encoding='utf8'))
+    evidence = json.loads((Path(__file__).parent / 'fixtures/runtime_evidence/item_damage_baseline_formula_evidence.json').read_text(encoding='utf8'))
     assert evidence['decoder'] == CATALOG['decoder']
     assert evidence['attributeType'] == 54
     assert evidence['nativeStages']['generallyInterchangeable'] is False
     manifest = json.loads((DATA / 'manifest.json').read_text(encoding='utf8'))
-    assert evidence['skillDataScan']['resourceCount'] == evidence['skillDataScan']['completeRootCount'] == len(manifest['entries'])
+    # This is the historical complete scan, not the reduced runtime stack-limit list.
+    assert manifest['projection'] == 'weapon_buff_stack_limits'
+    assert manifest['sourceManifestSha256'] == '1174a2e701b6804fdf439f49b203b3975dd7298d548fd6c5189eb2e85b3ee91f'
+    assert evidence['skillDataScan']['resourceCount'] == evidence['skillDataScan']['completeRootCount'] == manifest['sourceResourceCount'] == 2928
+    assert all(row['id'].startswith('sk_wpn_') for row in manifest['entries'])
     assert evidence['skillDataScan']['errorCount'] == 0
     assert evidence['skillDataScan']['formulaCounts'] == {'BaseAddition': 13, 'Addition': 1}
     assert evidence['buffDataScan']['formulaCounts'] == {'BaseAddition': 29}

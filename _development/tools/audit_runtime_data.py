@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 from collections import Counter, defaultdict
 import hashlib
 import json
@@ -24,11 +25,11 @@ DATASETS = {
                          readers=['battle_log_parser.py', 'hit_debug.py', 'battle_payload_builder.py', 'packet_resolver.py', 'game_data.py', 'loadout_static.py', 'trace_bridge.py']),
     'packet_semantics': dict(purpose='Packet resolver bundle, numeric mappings, mechanism and approved rDPS semantic registries',
                              readers=['packet_resolver.py', 'battle_log_parser.py', 'hit_debug.py']),
-    'public': dict(purpose='Contract tag labels and retained rotation assets; only contract tags confirmed active in current GUI',
+    'public': dict(purpose='Contract tag labels; rotation assets are excluded from the runtime projection',
                    readers=['battle_log_parser.py']),
     'message_ids': dict(purpose='Client/server message ID registries and generated-source provenance', readers=['message_registry.py']),
-    'jsondata': dict(purpose='Character names, character skills and fallback overlay cooldown configuration',
-                     readers=['game_data.py', 'skill_names.py', 'combo_cooldowns.py']),
+    'jsondata': dict(purpose='Character names, actor image mapping and dungeon fallback metadata',
+                     readers=['game_data.py', 'gui_main.py', 'service.py', 'trace_bridge.py']),
 }
 
 
@@ -40,11 +41,13 @@ def digest(path):
 def resources():
     for folder in ('data', 'jsondata'):
         for path in sorted((ROOT / '_internal' / folder).rglob('*')):
-            if path.is_file() and path != MANIFEST and path.suffix.lower() != '.md':
+            if path.is_file() and path != MANIFEST and path.name != 'runtime-data.zip' and path.suffix.lower() != '.md':
                 yield path
 
 
 def generate(archive):
+    if json.loads(MANIFEST.read_text(encoding='utf8')).get('schema_version') == 2:
+        raise ValueError('Use extract_runtime_data.py with local raw inputs to rebuild the runtime projection')
     if digest(archive) != BASELINE_SHA256:
         raise ValueError('Expected the verified complete official 3.0.12 archive')
     rows = []
@@ -131,16 +134,68 @@ def exercise():
     print(f'Observed {len(observed)} runtime resource reads across parser entries, uploader payload, packet resolver and GUI presenters.')
 
 
+def references():
+    """Record candidate IO sites and data-path expressions, including dynamic lookups.
+
+    This is an inspection index, not whole-program dependency analysis. It also
+    includes non-resource IO so an indirect helper cannot silently disappear.
+    """
+    roots = [ROOT / '_internal/src/endfield_pcap',
+             ROOT / '_internal/packages/parser_core/parser_core',
+             ROOT / '_internal/packages/uploader_core/uploader_core']
+    sites = []
+    for folder in roots:
+        for path in sorted(folder.rglob('*.py')):
+            if 'proto_generated' in path.parts:
+                continue
+            tree = ast.parse(path.read_text(encoding='utf-8-sig'))
+            for node in ast.walk(tree):
+                kind = None
+                if isinstance(node, ast.Call):
+                    name = node.func.attr if isinstance(node.func, ast.Attribute) else getattr(node.func, 'id', '')
+                    if name in {'open', 'read_text', 'read_bytes', 'load', 'loads', 'glob', 'rglob',
+                                '_read_json', '_load_json', '_iter_json_entries'}:
+                        kind = 'io_candidate'
+                if isinstance(node, (ast.BinOp, ast.Constant)):
+                    literals = [child.value for child in ast.walk(node)
+                                if isinstance(child, ast.Constant) and isinstance(child.value, str)]
+                    if any(text in {'data', 'jsondata'} or text.startswith(('data/', 'jsondata/')) for text in literals):
+                        kind = 'data_path'
+                if kind:
+                    sites.append(dict(file=path.relative_to(ROOT).as_posix(), line=node.lineno,
+                                      kind=kind, expression=ast.unparse(node)))
+    manifest = json.loads(MANIFEST.read_text(encoding='utf8'))
+    groups = defaultdict(lambda: dict(files=0, bytes=0))
+    for row in manifest['files']:
+        parts = row['path'].split('/')
+        group = 'jsondata' if parts[0] == 'jsondata' else parts[1] if parts[1] in DATASETS else 'message_ids'
+        groups[group]['files'] += 1
+        groups[group]['bytes'] += row['bytes']
+    output = ROOT / '_development/verification/runtime-data-references.json'
+    output.parent.mkdir(exist_ok=True)
+    output.write_text(json.dumps(dict(
+        scope='Static IO/path candidates, not proof that unobserved fields or resources are unused.',
+        datasets={key: dict(**DATASETS[key], **value) for key, value in sorted(groups.items())},
+        largest=sorted(manifest['files'], key=lambda row: row['bytes'], reverse=True)[:20],
+        sites=sites), ensure_ascii=False, indent=2)+'\n', encoding='utf8')
+    print(f'Indexed {len(sites)} IO/path candidates; report: {output.relative_to(ROOT)}')
+    for key, value in sorted(groups.items()):
+        print(f"{key}: {value['files']} files, {value['bytes']:,} bytes")
+
+
 def main():
     parser = argparse.ArgumentParser(__doc__)
     parser.add_argument('--refresh', type=Path, metavar='OFFICIAL_ZIP')
     parser.add_argument('--exercise', action='store_true')
+    parser.add_argument('--references', action='store_true', help='Inventory source IO/path candidates and resource sizes')
     args = parser.parse_args()
     if args.refresh:
         generate(args.refresh)
     verify()
     if args.exercise:
         exercise()
+    if args.references:
+        references()
 
 
 if __name__ == '__main__':

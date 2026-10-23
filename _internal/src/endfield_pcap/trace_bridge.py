@@ -2373,7 +2373,7 @@ class TraceBridge:
             if "buff_id" not in key and "child_buff_id" not in key:
                 continue
             value = str(item.get("string_value") or item.get("stringValue") or "")
-            if value.startswith("buff_") and self.resolver.buff_content(value):
+            if value.startswith("buff_") and self.resolver.has_buff(value):
                 candidates.append(value)
         if len(candidates) == 1:
             return candidates[0]

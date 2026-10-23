@@ -15,8 +15,9 @@
 
 ## 游戏数据与界面素材
 
-运行需要 `_internal/data/`、`_internal/jsondata/` 等外部资源。源码仓库只保留校验清单、
-开发版覆盖规则及来源说明；未修改的上游数据由资源准备脚本从固定发行 ZIP 恢复。
+运行需要 `_internal/data/`、`_internal/jsondata/` 等外部资源。源码仓库保留提取后的运行数据包、
+校验清单、开发版覆盖规则及来源说明；普通开发从该数据包离线恢复。
+完整上游原件仅用于本地维护提取规则，由固定发行 ZIP 校验恢复，不提交源码仓库。
 本项目的 MIT 不代替这些资源自身的许可，不宣称拥有游戏素材的权利。
 
 `_development/portable/licenses/Upstream-THIRD_PARTY_NOTICES.md` 是上游声明的原文副本，

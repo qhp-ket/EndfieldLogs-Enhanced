@@ -3,6 +3,8 @@
 《明日方舟：终末地》的第三方战斗日志客户端，基于 ZMDLogs / Endfield Logs 源码开发。
 提供 Python + PySide6（Qt）GUI、实时伤害浮窗、本地 trace 导入和战斗分析。
 此项目是独立开发版，项目中的“官网版”指 ZMDLogs 的发行版。
+相关项目：[ZMDLogs 官网](https://zmdlogs.com/)、[AKEData 网站](https://www.akedata.wiki/)、
+[AKEData Git 仓库](https://github.com/NagiYume/AKEDatabase)。
 
 ## 使用便携包
 
@@ -21,11 +23,11 @@ GUI 打开后自动尝试启动抓包一次，首页同一按钮启动/停止；
 ## 从源码开发
 
 当前验证环境是 Windows x64、CPython 3.14.2、PySide6 及 Qt WebEngine。
-源码仓库只保留开发必要内容：运行时、依赖、上游原始数据、密钥、官网 uploader、
+源码仓库只保留开发必要内容及提取后的运行数据：Python 运行时、依赖、上游原始数据、密钥、官网 uploader、
 真实战斗、个人配置、实施记录和发行 ZIP 均不提交。
 
 1. 执行 `Setup-Dev.cmd`：已有依赖能导入就复用，缺什么才安装，不锁版本或主动升级；
-   缺少的上游运行数据从固定官网发行 ZIP 恢复并校验，开发版规则不会被覆盖。
+   从源码附带的精简数据包离线恢复运行数据并校验，开发版规则不会被覆盖；不下载完整原始数据。
    没有 Python 时会准备项目内环境；详见 [开发环境说明](_development/docs/development-environment.md)。
 2. 按 [运行资源说明](_development/docs/runtime-resources.md) 从可信的 ZMDLogs 完整发行包
    取得 `client_privkey.pem`，放入 `_internal/secrets/`。不要生成随机密钥替代抓包密钥。
@@ -62,8 +64,8 @@ python -B _development/run_tests.py capture-key
 
 - `_internal/src/`：应用源码、Qt GUI、Overlay 和本地 Web 分析资产。
 - `_internal/packages/`：`parser_core`、`uploader_core` 及其测试。
-- `_internal/data/`、`_internal/jsondata/`：运行数据；Git 只保留清单、开发版覆盖规则与说明。
-- `_development/`：当前测试、工具、使用文档；历史实施记录、实验和验证输出留在本地。
+- `_internal/data/`、`_internal/jsondata/`：提取后的运行数据；Git 保留约 5.8 MB 的恢复包及清单、开发版规则与说明，运行数据共约 16.9 MB。
+- `_development/`：当前测试、工具、使用文档；`raw-resources/` 原始数据、历史实施记录、实验和验证输出留在本地。
 - `.dev-gui/`、`_releases/`、`Uploader/`：本地状态、便携发行、可选官网 uploader，均忽略。
 
 更多功能文档见 [_development/README.md](_development/README.md)。
@@ -73,11 +75,11 @@ python -B _development/run_tests.py capture-key
 ## 版本与打包
 
 版本唯一来源是 `_internal/src/endfield_pcap/_version.py`，GUI 和构建器共用。
-开发版本使用 `0.1.0-dev.1`，正式版使用 `0.1.0` 等 SemVer，不在版本里加日期或前导 `v`。
+开发版本使用 `0.1.0-dev.2` 等，正式版使用 `0.1.0` 等 SemVer，不在版本里加日期或前导 `v`。
 
 ```powershell
 python -B _development/tools/release.py version                 # 查看版本与包名
-python -B _development/tools/release.py version 0.1.0-dev.2     # 下次发布前修改
+python -B _development/tools/release.py version 0.1.0-dev.3     # 下次发布前修改
 python -B _development/tools/release.py build                   # 回归、构建、ZIP、解压启动校验
 ```
 

@@ -47,3 +47,10 @@ python -B _development/tools/release.py verify "_releases/EndfieldLogs-0.1.0-dev
 运行 CMD --check、GUI、伤害浮窗、合成 trace、本地 Web 分析和独立分析进程。
 使用隔离配置，不登录、不上传、不抓包；每次使用新目录，允许重复验证。
 脚本不推送 Git、不创建远程 Release、不安装驱动。Npcap 和游戏由使用者准备。
+
+## 运行数据边界
+
+开发环境和发行版共用 schema 2 的精简资源清单，约 16.9 MB。
+构建器只收集清单成员；本地原始数据、测试证据、审计材料和源码恢复 ZIP 均不进入运行包。
+缺少运行数据时先执行 `prepare_resources.py`；普通准备从源码附带的约 5.8 MB 包离线恢复。
+重新提取见 [data 说明](../../_internal/data/README.md)。旧发行 ZIP 不会自动重建或覆盖。

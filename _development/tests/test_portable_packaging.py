@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 import shutil
 import subprocess
+import sys
+from types import SimpleNamespace
 
 import pytest
 from Crypto.PublicKey import RSA
@@ -46,6 +48,10 @@ def test_gitignore_keeps_source_and_tests_but_excludes_private_and_generated_fil
                '_development/cache/wheels/package.whl',
                '_internal/packages/parser_core/tests/fixtures/private_battle.log',
                'nested/__pycache__/x.pyc']
+    ignored += ['_internal/src/uploader_settings.json', '_internal/src/.venv/pyvenv.cfg', '_internal/src/build/output.py',
+                '_development/tests/tmp/record.json', '_internal/src/trace_20261024.log.status.json',
+                '_development/tests/.cache/state.json', '_internal/data/akedata/character/items/chr_9999_future.json',
+                '_development/raw-resources/_internal/data/new.json']
     retained = ['launch_gui.py', 'Start-GUI.cmd', '_internal/src/endfield_pcap/service.py',
                 '_internal/packages/parser_core/tests/test_unified.py', '_development/tests/test_portable_packaging.py',
                 '_development/tools/build_portable.py', '_internal/secrets/README.md', '.env.example',
@@ -60,6 +66,8 @@ def test_gitignore_keeps_source_and_tests_but_excludes_private_and_generated_fil
                 '_internal/src/endfield_pcap/_version.py',
                 '_internal/data/resource-manifest.json',
                 '_internal/data/packet_semantics/rdps_semantics_registry.json',
+                '_internal/data/runtime-data.zip', '_development/tools/extract_runtime_data.py',
+                '_development/tools/verify_runtime_projection.py', '_development/tests/test_runtime_projection.py',
                 '_development/tools/prepare_resources.py', '_development/tools/release.py']
     for name in ignored + retained:
         put(tmp_path, name)
@@ -72,7 +80,8 @@ def test_gitignore_keeps_source_and_tests_but_excludes_private_and_generated_fil
 
 @pytest.mark.parametrize('relative', ['.dev-gui/settings.json', '_internal/secrets/extra.pem',
                                      '_internal/secrets/client_privkey.pem', '_internal/src/.env',
-                                     '_development/tests/fixture.log', '_internal/src/session.json'])
+                                     '_development/tests/fixture.log', '_internal/src/session.json',
+                                     'Uploader/tool/uploader_settings.json'])
 def test_release_rejects_personal_state_or_unapproved_key(tmp_path, relative):
     put(tmp_path, relative)
     with pytest.raises(ValueError):
@@ -99,6 +108,30 @@ def test_archive_refuses_files_modified_after_manifest(tmp_path, monkeypatch):
     with pytest.raises(ValueError, match='changed'):
         builder.zip_stage(stage)
     assert not (tmp_path / 'release.zip').exists()
+
+
+def test_portable_stage_includes_verified_capture_key(tmp_path, monkeypatch):
+    source = tmp_path / 'source'
+    for relative in ('Start-GUI.cmd', 'launch_gui.py', 'LICENSE', 'THIRD_PARTY_NOTICES.md',
+                     '_development/portable/README.zh-CN.md', '_development/portable/licenses/test.txt',
+                     '_internal/src/app.py', '_internal/packages/core.py'):
+        put(source, relative)
+    key = put(source, '_internal/secrets/client_privkey.pem')
+    key.write_bytes(RSA.generate(1024).export_key())
+    uploader = put(source, 'Uploader/EndfieldLogsUploader/EndfieldLogsUploader.exe')
+    monkeypatch.setattr(builder, 'ROOT', source)
+    monkeypatch.setattr(builder, 'RELEASES', tmp_path / 'releases')
+    monkeypatch.setattr(builder, 'CAPTURE_KEY_SHA256', builder.digest(key))
+    monkeypatch.setattr(builder, 'OFFICIAL_UPLOADER_SHA256', builder.digest(uploader))
+    monkeypatch.setitem(sys.modules, 'prepare_resources', SimpleNamespace(prepare=lambda *a, **kw: 0))
+    monkeypatch.setitem(sys.modules, 'audit_runtime_data', SimpleNamespace(verify=lambda: None))
+    monkeypatch.setattr(builder, 'copy_runtime_data', lambda stage: None)
+    monkeypatch.setattr(builder, 'copy_python', lambda stage: None)
+    monkeypatch.setattr(builder, 'copy_dependencies', lambda stage: {})
+    monkeypatch.setattr(builder, 'write_manifest', lambda stage, versions: None)
+    stage = builder.stage_release()
+    assert (stage / '_internal/secrets/client_privkey.pem').read_bytes() == key.read_bytes()
+    assert (stage / 'Uploader/EndfieldLogsUploader/EndfieldLogsUploader.exe').read_bytes() == uploader.read_bytes()
 
 
 def test_launcher_prefers_portable_runtime_over_system_python():
