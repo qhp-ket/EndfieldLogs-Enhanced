@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from PySide6.QtWidgets import QFileDialog, QMessageBox
+from PySide6.QtWidgets import QApplication, QFileDialog, QMessageBox
 from endfield_pcap.gui.config import save_app_config
 from endfield_pcap.gui.resources import ROOT
 from endfield_pcap.gui.pages.settings.paths import (
@@ -89,6 +89,7 @@ class SettingsActions:
         self.app_config.service.ws_port = port
         save_app_config(self.app_config, self.config_path)
         self.settings_page.port_hint.setText('端口已保存；下次启动抓包生效。')
+        self.settings_page.set_service_info(self.app_config.service)
         self._update_service_status()
 
     def _choose_game_dir(self, *, select_exe: bool = False) -> None:
@@ -132,6 +133,8 @@ class SettingsActions:
 
 
     def _bind_settings_events(self) -> None:
+        self.settings_page.copy_browser_ws_btn.clicked.connect(
+            lambda: QApplication.clipboard().setText(self.settings_page.browser_ws_edit.text()))
         self.settings_page.port_edit.valueChanged.connect(self._apply_service_port)
         self.settings_page.theme_combo.currentIndexChanged.connect(self._apply_theme_mode)
         self.settings_page.gui_font_edit.valueChanged.connect(self._apply_gui_font_size)

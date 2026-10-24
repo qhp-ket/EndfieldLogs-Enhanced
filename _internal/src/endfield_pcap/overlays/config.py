@@ -23,6 +23,7 @@ class OverlayWindowConfig:
     use_in_process_snapshots: bool = False
     desktop_visible: bool = True
     hide_on_close: bool = False
+    ws_browser_token: str = ''
 
 
 def _window_defaults(entry: OverlayEntry) -> dict[str, int]:

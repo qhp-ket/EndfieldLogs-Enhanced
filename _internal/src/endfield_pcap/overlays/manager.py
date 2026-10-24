@@ -13,9 +13,10 @@ class OverlayManager:
     def __init__(
         self, ws_port: int, on_entry_changed: Callable[[OverlayEntry], None] | None = None,
         *, use_in_process_snapshots: bool = False, on_full_requirement=None,
-        on_analysis_requirement=None, visible=True,
+        on_analysis_requirement=None, visible=True, ws_browser_token='',
     ) -> None:
         self.ws_port = ws_port
+        self.ws_browser_token = ws_browser_token
         self.on_full_requirement = on_full_requirement
         self.on_analysis_requirement = on_analysis_requirement
         self.visible = bool(visible)
@@ -139,6 +140,7 @@ class OverlayManager:
                     OverlayWindowConfig(
                         entry=replace(entry),
                         ws_port=self.ws_port,
+                        ws_browser_token=self.ws_browser_token,
                         **_window_defaults(entry),
                         on_geometry_changed=self._handle_geometry_changed,
                         on_closed=self._handle_window_closed,

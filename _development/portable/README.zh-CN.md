@@ -38,6 +38,10 @@
 
 ## 内容与许可
 
+本开发版程序采用 GPL-3.0-only，保留上游 MIT 版权及许可；各依赖采用各自许可。
+分发需同时满足对应源码等适用义务，详见 `licenses/EndfieldLogs-LICENSING.zh-CN.md`。
+运行数据来源与上游声明见 `licenses/EndfieldLogs-THIRD_PARTY_NOTICES.md`，不由本项目 GPLv3 重新授权。
+
 - `launch_gui.py` 与 `_internal/src/`、`_internal/packages/`：可阅读修改的程序源码。
 - `_internal/python/`：隔离 Python 运行时，启动器优先使用它。
 - `_internal/python_deps/`：运行依赖及原有许可文件；没有打包 pytest 和开发测试组件。

@@ -287,6 +287,9 @@ class OverlayWindow(QWidget):
             url = QUrl.fromUserInput(self.entry.source_value)
         query = QUrlQuery(url)
         query.addQueryItem("wsPort", str(self.config.ws_port))
+        # Never disclose the capability to an arbitrary remote template URL.
+        if url.isLocalFile() and not self.config.use_in_process_snapshots and self.config.ws_browser_token:
+            query.addQueryItem('wsToken', self.config.ws_browser_token)
         query.addQueryItem("builtin", self.entry.source_value or "damage")
         values = template_values(self.entry, template)
         query.addQueryItem("barMode", str(values.get("bar_mode", self.entry.bar_mode)))

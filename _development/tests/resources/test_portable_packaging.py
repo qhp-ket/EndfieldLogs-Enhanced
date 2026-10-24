@@ -104,6 +104,7 @@ def test_portable_stage_includes_verified_capture_key(tmp_path, monkeypatch):
     source = tmp_path / 'source'
     for relative in ('Start-GUI.cmd', 'launch_gui.py', 'LICENSE', 'THIRD_PARTY_NOTICES.md',
                      '_development/portable/README.zh-CN.md', '_development/portable/licenses/test.txt',
+                     '_development/docs/licensing.md',
                      '_internal/src/app.py', '_internal/packages/core.py'):
         put(source, relative)
     key = put(source, '_internal/secrets/client_privkey.pem')
@@ -119,6 +120,8 @@ def test_portable_stage_includes_verified_capture_key(tmp_path, monkeypatch):
     monkeypatch.setattr(builder, 'write_manifest', lambda stage, versions: None)
     stage = builder.stage_release()
     assert (stage / '_internal/secrets/client_privkey.pem').read_bytes() == key.read_bytes()
+    assert (stage / 'licenses/EndfieldLogs-LICENSING.zh-CN.md').read_bytes() == (source / '_development/docs/licensing.md').read_bytes()
+    assert (stage / 'licenses/EndfieldLogs-LICENSE.txt').read_bytes() == (source / 'LICENSE').read_bytes()
     assert not (stage / 'Uploader').exists()
 
 def test_application_rejects_accidentally_bundled_uploader(tmp_path):

@@ -1,7 +1,21 @@
 # 提取后的运行数据
 
-开发环境和便携版共用这份数据。当前来自固定的 ZMDLogs 3.0.12 / 2026-10-16
-资源及本项目的四份开发规则；“akedata”沿用上游目录名，不代表已核实某个 AKEDatabase commit。
+开发环境和便携版共用这份数据。运行数据包提取自固定的 ZMDLogs 3.0.12 / 2026-10-16
+资源，另保留本项目维护的四份开发规则。
+
+## 来源与许可记录
+
+- `runtime-data.zip`：直接来源是固定 ZMDLogs 发行包，下载地址与哈希见 `resource-manifest.json`；
+  其中 `akedata` 沿用上游目录名，相关资料来自 [AKEData 数据站](https://data.akedata.wiki/)，不据此推定某个 AKEDatabase commit。
+- `local_semantics/team_energy_rules.json`：依据 [AKEDatabase](https://github.com/NagiYume/AKEDatabase)
+  的技力机制与技能表提取，提交 `31b53147cd88fb6e9576b5c389967d21687c85cf`、表版本和哈希保留在 `source` 中。
+- `local_semantics/skill_frame_rules.json`：依据 AKEDatabase 的角色 SkillData 提取，资源时间、摘要及文件数保留在 `source` 中。
+- `game_resource_snapshot.json` 与 `packet_semantics/rdps_semantics_registry.json`：本项目维护的快照元数据和开发版解析规则，保留输入哈希、证据及修改说明。
+
+上述外部数据未附独立数据许可，按来源记录，不套用本项目代码许可证；
+上游代码的 MIT 声明另行保留。完整来源表见根目录 `THIRD_PARTY_NOTICES.md`。
+
+## 体积
 
 原始资源约 390.1 MB；按读取字段提取后为 16.9 MB（2,740 个文件），
 源码附带的 `runtime-data.zip` 约 5.8 MB。大小使用十进制 MB，不含 Python、Qt、图片和官网 uploader。
@@ -118,7 +132,7 @@ Overlay 和 uploader payload，以及 GUI 数据。另需运行应用、parser_c
 `_development/tests/resources/test_missing_character_resources.py`：包括未见过的新 ID 自动提取、
 原件缺失拒绝，以及缺少角色资料时历史报告、实时摘要和本地时间轴仍可使用。
 
-项目 MIT 不会重新授权游戏数据、图片或外部资料。提取不改变其来源和权利边界，
+项目的代码许可不会重新授权游戏数据、图片或外部资料。提取不改变其来源和权利边界，
 见根目录 THIRD_PARTY_NOTICES.md。
-项目链接见根目录 README；运行数据的直接来源仍以清单中的固定 ZMDLogs 发行包和哈希为准，
-不会因补充 AKEData 网站链接而变成从其最新仓库下载的数据。
+运行数据包的直接来源以固定 ZMDLogs 发行包和哈希为准；
+单独维护的 AKEData 派生规则以各自的 `source` 为准。

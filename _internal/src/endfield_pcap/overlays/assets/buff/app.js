@@ -43,7 +43,8 @@
   window.addEventListener("endfield-overlay-config", e => {settings = {...settings, ...e.detail.settings}; render();});
   window.addEventListener("endfield-buff-snapshot", e => accept(e.detail));
   function connect() {
-    const ws = socket = new WebSocket(`ws://127.0.0.1:${params.get("wsPort") || "29325"}/ws`);
+    const suffix = params.get("wsToken") ? `?access_token=${encodeURIComponent(params.get("wsToken"))}` : "";
+    const ws = socket = new WebSocket(`ws://127.0.0.1:${params.get("wsPort") || "29325"}/ws${suffix}`);
     ws.onopen = () => {if (socket === ws) {connected = true; render();}};
     ws.onmessage = e => {if (socket === ws) {try {accept(JSON.parse(e.data));} catch (error) {console.error(error);}}};
     ws.onclose = () => {if (socket === ws) {connected = false; render(); retry = setTimeout(connect, 1500);}};

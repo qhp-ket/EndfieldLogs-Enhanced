@@ -1,6 +1,7 @@
 from __future__ import annotations
 import json
 import os
+import re
 import sys
 import uuid
 from dataclasses import dataclass, field, replace
@@ -120,6 +121,10 @@ def load_app_config(path: Path | None = None) -> AppConfig:
     config = AppConfig(
         service=ServiceConfig(
             ws_port=int(service_payload.get("ws_port", service_default.ws_port)),
+            ws_browser_token=(service_payload['ws_browser_token']
+                if isinstance(service_payload.get('ws_browser_token'), str)
+                and re.fullmatch(r'[A-Za-z0-9_-]{43,128}', service_payload['ws_browser_token'])
+                else service_default.ws_browser_token),
             log_dir=Path(service_payload.get("log_dir", str(service_default.log_dir))).resolve(),
             log_level=str(service_payload.get("log_level", service_default.log_level)),
             game_exe=str(service_payload.get("game_exe", service_default.game_exe)),
@@ -178,6 +183,7 @@ def save_app_config(config: AppConfig, path: Path | None = None) -> None:
             {
                 "service": {
                     "ws_port": config.service.ws_port,
+                    "ws_browser_token": config.service.ws_browser_token,
                     "log_dir": str(config.service.log_dir),
                     "log_level": config.service.log_level,
                     "game_exe": config.service.game_exe,

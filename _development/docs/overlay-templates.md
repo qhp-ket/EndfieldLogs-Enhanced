@@ -81,6 +81,11 @@ window.addEventListener("endfield-analysis-snapshot", event => {
 
 订阅伤害的本地模板与内置伤害窗一起切换历史/实时，关闭后重开、页面重新加载都会补发当前完整状态。BUFF 保持实时。URL 与没有声明的 HTML 不接收进程内战斗快照，需要网页自己连接 `ws://127.0.0.1:<wsPort>/ws`，消费版本化完整状态；WebSocket 始终保持实时，保留 raw `event_batch` 供诊断。
 
+浏览器 WS 连接还需 `access_token`。在 GUI 设置页复制含凭据的连接地址；不要将其提交到仓库。
+WS 模式的本地模板可从 URL 的 `wsToken` 参数取得凭据并转发为 WS 查询参数 `access_token`，
+内置伤害/BUFF 模板已支持。进程内模式不需要凭据；宿主不会把凭据自动附给远程 URL 模板。
+独立浮窗附着已有服务时，须使用与该服务匹配的配置凭据。未经授权的外站与 `Origin: null` 页面均被拒绝。
+
 OBS 使用「窗口采集」，捕获方式选择 Windows 10（Windows Graphics Capture），按浮窗名称选中 GUI 使用的同一个窗口。用户已确认 OBS 可正常捕获；无需浏览器来源或额外端口，旧镜像服务及相关配置、提示已移除。设置中的 WebSocket 端口继续供实时数据客户端使用。
 
 浮窗使用普通无边框置顶 Qt 窗口，不抢焦点。隐藏时窗口保持原 HWND、位置、尺寸和绘制，桌面透明度为零，Windows 10 捕获仍接收新画面；恢复时还原用户透明度和穿透设置。已通过原生 Windows Graphics Capture 像素测试：显示红色、隐藏后绿色、再次更新紫色、恢复紫色，桌面隐藏期间只显示后面的测试背景。未验证 BitBlt/GDI 隐藏捕获。关闭「启用」会真正关闭窗口，停止 GUI 也会结束窗口捕获。

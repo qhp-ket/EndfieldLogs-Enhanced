@@ -2,7 +2,7 @@
 from pathlib import Path
 from PySide6.QtCore import QUrl, Qt
 from PySide6.QtGui import QKeySequence
-from PySide6.QtWidgets import QWidget, QFormLayout, QHBoxLayout, QVBoxLayout
+from PySide6.QtWidgets import QWidget, QFormLayout, QHBoxLayout, QVBoxLayout, QLineEdit
 from qfluentwidgets import (
     HeaderCardWidget,
     ComboBox,
@@ -93,6 +93,19 @@ class SettingsPage(InterfacePage):
         self.port_hint.setWordWrap(True)
         service_form.addRow("端口", self.port_edit)
         service_form.addRow("", self.port_hint)
+        browser_row = QWidget(service_wrapper)
+        browser_layout = QHBoxLayout(browser_row)
+        browser_layout.setContentsMargins(0, 0, 0, 0)
+        self.browser_ws_edit = LineEdit(browser_row)
+        self.browser_ws_edit.setReadOnly(True)
+        self.browser_ws_edit.setEchoMode(QLineEdit.EchoMode.Password)
+        self.copy_browser_ws_btn = PushButton('复制地址', browser_row)
+        browser_layout.addWidget(self.browser_ws_edit, 1)
+        browser_layout.addWidget(self.copy_browser_ws_btn)
+        service_form.addRow('网页访问地址', browser_row)
+        browser_hint = CaptionLabel('含访问凭据，仅交给可信页面。使用当前保存的端口，下次启动抓包生效。', service_wrapper)
+        browser_hint.setWordWrap(True)
+        service_form.addRow('', browser_hint)
 
         log_card = HeaderCardWidget("日志文件路径", self)
         self.content_layout.addWidget(log_card)
@@ -194,4 +207,7 @@ class SettingsPage(InterfacePage):
         self.game_exe_edit.setToolTip(game_exe)
         self.game_exe_edit.setCursorPosition(0)
         self.ws_port.setText(f"WS 端口: {config.ws_port}")
+        from urllib.parse import urlencode
+        self.browser_ws_edit.setText(f'ws://127.0.0.1:{config.ws_port}/ws?' +
+            urlencode({'analysis': 'summary', 'access_token': config.ws_browser_token}))
         self.service_log_dir.setText(f"日志目录: {config.log_dir}")

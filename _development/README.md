@@ -9,6 +9,7 @@
 - [界面组件位置](docs/battle-analysis-components.md)：控件、字号、时间轴和网页资产。
 - [实时摘要接口](docs/live-summary-publisher.md)、[质量契约](docs/snapshot-quality-contract.md)。
 - [版本与打包](docs/portable-packaging.md)。
+- [许可与再分发](docs/licensing.md)：GPLv3 组合程序、上游 MIT、对应源码及外部资源的边界。
 
 `tests/` 为应用回归，核心回归位于 `_internal/packages/*/tests/`；[测试分类与精简记录](tests/README.md)说明各目录覆盖范围、预期失败、跳过条件和分类运行命令。
 `tools/` 只入库当前维护工具；下载、缓存、性能实验、历史实施记录与验证产物留在本地。

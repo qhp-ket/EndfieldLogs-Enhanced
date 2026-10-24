@@ -56,7 +56,8 @@ def run_with_overlay(service_config: ServiceConfig) -> int:
     app = QApplication.instance() or QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(True)
 
-    manager = OverlayManager(service_config.ws_port, use_in_process_snapshots=not attach_only)
+    manager = OverlayManager(service_config.ws_port, use_in_process_snapshots=not attach_only,
+                             ws_browser_token=service_config.ws_browser_token)
     manager.sync_entries(
         [
             OverlayEntry(

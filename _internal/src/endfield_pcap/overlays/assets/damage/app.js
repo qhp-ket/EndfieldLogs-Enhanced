@@ -1,7 +1,8 @@
 (function () {
   const query = new URLSearchParams(window.location.search);
   const inProcess = query.get("snapshotTransport") === "inprocess";
-  const wsUrl = `ws://127.0.0.1:${query.get("wsPort") || "29325"}/ws?analysis=summary`;
+  const wsUrl = `ws://127.0.0.1:${query.get("wsPort") || "29325"}/ws?analysis=summary` +
+    (query.get("wsToken") ? `&access_token=${encodeURIComponent(query.get("wsToken"))}` : "");
   const state = { streamId: null, sequence: -1, snapshot: null, connected: inProcess, error: null, source: null };
   const retiredStreams = new Set();
   let barMode = query.get("barMode") === "rdps" ? "rdps" : "dps";

@@ -1,6 +1,7 @@
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
+import secrets
 
 
 @dataclass(slots=True)
@@ -19,3 +20,4 @@ class ServiceConfig:
     status_file: Path | None = None
     trace_enabled: bool = True
     merge_multi_phase_enemy_battles: bool = False
+    ws_browser_token: str = field(default_factory=lambda: secrets.token_urlsafe(32), repr=False)

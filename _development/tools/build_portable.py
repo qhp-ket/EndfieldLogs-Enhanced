@@ -235,6 +235,7 @@ def stage_release(name=None):
     copy_tree(ROOT / '_development/portable/licenses', stage / 'licenses')
     copy_file(ROOT / 'LICENSE', stage / 'licenses/EndfieldLogs-LICENSE.txt')
     copy_file(ROOT / 'THIRD_PARTY_NOTICES.md', stage / 'licenses/EndfieldLogs-THIRD_PARTY_NOTICES.md')
+    copy_file(ROOT / '_development/docs/licensing.md', stage / 'licenses/EndfieldLogs-LICENSING.zh-CN.md')
     for folder in ('src', 'packages'):
         print(f'Runtime resources: {folder}', flush=True)
         copy_tree(ROOT / '_internal' / folder, stage / '_internal' / folder)

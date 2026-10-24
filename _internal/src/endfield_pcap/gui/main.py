@@ -68,6 +68,7 @@ class MainWindow(
         self.service_controller = ServiceController(self.app_config.service)
         self.overlay_manager = OverlayManager(
             self.app_config.service.ws_port,
+            ws_browser_token=self.app_config.service.ws_browser_token,
             on_entry_changed=self._handle_overlay_entry_changed,
             use_in_process_snapshots=True,
             on_full_requirement=self.service_controller.set_full_analysis_required,

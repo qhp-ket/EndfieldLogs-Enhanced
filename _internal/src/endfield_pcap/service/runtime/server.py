@@ -109,7 +109,8 @@ class DamageLogService(WebSocketDelivery, AnalysisStreams, FlowCapture, DebugOut
             await self._publish_analysis_snapshot()
             await self._publish_analysis_summary()
             await self._publish_buff_snapshot()
-            self.server = await websockets.serve(self._ws_handler, "127.0.0.1", self.config.ws_port)
+            self.server = await websockets.serve(self._ws_handler, "127.0.0.1", self.config.ws_port,
+                                                 process_request=self._ws_process_request)
             self.capture_manager.start()
             if self._analysis_required('analysis_summary'):
                 self.summary_publisher.start()

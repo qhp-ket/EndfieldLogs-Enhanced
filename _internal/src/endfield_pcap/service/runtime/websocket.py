@@ -4,13 +4,23 @@ import copy
 import json
 from dataclasses import asdict
 from datetime import datetime
+from http import HTTPStatus
+from endfield_pcap.service.runtime.access import browser_request_allowed
 
 
 class WebSocketDelivery:
+    def _ws_process_request(self, connection, request):
+        if not browser_request_allowed(request, self.config.ws_browser_token):
+            return connection.respond(HTTPStatus.FORBIDDEN, 'Browser WebSocket access requires a valid token.\n')
+
     async def _ws_handler(self, websocket):
         from urllib.parse import parse_qs, urlsplit
         from endfield_pcap.analysis.live.delivery import ClientSender
         request = getattr(websocket, 'request', None)
+        # Retain the boundary for embedded callers that omit process_request.
+        if request is not None and not browser_request_allowed(request, self.config.ws_browser_token):
+            await websocket.close(code=1008, reason='Browser access denied')
+            return
         path = getattr(request, 'path', getattr(websocket, 'path', ''))
         summary = parse_qs(urlsplit(path).query).get('analysis') == ['summary']
         publisher = self.summary_publisher if summary else self.snapshot_publisher

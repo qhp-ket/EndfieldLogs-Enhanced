@@ -18,10 +18,11 @@ class Element {
   replaceChildren(...nodes) { this.children = nodes; }
 }
 
-function mount(inProcess) {
+function mount(inProcess, token = '') {
   const refs = new Map(); const listeners = new Map(); const sockets = []; const timers = [];
   const window = {
-    location: { search: inProcess ? '?snapshotTransport=inprocess' : '?wsPort=29325' },
+    location: { search: (inProcess ? '?snapshotTransport=inprocess' : '?wsPort=29325') +
+      (token ? `&wsToken=${encodeURIComponent(token)}` : '') },
     addEventListener(name, handler) { listeners.set(name, handler); },
     setTimeout(fn) { timers.push(fn); return timers.length; },
     clearTimeout() {},
@@ -46,8 +47,9 @@ function mount(inProcess) {
 }
 
 for (const inProcess of [false, true]) {
-  const app = mount(inProcess);
+  const app = mount(inProcess, 'fixture-token&with spaces');
   assert.equal(app.sockets.length, inProcess ? 0 : 1, 'Qt must not create a localhost WebSocket');
+  if (!inProcess) assert.equal(new URL(app.sockets[0].url).searchParams.get('access_token'), 'fixture-token&with spaces');
   if (!inProcess) app.sockets[0].onopen();
   const text = id => app.refs.get(id).textContent;
   const rowNumbers = () => app.refs.get('rows').children.map(row => ({

@@ -20,6 +20,15 @@ canonical trace
 
 ## 消息与订阅
 
+服务仅监听 `127.0.0.1`。带 `Origin` 的网页连接必须在查询参数中提供 `access_token`，
+与当前保存配置的随机 `ws_browser_token` 匹配；未授权连接在握手阶段返回 403，发送任何战斗数据前即拒绝。
+`Origin: null` 的本地文件或沙盒页面也必须带凭据。设置页可复制含凭据的摘要 WS 地址；
+访问完整流时保留 `access_token`、移除 `analysis=summary` 即可。不要把凭据交给不可信页面或写入公开模板。
+旧配置加载时生成凭据，保存到被忽略的个人设置；配置 repr 不输出该字段，发行包不收集个人设置。
+
+不带 Origin 的原生本地客户端仍可使用原有接口。这是防未授权网页访问的边界，
+并非隔离本机程序的完整身份认证。GUI 的进程内模板桥保持原样。
+
 摘要入口是 `/ws?analysis=summary`。连接后依次收到 `hello`、当前 `analysis_summary`（无状态时为 null）、当前 BUFF 状态，随后接收后续状态。raw `event_batch` 仍保留。
 
 ```json

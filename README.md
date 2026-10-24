@@ -29,6 +29,8 @@
 增量分析允许迟到证据修正及异常重放；轻量摘要与完整报告共用计算口径，不跳过归因证据。
 连携 CD 功能已停用，代码保留。更多入口见 [源码导航](_internal/src/README.md)，
 接口细节见 [实时摘要接口](_development/docs/live-summary-publisher.md)。
+本地 WebSocket 的网页连接需要访问凭据，可在「设置 → 服务连接」复制地址；GUI 内置数据桥不受影响。
+不带 Origin 的原生本地客户端保留兼容接入，因此这项防护阻止未授权网页读取，不隔离本机程序。
 
 ## 使用便携包
 
@@ -117,8 +119,8 @@ python -B _development/tools/release.py build --component uploader # 可选：�
 
 ## 许可与来源
 
-项目代码沿用上游 **MIT**，见 [LICENSE](LICENSE)。保留上游版权和许可声明，
-项目来源及外部资源边界见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
-MIT 允许商业使用；本项目没有附加禁止商用条款。转载和分发时请保留项目来源与修改说明；
-其中强制要求以 MIT 原文为准，不另设产品界面署名条件。
-游戏数据、图片、第三方软件和外部抓包密钥不因与程序一起存放而自动适用本项目 MIT。
+本开发版的新增和修改代码，以及包含 GPLv3 GUI 依赖的组合程序，采用 **GPL-3.0-only**，见 [LICENSE](LICENSE)。
+上游 MIT 代码仍保留其版权声明及许可；各依赖继续按各自许可证授权。
+GPLv3 允许商业使用，分发程序需履行对应源码、许可和修改说明等义务，不另加禁止商用条件。
+来源及边界见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)，具体交付要求见 [许可与再分发](_development/docs/licensing.md)。
+仓库内第三方资源有明确许可的保留许可，未附明确许可的注明来源；数据来源包括 AKEData 与固定版本的 ZMDLogs 发行包，不由本项目 GPLv3 重新授权。
