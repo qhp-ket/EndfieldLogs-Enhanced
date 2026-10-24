@@ -9,7 +9,13 @@ from endfield_pcap.service.runtime.access import browser_request_allowed
 
 
 class WebSocketDelivery:
-    def _ws_process_request(self, connection, request):
+    async def _ws_process_request(self, connection, request):
+        if isinstance(connection, str):
+            # Legacy API: (path, request_headers), with an HTTP response tuple.
+            if not browser_request_allowed(request, self.config.ws_browser_token, path=connection):
+                return (HTTPStatus.FORBIDDEN, [('Content-Type', 'text/plain; charset=utf-8')],
+                        b'Browser WebSocket access requires a valid token.\n')
+            return None
         if not browser_request_allowed(request, self.config.ws_browser_token):
             return connection.respond(HTTPStatus.FORBIDDEN, 'Browser WebSocket access requires a valid token.\n')
 
@@ -17,11 +23,13 @@ class WebSocketDelivery:
         from urllib.parse import parse_qs, urlsplit
         from endfield_pcap.analysis.live.delivery import ClientSender
         request = getattr(websocket, 'request', None)
+        path = getattr(request, 'path', getattr(websocket, 'path', ''))
+        if request is None:
+            request = getattr(websocket, 'request_headers', None)
         # Retain the boundary for embedded callers that omit process_request.
-        if request is not None and not browser_request_allowed(request, self.config.ws_browser_token):
+        if not browser_request_allowed(request, self.config.ws_browser_token, path=path):
             await websocket.close(code=1008, reason='Browser access denied')
             return
-        path = getattr(request, 'path', getattr(websocket, 'path', ''))
         summary = parse_qs(urlsplit(path).query).get('analysis') == ['summary']
         publisher = self.summary_publisher if summary else self.snapshot_publisher
         sender = None

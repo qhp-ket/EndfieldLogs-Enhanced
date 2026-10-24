@@ -69,6 +69,8 @@ def test_service_buff_sink_observer_and_full_handshake(service_factory):
         original = deepcopy(observed[-1])
         observed[-1]["snapshot"]["buffs"].clear()
         class Socket:
+            request_headers = {}
+            path = '/ws'
             def __init__(self): self.frames = []
             async def send(self, text): self.frames.append(json.loads(text))
             async def wait_closed(self): pass

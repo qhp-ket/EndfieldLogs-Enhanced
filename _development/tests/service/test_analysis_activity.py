@@ -107,7 +107,7 @@ def test_explicit_websocket_consumers_override_disabled_gui_streams(service_fact
         for line in FIXTURE.splitlines(keepends=True): service._handle_trace_line(line)
         service._handle_trace_line(start())
         class Socket:
-            request = SimpleNamespace(path='/ws?analysis=summary')
+            request = SimpleNamespace(path='/ws?analysis=summary', headers={})
             def __init__(self): self.frames = []
             async def send(self, text): self.frames.append(json.loads(text))
             async def wait_closed(self):

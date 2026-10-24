@@ -337,6 +337,8 @@ def test_decoded_damage_events_reach_disk_canonical_observer_and_websocket(servi
     asyncio.run(scenario())
 
 class FakeSocket:
+    request_headers = {}
+    path = '/ws'
     def __init__(self):
         self.sent = []
         self.hello_entered = asyncio.Event()

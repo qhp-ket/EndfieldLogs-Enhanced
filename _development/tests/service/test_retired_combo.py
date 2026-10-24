@@ -29,6 +29,8 @@ def test_retired_combo_has_no_service_analysis_input_queue_or_ws_frames(service_
         assert not service._analysis_streams and not service._analysis_required('combo_snapshot')
         assert not hasattr(service, 'combo_publisher') and not hasattr(service, '_combo_inputs')
         class Socket:
+            request_headers = {}
+            path = '/ws'
             def __init__(self): self.frames = []
             async def send(self, text): self.frames.append(json.loads(text))
             async def wait_closed(self): pass
