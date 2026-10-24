@@ -92,7 +92,7 @@ def verify():
 
 def exercise():
     sys.path.insert(0, str(ROOT / '_internal/src'))
-    from endfield_pcap.environment_paths import configure_paths
+    from endfield_pcap.runtime.environment import configure_paths
     handles = configure_paths(ROOT)
     os.environ['ENDFIELD_LOGS_DATA_ROOT'] = str(ROOT / '_internal')
     observed = defaultdict(set)
@@ -120,12 +120,12 @@ def exercise():
             current[0] = name
             call()
     current[0] = 'live_packet_resolver'
-    from endfield_pcap.packet_resolver import PacketResolver
+    from endfield_pcap.capture.resolver import PacketResolver
     PacketResolver(ROOT / '_internal')
     current[0] = 'gui_presenters'
-    from endfield_pcap.battle_buff_labels import _manifest_names
-    from endfield_pcap.battle_energy_evidence import energy_rules
-    from endfield_pcap.skill_frame_reference import frame_rules
+    from endfield_pcap.analysis.battle.buffs.labels import _manifest_names
+    from endfield_pcap.analysis.battle.energy import energy_rules
+    from endfield_pcap.data.skill_frames import frame_rules
     _manifest_names(); energy_rules(); frame_rules()
     output = ROOT / '_development/verification/runtime-data-observations.json'
     output.parent.mkdir(exist_ok=True)

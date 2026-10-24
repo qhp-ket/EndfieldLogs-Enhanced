@@ -78,7 +78,7 @@ quality evidence 是递归复制的数据，修改 quality evidence 不会修改
 
 ## 回归门禁
 
-`_internal/packages/parser_core/tests/test_snapshot_quality.py` 使用 `fixtures/rdps_snapshot_contract.log` 断言四入口的总伤害 760、总 DPS 380、时长 2000 ms、rDPS 总归属 640/120、参与者 rDPS 320/60，且质量与原始证据一致。fixture 数值守恒，但缺少严格 action-unit 证据和官方计时验证，结果应为 provisional。
+`_internal/packages/parser_core/tests/reporting/test_snapshot_quality.py` 使用 `fixtures/rdps_snapshot_contract.log` 断言四入口的总伤害 760、总 DPS 380、时长 2000 ms、rDPS 总归属 640/120、参与者 rDPS 320/60，且质量与原始证据一致。fixture 数值守恒，但缺少严格 action-unit 证据和官方计时验证，结果应为 provisional。
 
 门禁还覆盖官方计时成功与冲突、每个必要验证字段缺失、负面 rDPS 与计时证据、null/0、上下文无伤害、空文本原异常、uint64 与证据副本隔离、live 无新输入缓存、reset、连续官方战斗的质量隔离。单纯投影的正控用显式合成证据验证 verified 路径，不声称该合成对象是真实完整战斗。
 

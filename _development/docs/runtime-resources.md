@@ -52,7 +52,9 @@ Uploader/
 ```
 
 不要仅复制单个 EXE。也可在别处运行官网 uploader，无需复制到开发目录。
-目前便携打包器会收集根目录的 `Uploader/`，因此构建完整便携包时需要先准备该目录。
+主程序便携包不收集 `Uploader/`，构建主程序无需准备该目录。
+独立 uploader 构建直接从通过哈希校验的官网 ZIP 提取，无需先准备本地 `Uploader/`；
+它按官网版本单独发行，不随主程序版本重复打包。
 
 上传选择 `.dev-gui/logs/battles/` 日期子目录中的 `trace_*.log`，并保留配套的
 `.log.status.json`。`launcher.log` 和 `session_*.ndjson` 不能代替 trace。

@@ -45,8 +45,12 @@ def main():
     version = commands.add_parser('version')
     version.add_argument('new_version', nargs='?')
     build = commands.add_parser('build')
+    build.add_argument('--component', choices=('application', 'uploader'), default='application')
     build.add_argument('--skip-tests', action='store_true', help='Only when the same sources already passed all regressions')
     build.add_argument('--stage-only', action='store_true', help='Stop before ZIP/relocation verification')
+    uploader = commands.add_parser('build-uploader', help='Build the optional official uploader as a separate ZIP')
+    uploader.add_argument('--skip-tests', action='store_true')
+    uploader.add_argument('--stage-only', action='store_true')
     verify = commands.add_parser('verify')
     verify.add_argument('archive', type=Path)
     args = parser.parse_args()
@@ -59,14 +63,19 @@ def main():
         elif args.command == 'verify':
             run('tools/verify_portable_zip.py', args.archive.resolve())
         else:
-            name, value = identity()
-            artifact = ROOT / '_releases' / f'{name}-{value}-windows-x64'
+            is_uploader = args.command == 'build-uploader' or args.component == 'uploader'
+            if is_uploader:
+                from build_portable import UPLOADER_RELEASE_NAME
+                artifact = ROOT / '_releases' / UPLOADER_RELEASE_NAME
+            else:
+                name, value = identity()
+                artifact = ROOT / '_releases' / f'{name}-{value}-windows-x64'
             if artifact.exists() or Path(str(artifact) + '.zip').exists():
                 raise ValueError('Version already built; bump version rather than overwrite a tested artifact')
             if not args.skip_tests:
-                for suite in ('live', 'parser_core', 'uploader_core'):
+                for suite in (('uploader_core',) if is_uploader else ('live', 'parser_core', 'uploader_core')):
                     run('run_tests.py', suite)
-            run('tools/build_portable.py', '--stage-only')
+            run('tools/build_portable.py', '--stage-only', '--component', 'uploader' if is_uploader else 'application')
             if not args.stage_only:
                 run('tools/build_portable.py', '--zip-stage', artifact)
                 run('tools/verify_portable_zip.py', Path(str(artifact) + '.zip'))

@@ -58,4 +58,3 @@ def app():
     profile.setCachePath(str(root / "qt-cache"))
     profile.setPersistentStoragePath(str(root / "qt-storage"))
     return application
-

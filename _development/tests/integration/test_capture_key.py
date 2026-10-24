@@ -2,7 +2,6 @@
 import importlib.util
 from pathlib import Path
 import shutil
-
 import pytest
 from Crypto.PublicKey import RSA
 

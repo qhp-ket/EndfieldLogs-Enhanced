@@ -16,11 +16,11 @@ canonical trace
 历史分析：按需读取文件 → 原完整报告（全部时间轴、悬停与选项）
 ```
 
-摘要分支不构建展示用时间轴、角色技能构成、完整 BUFF 展示事件、暴击上下文明细和完整质量证据，再将它们删除。它仍构建计算必需的语义窗口、逐击贡献及严格质量判断。连携和 BUFF 浮窗继续消费各自已有的 `combo_snapshot`、`buff_snapshot`。
+摘要分支不构建展示用时间轴、角色技能构成、完整 BUFF 展示事件、暴击上下文明细和完整质量证据，再将它们删除。它仍构建计算必需的语义窗口、逐击贡献及严格质量判断。BUFF 浮窗消费独立的 `buff_snapshot`；连携 CD 已停用，不再发布 `combo_snapshot`。
 
 ## 消息与订阅
 
-摘要入口是 `/ws?analysis=summary`。连接后依次收到 `hello`、当前 `analysis_summary`（无状态时为 null）、当前连携和 BUFF 状态，随后接收后续状态。raw `event_batch` 仍保留。
+摘要入口是 `/ws?analysis=summary`。连接后依次收到 `hello`、当前 `analysis_summary`（无状态时为 null）、当前 BUFF 状态，随后接收后续状态。raw `event_batch` 仍保留。
 
 ```json
 {

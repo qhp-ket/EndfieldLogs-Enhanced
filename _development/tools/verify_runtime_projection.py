@@ -24,7 +24,7 @@ def fingerprint(value):
 
 def collect(data_root):
     sys.path.insert(0, str(ROOT / '_internal/src'))
-    from endfield_pcap.environment_paths import configure_paths
+    from endfield_pcap.runtime.environment import configure_paths
     handles = configure_paths(ROOT)
     os.environ['ENDFIELD_LOGS_DATA_ROOT'] = str(data_root)
     from parser_core import battle_log_parser as p, hit_debug
@@ -55,17 +55,21 @@ def collect(data_root):
         results['overlay:' + path.name] = fingerprint(parse_overlay_battle_snapshot_text(text))
         results['viewer:' + path.name] = fingerprint(parse_hit_viewer_log_text(text))
         results['upload:' + path.name] = fingerprint(build_battle_upload_payloads_from_log(str(path), fast_unverified=True))
-    from endfield_pcap.packet_resolver import PacketResolver
+    from endfield_pcap.capture.resolver import PacketResolver
     resolver = PacketResolver(data_root)
     for attr in ('static_buff_by_numeric', 'static_skill_by_numeric', 'buff_by_numeric',
                  'skill_by_owner_numeric', 'skill_by_numeric_unique', 'known_buff_ids'):
         results['packet:' + attr] = fingerprint(getattr(resolver, attr))
-    from endfield_pcap import loadout_static, battle_buff_labels, trace_bridge, battle_energy_evidence, skill_frame_reference
+    import endfield_pcap.data.loadout as loadout_static
+    import endfield_pcap.analysis.battle.buffs.labels as battle_buff_labels
+    import endfield_pcap.trace.bridge as trace_bridge
+    import endfield_pcap.analysis.battle.energy as battle_energy_evidence
+    import endfield_pcap.data.skill_frames as skill_frame_reference
     for module in (loadout_static, battle_buff_labels, trace_bridge, battle_energy_evidence, skill_frame_reference):
         module.bundle_root = lambda: data_root
     for name in ('weapon_catalog', 'equip_piece_catalog', 'attribute_type_catalog'):
         results['gui:' + name] = fingerprint(getattr(loadout_static, name)())
-    from endfield_pcap.game_data import load_name_index
+    from endfield_pcap.data.names import load_name_index
     results['gui:character_names'] = fingerprint(load_name_index(data_root / 'jsondata/CharacterNameIndex.json'))
     results['gui:buff_names'] = fingerprint(battle_buff_labels._manifest_names())
     results['gui:energy_rules'] = fingerprint(battle_energy_evidence.energy_rules())

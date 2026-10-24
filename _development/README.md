@@ -1,5 +1,7 @@
 # 开发指南
 
+- [源码目录导航](../_internal/src/README.md)：功能分组、侧栏操作、服务和浮窗的修改入口。
+
 - [环境准备](docs/development-environment.md)：零环境、部分环境、完整环境的复用与安装。
 - [外部资源](docs/runtime-resources.md)：运行数据、抓包密钥、官网 uploader 与上传兼容。
 - [GUI 启动](docs/gui-launch.md)、[浮窗模板](docs/overlay-templates.md)。
@@ -8,7 +10,7 @@
 - [实时摘要接口](docs/live-summary-publisher.md)、[质量契约](docs/snapshot-quality-contract.md)。
 - [版本与打包](docs/portable-packaging.md)。
 
-`tests/` 为应用回归，核心回归位于 `_internal/packages/*/tests/`。
+`tests/` 为应用回归，核心回归位于 `_internal/packages/*/tests/`；[测试分类与精简记录](tests/README.md)说明各目录覆盖范围、预期失败、跳过条件和分类运行命令。
 `tools/` 只入库当前维护工具；下载、缓存、性能实验、历史实施记录与验证产物留在本地。
 
 ```powershell

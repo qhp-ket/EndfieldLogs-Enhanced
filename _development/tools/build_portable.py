@@ -24,12 +24,18 @@ RELEASES = ROOT / '_releases'
 IDENTITY = runpy.run_path(str(ROOT / '_internal/src/endfield_pcap/_version.py'))
 APP_NAME, VERSION = IDENTITY['APP_NAME'], IDENTITY['__version__']
 RELEASE_NAME = f'{APP_NAME}-{VERSION}-windows-x64'
+UPLOADER_NAME = 'EndfieldLogsUploader'
+UPLOADER_VERSION = '3.0.12'
+UPLOADER_RELEASE_NAME = f'{UPLOADER_NAME}-{UPLOADER_VERSION}-windows-x64'
 sys.dont_write_bytecode = True
 GUI_DEPS = ROOT / '_internal/python_deps/gui'
 COMMON_DEPS = ROOT / '_internal/python_deps/common'
 if sys.prefix == sys.base_prefix:
     sys.path[:0] = [str(GUI_DEPS), str(COMMON_DEPS)]
 from packaging.requirements import Requirement
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from portable_dependencies import dependency_file_allowed, qt_runtime_files
+from portable_uploader import extract_uploader
 
 CAPTURE_KEY_SHA256 = 'b83257fadefe901f708386da11ffcde0eb0dee6450a6b56fc1b85e197cab1b56'
 OFFICIAL_UPLOADER_SHA256 = 'd37373181c92273d379c72bac353f7057373e84bccbc08fadca721270c543179'
@@ -91,7 +97,9 @@ def dependencies():
 
 def copy_dependencies(stage):
     versions = {}
-    for name, dist in sorted(dependencies().items()):
+    resolved = dependencies()
+    qt_files = qt_runtime_files(Path(resolved['pyside6-essentials'].locate_file('PySide6')))
+    for name, dist in sorted(resolved.items()):
         source_root = Path(dist.locate_file('')).resolve()
         # User-installed packages (e.g. numpy, psutil, websockets) are resolved
         # explicitly through RECORD; no unrelated user files are collected.
@@ -105,7 +113,7 @@ def copy_dependencies(stage):
             if not source.is_relative_to(source_root):
                 continue  # Scripts outside site-packages are not runtime inputs.
             relative = source.relative_to(source_root)
-            if source.is_file() and not excluded(relative):
+            if source.is_file() and not excluded(relative) and dependency_file_allowed(relative, qt_files):
                 copy_file(source, target / relative)
         versions[name] = dist.version
     return versions
@@ -133,10 +141,15 @@ def copy_python(stage):
     (target / 'python314._pth').write_text('python314.zip\n.\nDLLs\n', encoding='ascii')
 
 
-def validate_tree(stage):
+def validate_tree(stage, component='application'):
     """Fail closed on personal state and extra secrets before creating a ZIP."""
-    allowed_roots = {'Start-GUI.cmd', 'launch_gui.py', 'README.zh-CN.md', 'BUILD-MANIFEST.json',
-                     '_internal', 'Uploader', 'licenses'}
+    allowed_roots = {'README.zh-CN.md', 'BUILD-MANIFEST.json', 'licenses'}
+    if component == 'application':
+        allowed_roots |= {'Start-GUI.cmd', 'launch_gui.py', '_internal'}
+    elif component == 'official_uploader':
+        allowed_roots.add('Uploader')
+    else:
+        raise ValueError('Unknown portable component: ' + component)
     files = []
     for path in sorted(stage.rglob('*')):
         if not path.is_file():
@@ -159,16 +172,28 @@ def validate_tree(stage):
     return files
 
 
-def write_manifest(stage, versions):
-    files = [p for p in validate_tree(stage) if p.name != 'BUILD-MANIFEST.json']
+def write_manifest(stage, versions, component='application'):
+    files = [p for p in validate_tree(stage, component) if p.name != 'BUILD-MANIFEST.json']
     source_commit = subprocess.run(['git', 'rev-parse', '--verify', 'HEAD'], cwd=ROOT,
                                    capture_output=True, text=True, check=False).stdout.strip() or None
-    manifest = dict(schema_version=2, built_at=datetime.now(timezone.utc).isoformat(),
-                    application=dict(name=APP_NAME, version=VERSION, artifact=stage.name), source_commit=source_commit,
-                    official_uploader=dict(version='3.0.12', executable_sha256=OFFICIAL_UPLOADER_SHA256),
-                    python=platform.python_version(), platform='Windows x64', dependencies=versions,
-                    capture_key='Unmodified shared runtime resource from official 3.0.12; not an account credential',
+    source_dirty = bool(subprocess.run(['git', 'status', '--porcelain'], cwd=ROOT,
+                                       capture_output=True, text=True, check=False).stdout.strip())
+    app_name, app_version = ((APP_NAME, VERSION) if component == 'application' else
+                             (UPLOADER_NAME, UPLOADER_VERSION))
+    manifest = dict(schema_version=2, component=component, built_at=datetime.now(timezone.utc).isoformat(),
+                    application=dict(name=app_name, version=app_version, artifact=stage.name), source_commit=source_commit,
+                    source_dirty=source_dirty,
+                    python=platform.python_version() if component == 'application' else None,
+                    platform='Windows x64', dependencies=versions,
+                    packaging=dict(dependency_policy='windows-runtime-closure-v1',
+                                   uncompressed_bytes=sum(p.stat().st_size for p in files)),
                     files={p.relative_to(stage).as_posix(): dict(size=p.stat().st_size, sha256=digest(p)) for p in files})
+    if component == 'application':
+        manifest['capture_key'] = 'Unmodified shared runtime resource from official 3.0.12; not an account credential'
+    else:
+        manifest['official_uploader'] = dict(version=UPLOADER_VERSION, executable_sha256=OFFICIAL_UPLOADER_SHA256,
+                                            resource_packaging='official-archive-byte-exact-v1')
+        manifest['packaging']['dependency_policy'] = 'official-frozen-runtime-unchanged'
     (stage / 'BUILD-MANIFEST.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding='utf8')
 
 
@@ -202,10 +227,6 @@ def stage_release(name=None):
     key = ROOT / '_internal/secrets/client_privkey.pem'
     if not key.is_file() or digest(key) != CAPTURE_KEY_SHA256:
         raise ValueError('Prepare the verified official capture key before packaging')
-    if not (ROOT / 'Uploader/EndfieldLogsUploader/EndfieldLogsUploader.exe').is_file():
-        raise ValueError('Prepare the complete official Uploader directory before packaging')
-    if digest(ROOT / 'Uploader/EndfieldLogsUploader/EndfieldLogsUploader.exe') != OFFICIAL_UPLOADER_SHA256:
-        raise ValueError('Uploader executable differs from the pinned official release')
     stage = RELEASES / name
     stage.mkdir(parents=True, exist_ok=False)
     for name in ('Start-GUI.cmd', 'launch_gui.py'):
@@ -224,10 +245,28 @@ def stage_release(name=None):
     print('Python runtime', flush=True)
     copy_python(stage)
     versions = copy_dependencies(stage)
-    print('Standalone official uploader', flush=True)
-    copy_tree(ROOT / 'Uploader', stage / 'Uploader')
     write_manifest(stage, versions)
     print(f'STAGED: {stage}', flush=True)
+    return stage
+
+
+def stage_uploader(name=None):
+    name = name or UPLOADER_RELEASE_NAME
+    if name != UPLOADER_RELEASE_NAME:
+        raise ValueError(f'Uploader release name must match its upstream version: {UPLOADER_RELEASE_NAME}')
+    from prepare_resources import acquire_archive
+    manifest = json.loads((ROOT / '_internal/data/resource-manifest.json').read_text(encoding='utf8'))
+    archive = acquire_archive(ROOT, manifest)
+    stage = RELEASES / name
+    stage.mkdir(parents=True, exist_ok=False)
+    stats = extract_uploader(archive, stage / 'Uploader')
+    executable = stage / 'Uploader/EndfieldLogsUploader/EndfieldLogsUploader.exe'
+    if not executable.is_file() or digest(executable) != OFFICIAL_UPLOADER_SHA256:
+        raise ValueError('Official uploader executable differs from the pinned release')
+    copy_file(ROOT / '_development/portable/README-uploader.zh-CN.md', stage / 'README.zh-CN.md')
+    copy_tree(ROOT / '_development/portable/licenses', stage / 'licenses')
+    write_manifest(stage, {}, component='official_uploader')
+    print(f'Uploader: {stats}\nSTAGED: {stage}', flush=True)
     return stage
 
 
@@ -235,8 +274,9 @@ def zip_stage(stage):
     stage = stage.resolve()
     if stage.parent != RELEASES.resolve() or not (stage / 'BUILD-MANIFEST.json').is_file():
         raise ValueError('Only an existing build directly under _releases can be archived')
-    files = validate_tree(stage)
     manifest = json.loads((stage / 'BUILD-MANIFEST.json').read_text(encoding='utf8'))
+    component = manifest.get('component', 'application')
+    files = validate_tree(stage, component)
     actual = {p.relative_to(stage).as_posix() for p in files if p.name != 'BUILD-MANIFEST.json'}
     if actual != set(manifest['files']):
         raise ValueError('Build contents changed since staging')
@@ -244,8 +284,9 @@ def zip_stage(stage):
         if p.name != 'BUILD-MANIFEST.json' and digest(p) != manifest['files'][p.relative_to(stage).as_posix()]['sha256']:
             raise ValueError(f'Build file changed: {p.relative_to(stage)}')
     identity = manifest.get('application') or {}
-    if (identity.get('name') != APP_NAME or identity.get('artifact') != stage.name
-            or stage.name != f"{APP_NAME}-{identity.get('version')}-windows-x64"):
+    expected_name = APP_NAME if component == 'application' else UPLOADER_NAME
+    if (identity.get('name') != expected_name or identity.get('artifact') != stage.name
+            or stage.name != f"{expected_name}-{identity.get('version')}-windows-x64"):
         raise ValueError('Staged artifact identity does not match its canonical versioned name')
     output = RELEASES / f'{stage.name}.zip'
     # Exclusive creation avoids silently replacing an existing tested release.
@@ -257,19 +298,21 @@ def zip_stage(stage):
             raise ValueError('ZIP CRC verification failed')
     sha = digest(output)
     output.with_suffix('.zip.sha256').write_text(f'{sha}  {output.name}\n', encoding='ascii')
-    print(f'ZIP: {output}\nBytes: {output.stat().st_size}\nSHA256: {sha}', flush=True)
+    print(f'ZIP: {output}\nUncompressed bytes: {sum(p.stat().st_size for p in files)}'
+          f'\nZIP bytes: {output.stat().st_size}\nSHA256: {sha}', flush=True)
     return output
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--name', default=RELEASE_NAME, help='Must match the canonical versioned artifact name')
+    parser.add_argument('--name', help='Must match the canonical versioned artifact name')
+    parser.add_argument('--component', choices=('application', 'uploader'), default='application')
     parser.add_argument('--stage-only', action='store_true')
     parser.add_argument('--zip-stage', type=Path)
     args = parser.parse_args()
     if args.zip_stage:
         zip_stage(args.zip_stage)
     else:
-        stage = stage_release(args.name)
+        stage = stage_release(args.name) if args.component == 'application' else stage_uploader(args.name)
         if not args.stage_only:
             zip_stage(stage)

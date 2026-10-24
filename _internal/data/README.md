@@ -30,14 +30,14 @@ typed roots 的整体结构和证明保持原样；被解析器计算字节哈�
 
 | 资源组 | 大小 MB | 主要读取者 / 用途 |
 | --- | ---: | --- |
-| `akedata` | 1.65 | parser、hit_debug、uploader payload、loadout_static、buff_display；按 ID 查定义和名称 |
+| `akedata` | 1.65 | parser、hit_debug、uploader payload、data/loadout、buff_display；按 ID 查定义和名称 |
 | `local_static` | 7.23 | parser；完整 typed Buff roots、技能伤害与公式证据 |
 | `local_semantics` | 3.51 | parser、battle_energy_evidence、skill_frame_reference；关系、分类、技力与帧规则 |
-| `local_tables` | 3.04 | parser、hit_debug、uploader payload、packet_resolver、game_data、loadout_static、trace_bridge |
-| `packet_semantics` | 1.24 | parser、packet_resolver、hit_debug；协议映射与语义批准 |
+| `local_tables` | 3.04 | parser、hit_debug、uploader payload、capture/resolver、data/names、data/loadout、trace/bridge |
+| `packet_semantics` | 1.24 | parser、capture/resolver、hit_debug；协议映射与语义批准 |
 | 消息 ID 表 | 0.18 | message_registry；协议消息识别 |
 | `public` | 0.02 | parser；关卡词条名称 |
-| `jsondata` | 0.007 | game_data、gui_main、service、trace_bridge；名称、头像映射和关卡辅助表 |
+| `jsondata` | 0.007 | data/names、gui/resources、service、trace/bridge；名称、头像映射和关卡辅助表 |
 
 第二轮把等级属性表从 3.53 MB 减到 1.27 MB；技能 manifest 从 1.04 MB 减到约 5 KB，
 两处再减少 3.31 MB。各等级、突破阶段及记录顺序保留；层数提示与创建 Buff 列表的回退顺序保留。
@@ -114,8 +114,8 @@ Overlay 和 uploader payload，以及 GUI 数据。另需运行应用、parser_c
 对应 rDPS 保持待确认并保留质量原因，不猜测角色数值或给出完整归因承诺。
 这不保证未来协议变化仍可解码；缺失角色条目也不同于整份关键数据包损坏，后者应重新恢复校验。
 
-相关回归在 `_development/tests/test_runtime_projection.py` 和
-`_development/tests/test_missing_character_resources.py`：包括未见过的新 ID 自动提取、
+相关回归在 `_development/tests/resources/test_runtime_projection.py` 和
+`_development/tests/resources/test_missing_character_resources.py`：包括未见过的新 ID 自动提取、
 原件缺失拒绝，以及缺少角色资料时历史报告、实时摘要和本地时间轴仍可使用。
 
 项目 MIT 不会重新授权游戏数据、图片或外部资料。提取不改变其来源和权利边界，

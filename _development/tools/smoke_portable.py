@@ -27,12 +27,11 @@ def main():
     assert launcher.main(['--check']) == 0
 
     from PySide6.QtCore import QCoreApplication, QEvent
-    from PySide6.QtTest import QTest
     from PySide6.QtWidgets import QApplication
     from qfluentwidgets import Theme, setTheme
-    from endfield_pcap import gui_main
-    from endfield_pcap.gui_config import load_app_config
-    from endfield_pcap.gui_battle_detail import BattleDetailDialog
+    import endfield_pcap.gui.main as gui_main
+    from endfield_pcap.gui.config import load_app_config
+    from endfield_pcap.gui.battle.detail import BattleDetailDialog
 
 
     def wait(condition, seconds=45):
@@ -41,7 +40,7 @@ def main():
             app.processEvents()
             if condition():
                 return
-            QTest.qWait(20)
+            time.sleep(0.02)
         raise TimeoutError('Portable GUI smoke check timed out')
 
 
@@ -63,7 +62,8 @@ def main():
     window.setMicaEffectEnabled(False)
     window.show()
     window.switchTo(window.overlay_page)
-    QTest.qWait(500)
+    wait_until = time.monotonic()+0.5
+    wait(lambda: time.monotonic() >= wait_until)
     assert window.overlay_page.reset_layout_btn.isVisible()
     overlay = next(iter(window.overlay_manager._windows.values()))
     wait(lambda: overlay.webview.url().isLocalFile())
@@ -79,14 +79,15 @@ def main():
 
     snapshot = {}
     if trace:
-        from endfield_pcap.trace_import import load_trace_records
-        from endfield_pcap.history_analysis import load_record_snapshot
+        from endfield_pcap.history.importer import load_trace_records
+        from endfield_pcap.history.analysis import load_record_snapshot
         records = load_trace_records(trace)
         selected = next((row for row in records if row.record_index == 2), records[-1])
         snapshot = load_record_snapshot(selected)
         result['parsed_battle'] = {k: snapshot['battle'].get(k) for k in ('total_damage', 'duration_ms')}
         window.overlay_manager.show_history(snapshot, 'portable-smoke')
-        QTest.qWait(500)
+        wait_until = time.monotonic()+0.5
+        wait(lambda: time.monotonic() >= wait_until)
         damage=[]
         overlay.webview.page().runJavaScript('window.endfieldOverlay.snapshots.analysis_snapshot.snapshot.battle.total_damage', lambda value: damage.append(value))
         wait(lambda: bool(damage))
@@ -101,7 +102,8 @@ def main():
     assert js(view, 'document.body.dataset.ready') == 'true'
     for tab in ('skills', 'enemy', 'timeline'):
         js(view, f'document.querySelector("[data-tab={tab}]").click()')
-    QTest.qWait(400)
+    wait_until = time.monotonic()+0.4
+    wait(lambda: time.monotonic() >= wait_until)
     assert not view.page.console_errors
     dialog.grab().save(str(output / 'analysis-web.png'))
     result['web_blocks'] = len(view.bridge.model.blocks)
@@ -114,7 +116,7 @@ def main():
                 external.append(name)
     assert not external, external
     result['external_modules'] = external
-    from endfield_pcap.snapshot_process import SnapshotProcess
+    from endfield_pcap.analysis.live.process import SnapshotProcess
     worker = SnapshotProcess()
     try:
         # A real spawn must work with the isolated interpreter and resource paths.

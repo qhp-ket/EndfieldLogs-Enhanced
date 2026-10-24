@@ -56,7 +56,7 @@ def bootstrap() -> None:
     os.environ["LOCALAPPDATA"] = str(PROFILE / "local")
     os.environ["APPDATA"] = str(PROFILE / "roaming")
     sys.path.insert(0, str(ROOT / '_internal/src'))
-    from endfield_pcap.environment_paths import configure_paths
+    from endfield_pcap.runtime.environment import configure_paths
     _DLL_DIRECTORIES.extend(configure_paths(ROOT))
     log_dir = PROFILE / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -77,10 +77,11 @@ def bootstrap() -> None:
 
 
 def prepare_config(game_dir: Path | None = None, ws_port: int | None = None) -> Path:
-    from endfield_pcap.gui_config import (
-        AppConfig, default_overlay_entries, default_service_config,
-        load_app_config, save_app_config,
-    )
+    from endfield_pcap.gui.config import AppConfig
+    from endfield_pcap.gui.config import default_overlay_entries
+    from endfield_pcap.gui.config import default_service_config
+    from endfield_pcap.gui.config import load_app_config
+    from endfield_pcap.gui.config import save_app_config
 
     path = PROFILE / "settings.json"
     if path.exists():
@@ -122,14 +123,15 @@ def main(argv: list[str] | None = None) -> int:
         bootstrap()
         for name in ("PySide6.QtWebEngineWidgets", "qfluentwidgets", "dpkt", "Crypto", "google.protobuf", "websockets", "psutil"):
             importlib.import_module(name)
-        from endfield_pcap.gui_main import _is_valid_game_dir, run_gui
-        from endfield_pcap.gui_config import load_app_config
-        from endfield_pcap.npcap import has_npcap
+        from endfield_pcap.gui.pages.settings.paths import _is_valid_game_dir
+        from endfield_pcap.gui.main import run_gui
+        from endfield_pcap.gui.config import load_app_config
+        from endfield_pcap.capture.npcap import has_npcap
 
         config_path = prepare_config(args.game_dir, args.ws_port)
         config = load_app_config(config_path)
         logger.info("Python: %s", sys.executable)
-        logger.info("Source GUI: %s", ROOT / "_internal/src/endfield_pcap/gui_main.py")
+        logger.info("Source GUI: %s", ROOT / "_internal/src/endfield_pcap/gui/main.py")
         logger.info("Config: %s", config_path)
         logger.info("Battle logs: %s", config.service.log_dir)
         logger.info("WebSocket: ws://127.0.0.1:%s/ws", config.service.ws_port)

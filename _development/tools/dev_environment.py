@@ -26,7 +26,7 @@ MODULES = {'PySide6': ('PySide6.QtWidgets', 'PySide6.QtWebEngineWidgets'),
 
 def probe(root, *, isolated=False):
     sys.path.insert(0, str(root / '_internal/src'))
-    from endfield_pcap.environment_paths import configure_paths
+    from endfield_pcap.runtime.environment import configure_paths
     handles = configure_paths(root, isolated=isolated)
     compatible = struct.calcsize('P') == 8 and sys.platform == 'win32'
     missing, locations = [], {}

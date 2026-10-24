@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Endfield Overlay</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div id="app" class="overlay-shell">
+      <div class="overlay-card">
+        <div class="overlay-header">
+          <div class="header-accent"></div>
+          <div class="header-grid">
+            <div class="header-metric-group">
+              <div class="header-metric">
+                <span class="metric-label">团队 DMG</span>
+                <span id="totalDamage" class="metric-value">0</span>
+              </div>
+              <div class="header-metric">
+                <span class="metric-label">团队 DPS</span>
+                <span id="totalDps" class="metric-value">0.0</span>
+              </div>
+            </div>
+            <div class="header-clock">
+              <div id="combatIndicator" class="combat-indicator"></div>
+              <div id="combatTime" class="clock-value">00:00:00</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-head">
+          <div id="columnsHead" class="table-grid"></div>
+        </div>
+
+        <div class="table-body">
+          <div id="rows" class="rows"></div>
+          <div id="emptyState" class="empty-state">Waiting for combat data...</div>
+          <div class="body-accent"></div>
+        </div>
+
+        <div id="footer" class="overlay-footer">
+          <div class="footer-gloss"></div>
+          <span id="footerText" class="footer-text">STANDBY // 待机中</span>
+        </div>
+
+        <div class="corner corner-left"></div>
+        <div class="corner corner-right"></div>
+      </div>
+    </div>
+
+    <script src="../shared/presentation.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>

@@ -44,9 +44,12 @@ folders = [p for p in output.iterdir() if p.is_dir()]
 assert len(folders) == 1
 app_root = folders[0]
 manifest = json.loads((app_root / 'BUILD-MANIFEST.json').read_text(encoding='utf8'))
-assert manifest['application']['name'] == 'EndfieldLogs'
+component = manifest.get('component', 'application')
+app_name = 'EndfieldLogs' if component == 'application' else 'EndfieldLogsUploader'
+assert component in {'application', 'official_uploader'}
+assert manifest['application']['name'] == app_name
 assert manifest['application']['artifact'] == app_root.name == archive_path.stem
-assert app_root.name == f"EndfieldLogs-{manifest['application']['version']}-windows-x64"
+assert app_root.name == f"{app_name}-{manifest['application']['version']}-windows-x64"
 actual = {p.relative_to(app_root).as_posix() for p in app_root.rglob('*') if p.is_file()}
 assert actual == set(manifest['files']) | {'BUILD-MANIFEST.json'}
 for relative, entry in manifest['files'].items():
@@ -56,6 +59,33 @@ assert not (app_root / '.dev-gui').exists()
 assert not (app_root / '_development').exists()
 assert not any('/tests/' in p or '/__pycache__/' in p for p in actual)
 print('Extracted manifest and privacy boundary verified', flush=True)
+
+if component == 'official_uploader':
+    from prepare_resources import acquire_archive
+    from portable_uploader import PREFIX
+    resources = json.loads((ROOT / '_internal/data/resource-manifest.json').read_text(encoding='utf8'))
+    original_archive = acquire_archive(ROOT, resources)
+    with zipfile.ZipFile(original_archive) as original:
+        members = [i for i in original.infolist() if not i.is_dir() and i.filename.startswith(PREFIX)]
+        originals = {'Uploader/' + i.filename[len(PREFIX):]: i for i in members}
+        assert {p for p in actual if p.startswith('Uploader/')} == originals.keys()
+        for relative, member in originals.items():
+            assert (app_root / relative).read_bytes() == original.read(member), relative
+    executable = app_root / 'Uploader/EndfieldLogsUploader/EndfieldLogsUploader.exe'
+    assert sha(executable) == manifest['official_uploader']['executable_sha256']
+    assert not (app_root / '_internal').exists()
+    assert not any(p.endswith(('.key', '.pfx', '.p12')) or '/secrets/' in p for p in actual)
+    result = dict(archive=archive_path.name, component=component,
+                  bytes=archive_path.stat().st_size, sha256=expected,
+                  uncompressed_bytes=sum((app_root / p).stat().st_size for p in actual),
+                  manifest_files=len(manifest['files']), official_executable_hash_verified=True,
+                  official_archive_files_verified=len(originals),
+                  main_application_runtime_included=False)
+    (output / 'portable-zip-result.json').write_text(json.dumps(result, indent=2), encoding='utf8')
+    print(json.dumps(result, indent=2), flush=True)
+    raise SystemExit(0)
+
+assert not (app_root / 'Uploader').exists(), 'Uploader must be distributed separately'
 
 env = dict(os.environ)
 for key in list(env):
@@ -85,9 +115,11 @@ smoke = subprocess.run(command, cwd=output, env=env, stdout=subprocess.PIPE,
 (output / 'smoke.log').write_bytes(smoke.stdout)
 assert smoke.returncode == 0, smoke.stdout.decode('utf8', errors='replace')[-3000:]
 result = dict(archive=archive_path.name, bytes=archive_path.stat().st_size, sha256=expected,
+              uncompressed_bytes=sum((app_root / p).stat().st_size for p in actual),
               manifest_files=len(manifest['files']), archive_has_personal_profile=False,
               cmd_check_exit=check.returncode, smoke_exit=smoke.returncode,
-              relocation_with_spaces_and_chinese=True, system_python_on_path=False,
+              relocation_with_spaces_and_chinese=(' ' in str(output) and any(ord(c) > 127 for c in str(output))),
+              uploader_included=False, system_python_on_path=False,
               smoke=json.loads((output / 'smoke/result.json').read_text(encoding='utf8')))
 (output / 'portable-zip-result.json').write_text(
     json.dumps(result, ensure_ascii=False, indent=2), encoding='utf8')

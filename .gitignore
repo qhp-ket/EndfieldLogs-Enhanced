@@ -1,4 +1,5 @@
 # Source-only allowlist: unknown root entries, private state and local tools stay local.
+/AGENTS.md
 /*
 !/.gitignore
 !/.gitattributes
@@ -65,6 +66,9 @@
 !/_development/tools/audit_repository.py
 !/_development/tools/generate_test_fixtures.py
 !/_development/tools/build_portable.py
+!/_development/tools/portable_dependencies.py
+!/_development/tools/portable_uploader.py
+!/_development/tools/verify_uploader_resources.py
 !/_development/tools/release.py
 !/_development/tools/smoke_portable.py
 !/_development/tools/verify_portable_zip.py

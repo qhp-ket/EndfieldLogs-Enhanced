@@ -16,9 +16,10 @@ root = Path(__file__).resolve().parents[1]
 output = root / "_development/verification"
 output.mkdir(parents=True, exist_ok=True)
 sys.path.insert(0, str(root / '_internal/src'))
-from endfield_pcap.environment_paths import configure_paths
+from endfield_pcap.runtime.environment import configure_paths
 dll_directories = configure_paths(root)
 sys.path.insert(0, str(root / '_internal/packages/parser_core/tests'))
+sys.path.insert(0, str(root / '_development/tests'))
 os.environ["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
 os.environ["ENDFIELD_LOGS_DATA_ROOT"] = str(root / "_internal")
 os.environ["ENDFIELD_UI_EVIDENCE_DIR"] = str(output)
@@ -47,11 +48,20 @@ if __name__ == "__main__":
         sys.path[:0] = [str(app), str(baseline / 'packages/parser_core'), str(baseline / 'packages/uploader_core')]
         os.environ['ENDFIELD_LOGS_DATA_ROOT'] = str(baseline)
     if target == "controls":
-        tests = tests / "test_overlay_controls.py"
+        tests = tests / "overlays/test_overlay_controls.py"
+    # Category names are paths, rather than another copy of the test list.
+    if target.startswith("app-"):
+        tests = root / '_development/tests' / target.removeprefix('app-')
+    if target.startswith("core-"):
+        tests = root / '_internal/packages/parser_core/tests' / target.removeprefix('core-')
+    if target == "legacy":
+        tests = root / '_internal/packages/parser_core/tests/legacy'
     extra_args = []
     if target == "capture-key":
         tests = root / '_development/tests/integration'
         extra_args = ['--with-capture-key', '-m', 'requires_capture_key']
+    if not tests.exists():
+        raise SystemExit(f"Unknown or unavailable test category: {target} ({tests})")
     log = output / f"{target}-tests.txt"
     with log.open("w", encoding="utf-8") as stream:
         with contextlib.redirect_stdout(stream), contextlib.redirect_stderr(stream):

@@ -33,7 +33,7 @@ GUI 保留原有 Windows 设置风格（Fluent 主窗口、导航、卡片及主
 - **HTML/CSS/JS**负责布局、装饰、颜色、字号层级、格式化和渲染。JSON 声明一个设置后，模板 JS 也必须消费该设置才能产生视觉效果。
 - **数据发布层**提供轻量 canonical `analysis_summary`、完整 `analysis_snapshot` 或独立展示用的 `buff_snapshot`。模板替换当前状态，不累计 raw 事件，不重新实现伤害或 rDPS 算法。
 
-内置伤害模板：`_internal/src/endfield_pcap/overlay_assets/damage.template.json`。伤害条/排序、显示列、背景模式由模板声明；HTML、CSS 和 JS 决定具体显示效果。连携模板、`combo_skills.json`、原分析器作为停用代码保留，不接入当前 GUI 和抓包服务。
+内置伤害模板：`_internal/src/endfield_pcap/overlays/assets/damage/template.json`。伤害条/排序、显示列、背景模式由模板声明；HTML、CSS 和 JS 决定具体显示效果。连携模板、`combo_skills.json`、原分析器作为停用代码保留，不接入当前 GUI 和抓包服务。
 
 浅色和深色继续保留终末地黄黑装饰。透明背景只移除 Overlay 背景装饰，不使 GUI 透明。
 
@@ -87,13 +87,13 @@ OBS 使用「窗口采集」，捕获方式选择 Windows 10（Windows Graphics 
 
 ## BUFF 与 UID
 
-`buff.template.json` 配置显示对象（角色或全部）、时长筛选、列表或自动多列、背景模式。不限制 BUFF 数量；超出高度可在关闭鼠标穿透后滚轮浏览。宿主将滚轮转发给模板的 `[data-overlay-scroll]` 元素；连携模板也使用此区域，表头和关闭键不随列表滚动。
+`buff/template.json` 配置显示对象（角色或全部）、时长筛选、列表或自动多列、背景模式。不限制 BUFF 数量；超出高度可在关闭鼠标穿透后滚轮浏览。宿主将滚轮转发给模板的 `[data-overlay-scroll]` 元素；连携模板也使用此区域，表头和关闭键不随列表滚动。
 
 BUFF 来自同一 canonical trace 的 `BUFF_START`、`BB`、`BUFF_ENABLE`、`BUFF_END`。同一实例重复 START 更新信息，不重启倒计时。明确 `dur` 优先；否则只按本地官网 BuffData 的 `lifeType=Limited` 及其指定常量或 blackboard 键获取时长。`Infinity` 显示“无固定时长”，缺少证据显示“时长未知”。保留技术 BUFF ID 与目标标识，暂未提供完整中文名称/图标映射。
 
 倒计时用 trace 时间及本地单调时钟估算，带 `*` 标记，未补偿时停、时间膨胀及未知抓包滞后。估计归零显示“估计已到期”，不伪装成已收到结束事件；结束事件移除该实例。disabled 标记为“未启用”，未收到 enable 的实例不宣称已生效。重置战斗、重置抓包会清空列表。该展示状态不回写 parser_core，也不用于 rDPS 或效果判定。
 
-`uid_mask.template.json` 为本地黑色遮挡，无需抓包或 WebSocket。可选矩形/圆角，通用宽高、位置、透明度、锁定及穿透有效。首次默认 220×32，位于主屏完整屏幕左下角；已有保存位置继续使用，可拖到实际游戏 UID 位置。要完全遮挡请使用 100% 透明度和矩形，调整后开启穿透。没有实现对游戏画面的真正模糊。
+`uid_mask/template.json` 为本地黑色遮挡，无需抓包或 WebSocket。可选矩形/圆角，通用宽高、位置、透明度、锁定及穿透有效。首次默认 220×32，位于主屏完整屏幕左下角；已有保存位置继续使用，可拖到实际游戏 UID 位置。要完全遮挡请使用 100% 透明度和矩形，调整后开启穿透。没有实现对游戏画面的真正模糊。
 
 关闭键为右上角淡色 ×，悬停时显示红色底高亮；点击后同步关闭 GUI「显示浮窗」，鼠标穿透时关闭键隐藏。
 

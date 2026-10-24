@@ -1,13 +1,19 @@
 # EndfieldLogs 便携包
 
+目前没有 i18n，界面和说明以中文为主。
+实时链路为 Npcap 被动抓包 → 本进程解码 → trace → 增量贡献计算 → 轻量摘要 → 浮窗；
+本地分析按需从 trace 生成完整报告和时间轴，上传使用单独发行的官网 uploader。
+程序不向游戏进程注入、Hook 或读写内存；登录解码在本程序进程内调用本机游戏 DLL 的导出函数。
+
 适用于 Windows 10 / 11 x64。请先完整解压 ZIP 到有写入权限的目录，再双击
 `Start-GUI.cmd`。包内附带 Python 3.14、Qt / WebEngine 及程序依赖，无需另装 Python，
 无需 pip，也没有将新版 GUI 编译成 EXE。
 
 ## 第一次使用
 
-1. 实时抓包需要系统已安装 Npcap。缺少 Npcap 时仍可导入、分析本地 trace 日志。
-2. 关闭旧抓包客户端，运行 `Start-GUI.cmd`，按首次向导选择游戏目录。
+1. 实时抓包需要安装 [Npcap（官方下载安装页）](https://npcap.com/#download)。缺少 Npcap 时仍可导入、分析本地 trace 日志。
+2. 关闭旧抓包客户端，运行 `Start-GUI.cmd`，在「设置 → 游戏路径」选择 `Endfield.exe` 或游戏目录。
+   游戏迁移或重装后，可在同一位置重新选择；修改后下次启动抓包生效。
 3. GUI 自动尝试启动抓包一次；缺少前提时在首页提示，准备好后点「启动抓包」，再启动游戏。
    主动停止后不会自动重启；停止后再启动需要重开游戏，不能接续已有会话。
 4. 悬浮窗页可开关窗口、设置字体和尺寸，卡片右上角可重置尺寸、字体和位置。
@@ -23,8 +29,9 @@
 本包不包含打包者的个人配置、账号、日志或历史记录。转发给其他人时，请发送原始 ZIP，
 不要直接压缩自己已运行过的整个目录。
 
-`Uploader/` 内是未修改的 ZMDLogs 官网版独立 uploader：
-`Uploader/EndfieldLogsUploader/EndfieldLogsUploader.exe`。
+官网原版独立 uploader 另行打包，主程序包不包含它；本地分析和 Overlay 无需下载 uploader。
+上传时单独解压 uploader 包，运行其中的 `Uploader/EndfieldLogsUploader/EndfieldLogsUploader.exe`。
+它自带运行依赖，可以放在任意目录；也可将整个 `Uploader/` 文件夹复制到主程序根目录。
 选择 `.dev-gui/logs/battles/` 日期目录中的 `trace_*.log`，并保留配套的
 `.log.status.json`。本程序新采集的 trace 可直接交给官网版 uploader，无需转换。
 `session_*.ndjson` 与 `launcher.log` 不是可上传战斗 trace；上传仍需官网账号与服务器正常接收。

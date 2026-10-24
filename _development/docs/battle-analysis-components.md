@@ -6,14 +6,14 @@
 
 | 组件 | 文件（相对仓库根目录） | 常用修改入口 |
 | --- | --- | --- |
-| 战斗分析窗口、界面风格、顶部数据与筛选项 | `_internal/src/endfield_pcap/gui_battle_detail.py` | `BattleDetailDialog.__init__()`；默认复选框状态、工具栏顺序、标签文字 |
-| 详情栏拖动、收起、最大化和还原状态 | `_internal/src/endfield_pcap/gui_battle_detail_panel.py` | `BattleDetailSplitter`；`_normal_sizes` 为初始展开比例 |
-| 时间轴、技能块、实际伤害点和鼠标事件 | `_internal/src/endfield_pcap/gui_battle_timeline.py` | `BattleTimeline`；`timeHovered` 输出悬浮时间与资源提示 |
-| 角色名、技能类型、BUFF 标签、列宽与边框 | `_internal/src/endfield_pcap/gui_battle_timeline_labels.py` | `draw_sticky_labels()`；`ROLE_LABEL_PIXELS=17`、`SKILL_TYPE_LABEL_PIXELS=16`、`BASE_LABEL_PIXELS=13` |
-| 事件概况、贡献分配、逐击证据、原始证据、详情右上角按钮 | `_internal/src/endfield_pcap/gui_battle_inspector.py` | `BlockInspector`；`_PanelSizeIcon` 绘制最大化/还原框 |
-| 技力曲线 | `_internal/src/endfield_pcap/gui_battle_energy_plot.py` | 曲线绘制与悬浮信息 |
-| 敌方失衡曲线 | `_internal/src/endfield_pcap/gui_battle_poise_plot.py` | 曲线绘制与悬浮信息 |
-| GUI 通用字体缩放 | `_internal/src/endfield_pcap/gui_typography.py` | `apply_fonts()`；影响范围大于本窗口 |
+| 战斗分析窗口、界面风格、顶部数据与筛选项 | `_internal/src/endfield_pcap/gui/battle/detail.py` | `BattleDetailDialog.__init__()`；默认复选框状态、工具栏顺序、标签文字 |
+| 详情栏拖动、收起、最大化和还原状态 | `_internal/src/endfield_pcap/gui/battle/panel.py` | `BattleDetailSplitter`；`_normal_sizes` 为初始展开比例 |
+| 时间轴、技能块、实际伤害点和鼠标事件 | `_internal/src/endfield_pcap/gui/battle/timeline/view.py` | `BattleTimeline`；`timeHovered` 输出悬浮时间与资源提示 |
+| 角色名、技能类型、BUFF 标签、列宽与边框 | `_internal/src/endfield_pcap/gui/battle/timeline/labels.py` | `draw_sticky_labels()`；`ROLE_LABEL_PIXELS=17`、`SKILL_TYPE_LABEL_PIXELS=16`、`BASE_LABEL_PIXELS=13` |
+| 事件概况、贡献分配、逐击证据、原始证据、详情右上角按钮 | `_internal/src/endfield_pcap/gui/battle/inspector.py` | `BlockInspector`；`_PanelSizeIcon` 绘制最大化/还原框 |
+| 技力曲线 | `_internal/src/endfield_pcap/gui/battle/plots/energy.py` | 曲线绘制与悬浮信息 |
+| 敌方失衡曲线 | `_internal/src/endfield_pcap/gui/battle/plots/poise.py` | 曲线绘制与悬浮信息 |
+| GUI 通用字体缩放 | `_internal/src/endfield_pcap/gui/shared/typography.py` | `apply_fonts()`；影响范围大于本窗口 |
 
 本次仅提高角色名与技能类型的基础字号。BUFF 名称、层数、持续时间、轴刻度保持原基础字号；它们仍服从已有的全局字体/图形缩放设置。
 
@@ -21,7 +21,7 @@
 
 ## 仿官网本地界面
 
-文件位于 `_internal/src/endfield_pcap/battle_analysis_assets/`：
+文件位于 `_internal/src/endfield_pcap/gui/battle/assets/`：
 
 | 文件 | 内容 |
 | --- | --- |
@@ -33,17 +33,17 @@
 | `details.js` | 详情栏目和证据展示、技能构成、敌方数据表 |
 | `charts.js` | 技力、失衡、伤害曲线与悬浮提示 |
 
-宿主与 Python 通信位于 `_internal/src/endfield_pcap/gui_battle_web.py`。首次切换时创建 WebEngine，后续复用。切换两种界面不重新解析日志，保留角色、单位、缩放、详情状态等。
+宿主与 Python 通信位于 `_internal/src/endfield_pcap/gui/battle/web.py`。首次切换时创建 WebEngine，后续复用。切换两种界面不重新解析日志，保留角色、单位、缩放、详情状态等。
 
 ## 数据与名称来源
 
 | 文件 | 职责 |
 | --- | --- |
-| `_internal/src/endfield_pcap/battle_detail.py` | canonical snapshot 转为时间轴技能/BUFF 块、贡献概况与技能构成 |
-| `_internal/src/endfield_pcap/battle_web_data.py` | Web 界面数据投影、按需证据与悬浮查询 |
-| `_internal/src/endfield_pcap/skill_names.py` | 角色/技能实际名称 |
-| `_internal/src/endfield_pcap/battle_buff_labels.py` | BUFF 实名与来源回退 |
-| `_internal/src/endfield_pcap/skill_frame_reference.py` | 缺失起止时的固定时长回退；默认关闭 |
+| `_internal/src/endfield_pcap/analysis/battle/detail.py` | canonical snapshot 转为时间轴技能/BUFF 块、贡献概况与技能构成 |
+| `_internal/src/endfield_pcap/analysis/battle/web_data.py` | Web 界面数据投影、按需证据与悬浮查询 |
+| `_internal/src/endfield_pcap/data/skill_names.py` | 角色/技能实际名称 |
+| `_internal/src/endfield_pcap/analysis/battle/buffs/labels.py` | BUFF 实名与来源回退 |
+| `_internal/src/endfield_pcap/data/skill_frames.py` | 缺失起止时的固定时长回退；默认关闭 |
 | `_internal/packages/parser_core/parser_core/` | 解析、贡献计算与质量证据核心；与外观修改分开 |
 
-相关验证：`_development/tests/test_timeline_intervals_and_details.py`、`test_battle_analysis_compact.py`、`test_battle_web_analysis.py`。截图保存在忽略目录 `_development/verification/`，使用合成战斗数据。
+相关验证：`_development/tests/battle/test_timeline_intervals_and_details.py`、`test_battle_analysis_compact.py`、`test_battle_web_analysis.py`。截图保存在忽略目录 `_development/verification/`，使用合成战斗数据。
