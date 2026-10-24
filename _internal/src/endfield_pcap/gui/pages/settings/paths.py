@@ -3,6 +3,7 @@ from pathlib import Path
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QWidget
 from endfield_pcap.gui.config import AppConfig, save_app_config
 from endfield_pcap.gui.resources import ROOT
+from endfield_pcap.gui.shared.typography import apply_fonts
 
 
 def _is_valid_game_dir(path: Path | None) -> bool:
@@ -42,16 +43,24 @@ def _run_game_directory_wizard(app_config: AppConfig, config_path: Path, parent:
     while True:
         box = QMessageBox(parent)
         box.setIcon(QMessageBox.Icon.Information)
-        box.setWindowTitle("首次设置游戏路径")
-        box.setText("请选择终末地游戏目录或 Endfield.exe。")
-        box.setInformativeText("客户端会保存这个路径，后续启动不会自动扫描磁盘。")
+        box.setWindowTitle("未找到终末地，请指定游戏路径")
+        box.setText("没有在当前路径找到游戏，请手动选择 Endfield Game 目录或 Endfield.exe。")
+        box.setInformativeText(
+            f"当前路径：{start_dir}\n选择后会保存；也可以暂不设置，继续使用历史分析，稍后在设置中修改。")
         exe_button = box.addButton("选择 Endfield.exe", QMessageBox.ButtonRole.AcceptRole)
         dir_button = box.addButton("选择游戏目录", QMessageBox.ButtonRole.ActionRole)
-        cancel_button = box.addButton("退出", QMessageBox.ButtonRole.RejectRole)
+        cancel_button = box.addButton("暂不设置", QMessageBox.ButtonRole.RejectRole)
+        box.setDefaultButton(exe_button)
+        box.setEscapeButton(cancel_button)
+        # Size the modal using its final fonts, before QMessageBox fixes its
+        # layout. The main window's deferred typography pass is otherwise late.
+        typography = getattr(parent, 'gui_typography', None)
+        if typography is not None:
+            apply_fonts(box, typography.scale)
         box.exec()
 
         clicked = box.clickedButton()
-        if clicked == cancel_button:
+        if clicked not in (exe_button, dir_button):
             return False
 
         selected_dir = _select_game_directory_from_dialog(

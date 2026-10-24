@@ -1,6 +1,6 @@
 """Run with the packaged interpreter to check relocation, GUI and WebEngine.
 
-Only the first-run game-directory dialog and global hotkey are bypassed. No
+Automatic capture and the global hotkey are bypassed. No
 capture, upload or account login is started. Verification uses its own profile.
 """
 import argparse
@@ -26,9 +26,10 @@ def main():
     launcher.PROFILE = output / 'profile'
     assert launcher.main(['--check']) == 0
 
-    from PySide6.QtCore import QCoreApplication, QEvent
-    from PySide6.QtWidgets import QApplication
-    from qfluentwidgets import Theme, setTheme
+    from PySide6.QtCore import QCoreApplication, QEvent, QTimer, Qt
+    from PySide6.QtGui import QFont, QKeyEvent
+    from PySide6.QtWidgets import QApplication, QLabel, QMessageBox
+    from qfluentwidgets import Slider, Theme, setTheme
     import endfield_pcap.gui.main as gui_main
     from endfield_pcap.gui.config import load_app_config
     from endfield_pcap.gui.battle.detail import BattleDetailDialog
@@ -46,21 +47,59 @@ def main():
 
     def js(view, source):
         results=[]
-        view.page.runJavaScript(source, lambda value: results.append(value))
+        page = view.page() if callable(view.page) else view.page
+        page.runJavaScript(source, lambda value: results.append(value))
         wait(lambda: bool(results))
         return results[0]
 
 
     app = QApplication([])
     app.setQuitOnLastWindowClosed(False)
+    app.setFont(QFont('Microsoft YaHei UI', 10))
     setTheme(Theme.DARK)
     gui_main.MainWindow._ensure_game_directory_ready = lambda self: True
     gui_main.MainWindow._update_overlay_shortcut = lambda self: None
+    auto_start = gui_main.MainWindow._auto_start_service
     gui_main.MainWindow._auto_start_service = lambda self: None
     config_path = launcher.PROFILE / 'settings.json'
     window = gui_main.MainWindow(load_app_config(config_path), config_path)
     window.setMicaEffectEnabled(False)
     window.show()
+    window.switchTo(window.settings_page)
+    expected_game_exe = Path(r'C:\Program Files\Hypergryph Launcher\games\Endfield Game\Endfield.exe')
+    assert Path(window.settings_page.game_exe_edit.text()) == expected_game_exe
+    slider = window.settings_page.gui_font_slider
+    assert isinstance(slider, Slider) and slider.orientation() == Qt.Orientation.Horizontal
+    original_percent = slider.value()
+    slider.setValue(137)
+    app.sendEvent(slider, QKeyEvent(QEvent.Type.KeyPress, Qt.Key.Key_Right, Qt.KeyboardModifier.NoModifier))
+    assert window.app_config.gui_font_percent == 138
+    assert window.settings_page.gui_font_value.text() == '138%'
+    assert load_app_config(config_path).gui_font_percent == 138
+    slider.setValue(original_percent)
+    app.processEvents()
+    window.grab().save(str(output / 'settings-font-and-game-path.png'))
+    # Exercise the real missing-game prompt, including its safe offline choice.
+    # This directory cannot contain a game, even on a machine with it installed.
+    window.app_config.service.dll_dir = output / 'missing-game'
+    prompts = []
+    def defer_game_setup():
+        box = app.activeModalWidget()
+        assert isinstance(box, QMessageBox)
+        assert 'Endfield.exe' in box.text() and '历史分析' in box.informativeText()
+        information = box.findChild(QLabel, 'qt_msgbox_informativelabel')
+        assert information is not None
+        assert information.height() >= information.heightForWidth(information.width())
+        box.grab().save(str(output / 'missing-game-prompt.png'))
+        prompts.append(box.windowTitle())
+        next(button for button in box.buttons() if button.text() == '暂不设置').click()
+    QTimer.singleShot(0, defer_game_setup)
+    auto_start(window)
+    auto_start(window)
+    assert len(prompts) == 1 and not window.service_controller.is_running()
+    assert window.isVisible() and window.home_page.start_service_btn.isEnabled()
+    window.app_config.service.dll_dir = expected_game_exe.parent
+    window._refresh_settings_page()
     window.switchTo(window.overlay_page)
     wait_until = time.monotonic()+0.5
     wait(lambda: time.monotonic() >= wait_until)
@@ -70,7 +109,9 @@ def main():
     result = dict(python=sys.version.split()[0], isolated=bool(sys.flags.isolated),
                   executable_inside_package=Path(sys.executable).resolve().is_relative_to(root),
                   gui_visible=window.isVisible(), overlay_visible=overlay.isVisible(),
-                  web_console_errors=[], parsed_battle=None)
+                  web_console_errors=[], parsed_battle=None,
+                  default_game_exe=str(expected_game_exe), font_slider_verified=True,
+                  missing_game_prompt_verified=True)
     assert result['isolated'] and result['executable_inside_package']
     if app.platformName() == 'windows':
         window.screen().grabWindow(int(window.winId())).save(str(output / 'main-gui.png'))
@@ -88,10 +129,9 @@ def main():
         window.overlay_manager.show_history(snapshot, 'portable-smoke')
         wait_until = time.monotonic()+0.5
         wait(lambda: time.monotonic() >= wait_until)
-        damage=[]
-        overlay.webview.page().runJavaScript('window.endfieldOverlay.snapshots.analysis_snapshot.snapshot.battle.total_damage', lambda value: damage.append(value))
-        wait(lambda: bool(damage))
-        assert damage[0] == snapshot['battle']['total_damage']
+        wait(lambda: js(overlay.webview,
+            'window.endfieldOverlay?.snapshots?.analysis_snapshot?.snapshot?.battle?.total_damage')
+            == snapshot['battle']['total_damage'])
 
     dialog = BattleDetailDialog(snapshot, '便携包离线验证', window)
     dialog.show()

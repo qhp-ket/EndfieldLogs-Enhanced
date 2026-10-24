@@ -24,8 +24,8 @@ canonical trace
 与当前保存配置的随机 `ws_browser_token` 匹配；未授权连接在握手阶段返回 403，发送任何战斗数据前即拒绝。
 兼容新版 `(connection, request)` 和 legacy `(path, request_headers)` 两种回调结构；
 处理器也分别读取 `request.headers` 或 `request_headers` 再次校验，无法识别的请求结构默认拒绝。
-`Origin: null` 的本地文件或沙盒页面也必须带凭据。设置页可复制含凭据的摘要 WS 地址；
-访问完整流时保留 `access_token`、移除 `analysis=summary` 即可。不要把凭据交给不可信页面或写入公开模板。
+`Origin: null` 的本地文件或沙盒页面也必须带凭据。访问完整流时保留 `access_token`、
+移除 `analysis=summary` 即可。不要把凭据交给不可信页面或写入公开模板。
 旧配置加载时生成凭据，保存到被忽略的个人设置；配置 repr 不输出该字段，发行包不收集个人设置。
 
 不带 Origin 的原生本地客户端仍可使用原有接口。这是防未授权网页访问的边界，

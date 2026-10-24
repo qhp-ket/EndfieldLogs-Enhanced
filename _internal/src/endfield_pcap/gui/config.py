@@ -54,7 +54,7 @@ def default_service_config() -> ServiceConfig:
         log_level="INFO",
         game_exe="Endfield.exe",
         npcap_device="auto",
-        dll_dir=(app / "Endfield Game").resolve(),
+        dll_dir=Path(r"C:\Program Files\Hypergryph Launcher\games\Endfield Game"),
         debug_enabled=False,
         debug_dir=(app / "debug").resolve(),
         rsa_key_txt=(app / "secrets" / "client_privkey.pem").resolve(),

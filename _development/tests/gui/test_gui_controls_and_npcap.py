@@ -1,12 +1,10 @@
 from PySide6.QtWidgets import QFileDialog, QMessageBox
-import endfield_pcap.gui.pages.settings.paths as settings_paths
 import endfield_pcap.gui.pages.home.actions as capture_actions
-"""Discrete typography controls, state-driven Fluent switches, optional capture."""
+"""Typography controls, state-driven Fluent switches, optional capture."""
 import pytest
 from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest
-from qfluentwidgets import Theme, setTheme
-import endfield_pcap.gui.main as gui_main
+from qfluentwidgets import Slider, Theme, setTheme
 from endfield_pcap.gui.shared.widgets import FluentSwitchButton
 from endfield_pcap.gui.shared.widgets import IntegerStepEdit
 from app_test_support.ui.window import main_window
@@ -70,23 +68,34 @@ def test_invalid_or_cancelled_game_exe_selection_preserves_saved_path(main_windo
     assert bool(warnings) == (selection != 'cancel')
 
 
-def test_global_and_overlay_fonts_accept_integer_input_and_increment_buttons(main_window, app):
+def test_gui_font_slider_and_overlay_font_integer_controls(main_window, app):
     window = main_window
-    editor = window.settings_page.gui_font_edit
-    assert isinstance(editor, IntegerStepEdit)
-    editor.edit.setText('137')
-    QTest.keyClick(editor.edit, Qt.Key.Key_Return)
+    slider = window.settings_page.gui_font_slider
+    assert isinstance(slider, Slider)
+    slider.setValue(137)
     assert window.app_config.gui_font_percent == 137
-    editor.increase_button.click()
+    assert window.settings_page.gui_font_value.text() == '137%'
+    QTest.keyClick(slider, Qt.Key.Key_Right)
     assert window.app_config.gui_font_percent == 138
-    editor.decrease_button.click()
+    QTest.keyClick(slider, Qt.Key.Key_Left)
     assert window.app_config.gui_font_percent == 137
-    editor.setValue(180)
-    assert not editor.increase_button.isEnabled()
+    slider.setValue(180)
+    QTest.keyClick(slider, Qt.Key.Key_Right)
+    assert slider.value() == 180
     overlay = window.overlay_page.font_size_edit
+    assert isinstance(overlay, IntegerStepEdit)
     overlay.setValue(125)
     overlay.increase_button.click()
     assert window._selected_overlay().font_scale == 1.26
+
+
+def test_default_game_path_is_independent_of_application_directory(tmp_path, monkeypatch):
+    from pathlib import Path
+    import endfield_pcap.gui.config as config
+    monkeypatch.setattr(config, 'app_root', lambda: tmp_path / 'relocated app')
+    fresh = config.load_app_config(tmp_path / 'fresh-settings.json')
+    assert fresh.service.dll_dir / fresh.service.game_exe == Path(
+        r'C:\Program Files\Hypergryph Launcher\games\Endfield Game\Endfield.exe')
 
 
 def test_switch_knob_draws_current_state_with_blocked_signals_and_large_fonts(app):
@@ -148,19 +157,48 @@ def test_missing_npcap_warns_in_gui_and_console_but_history_still_works(main_win
     assert window._npcap_infobar is None
 
 
-def test_startup_without_npcap_skips_game_directory_wizard(app, tmp_path, monkeypatch):
-    from endfield_pcap.gui.config import AppConfig
-    from endfield_pcap.gui.config import default_service_config
-    config = AppConfig(service=default_service_config())
-    monkeypatch.setattr(gui_main, 'load_app_config', lambda path: config)
-    monkeypatch.setattr(capture_actions, 'has_npcap', lambda: False)
-    monkeypatch.setattr(capture_actions, '_is_valid_game_dir', lambda path: False)
-    def forbidden(*args):
-        raise AssertionError('offline GUI must not require the game-directory wizard')
-    monkeypatch.setattr(settings_paths, '_run_game_directory_wizard', forbidden)
-    shown = []
-    from types import SimpleNamespace
-    monkeypatch.setattr(gui_main, 'MainWindow', lambda *args: SimpleNamespace(show=lambda: shown.append(True)))
-    monkeypatch.setattr(app, 'exec', lambda: 0)
-    assert gui_main.run_gui(tmp_path/'settings.json') == 0
-    assert shown == [True]
+@pytest.mark.parametrize('choice', ['exe', 'directory', 'defer', 'close'])
+def test_missing_game_startup_prompts_once_and_allows_manual_setup_or_history(
+        main_window, app, tmp_path, monkeypatch, choice):
+    from endfield_pcap.gui.config import load_app_config
+    window = main_window
+    original = tmp_path / 'missing-game'
+    window.app_config.service.dll_dir = original
+    directory = tmp_path / 'selected game'
+    directory.mkdir()
+    (directory / 'Endfield.exe').write_bytes(b'synthetic presence marker')
+    (directory / 'GameAssembly.dll').write_bytes(b'synthetic presence marker')
+    prompts, starts = [], []
+    def answer(box):
+        prompts.append(box.windowTitle())
+        assert '未找到终末地' in box.windowTitle()
+        assert str(original) in box.informativeText()
+        assert '历史分析' in box.informativeText()
+        # Reentry while a modal dialog runs must not schedule another start.
+        window._auto_start_service()
+        text = {'exe': '选择 Endfield.exe', 'directory': '选择游戏目录', 'defer': '暂不设置'}
+        if choice == 'close':
+            box.reject()
+        else:
+            next(button for button in box.buttons() if button.text() == text[choice]).click()
+    monkeypatch.setattr(QMessageBox, 'exec', answer)
+    monkeypatch.setattr(QFileDialog, 'getOpenFileName', lambda *args: (str(directory / 'Endfield.exe'), ''))
+    monkeypatch.setattr(QFileDialog, 'getExistingDirectory', lambda *args: str(directory))
+    monkeypatch.setattr(window, '_ensure_npcap_ready', lambda: True)
+    key = tmp_path / 'synthetic-key-marker.pem'
+    key.write_bytes(b'synthetic presence marker')
+    window.app_config.service.rsa_key_txt = key
+    monkeypatch.setattr(window.service_controller, 'start', lambda: starts.append(True))
+    window._auto_start_service()
+    window._auto_start_service()
+    assert len(prompts) == 1
+    assert window.isVisible() and window.home_page.start_service_btn.isEnabled()
+    if choice in ('exe', 'directory'):
+        assert starts == [True]
+        assert load_app_config(window.config_path).service.dll_dir == directory
+        assert window.settings_page.game_exe_edit.text() == str(directory / 'Endfield.exe')
+    else:
+        assert not starts
+        assert window.app_config.service.dll_dir == original
+        assert '历史分析' in window._capture_error
+        assert window._game_dir_infobar is not None

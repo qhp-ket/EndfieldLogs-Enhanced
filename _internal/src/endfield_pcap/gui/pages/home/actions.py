@@ -5,7 +5,7 @@ from qfluentwidgets import InfoBar, InfoBarPosition, PrimaryPushButton
 from endfield_pcap.models import ServiceState
 from endfield_pcap.capture.npcap import has_npcap
 from endfield_pcap.gui.service import CaptureLifecycle
-from endfield_pcap.gui.pages.settings.paths import _is_valid_game_dir
+from endfield_pcap.gui.pages.settings.paths import _is_valid_game_dir, _run_game_directory_wizard
 
 
 LOGGER = logging.getLogger(__name__)
@@ -88,6 +88,16 @@ class CaptureActions:
 
     def _auto_start_service(self):
         if not self._auto_start_attempted and not self._closing:
+            # Mark before opening a modal dialog: its nested event loop must not
+            # trigger another automatic attempt. Deferring still permits history.
+            self._auto_start_attempted = True
+            if not _is_valid_game_dir(self.app_config.service.dll_dir):
+                if not _run_game_directory_wizard(self.app_config, self.config_path, self):
+                    self._show_game_dir_infobar()
+                    self._capture_error = '未设置有效游戏目录；仍可使用历史分析。'
+                    self._update_service_status()
+                    return
+                self._refresh_settings_page()
             self._start_service_if_needed()
 
     def _toggle_capture(self):
@@ -203,7 +213,7 @@ class CaptureActions:
 
     def _ensure_game_directory_ready(self) -> None:
         # Defer the single automatic attempt until the window/event loop exists.
-        # Prerequisite failure leaves history usable; no mandatory setup wizard.
+        # Missing paths get an optional setup prompt; history stays usable.
         QTimer.singleShot(0, self._auto_start_service)
 
 

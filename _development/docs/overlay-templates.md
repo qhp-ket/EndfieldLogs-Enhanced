@@ -81,7 +81,7 @@ window.addEventListener("endfield-analysis-snapshot", event => {
 
 订阅伤害的本地模板与内置伤害窗一起切换历史/实时，关闭后重开、页面重新加载都会补发当前完整状态。BUFF 保持实时。URL 与没有声明的 HTML 不接收进程内战斗快照，需要网页自己连接 `ws://127.0.0.1:<wsPort>/ws`，消费版本化完整状态；WebSocket 始终保持实时，保留 raw `event_batch` 供诊断。
 
-浏览器 WS 连接还需 `access_token`。在 GUI 设置页复制含凭据的连接地址；不要将其提交到仓库。
+浏览器 WS 连接还需与服务配置一致的 `access_token`；不要将凭据提交到仓库。
 WS 模式的本地模板可从 URL 的 `wsToken` 参数取得凭据并转发为 WS 查询参数 `access_token`，
 内置伤害/BUFF 模板已支持。进程内模式不需要凭据；宿主不会把凭据自动附给远程 URL 模板。
 独立浮窗附着已有服务时，须使用与该服务匹配的配置凭据。未经授权的外站与 `Origin: null` 页面均被拒绝。

@@ -44,7 +44,7 @@ def test_font_size_persists_scales_dynamic_details_without_compounding(main_wind
     QTest.qWait(100)
     before = pixels(dialog.event_detail)
     overlay_fonts = [e.font_scale for e in window.app_config.overlays]
-    window.settings_page.gui_font_edit.setValue(160)
+    window.settings_page.gui_font_slider.setValue(160)
     QTest.qWait(100)
     assert pixels(dialog.event_detail) > before*1.25
     size = pixels(dialog.event_detail)
@@ -74,7 +74,7 @@ def test_font_size_persists_scales_dynamic_details_without_compounding(main_wind
 
 def test_large_global_font_pages_scroll_and_windows_stay_on_screen(main_window, app):
     window = main_window
-    window.settings_page.gui_font_edit.setValue(180)
+    window.settings_page.gui_font_slider.setValue(180)
     window._show_history_detail(snapshot_message()['snapshot'], '大字号仍在屏幕内')
     dialog = window._history_detail_dialog
     QTest.qWait(140)

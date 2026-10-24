@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from PySide6.QtWidgets import QApplication, QFileDialog, QMessageBox
+from PySide6.QtWidgets import QFileDialog, QMessageBox
 from endfield_pcap.gui.config import save_app_config
 from endfield_pcap.gui.resources import ROOT
 from endfield_pcap.gui.pages.settings.paths import (
@@ -28,9 +28,10 @@ def _directory_size(path: Path) -> int:
 
 class SettingsActions:
     def _refresh_settings_page(self) -> None:
-        self.settings_page.gui_font_edit.blockSignals(True)
-        self.settings_page.gui_font_edit.setValue(self.app_config.gui_font_percent)
-        self.settings_page.gui_font_edit.blockSignals(False)
+        self.settings_page.gui_font_slider.blockSignals(True)
+        self.settings_page.gui_font_slider.setValue(self.app_config.gui_font_percent)
+        self.settings_page.gui_font_value.setText(f'{self.app_config.gui_font_percent}%')
+        self.settings_page.gui_font_slider.blockSignals(False)
         self.settings_page.port_edit.blockSignals(True)
         self.settings_page.port_edit.setValue(self.app_config.service.ws_port)
         self.settings_page.port_edit.blockSignals(False)
@@ -133,11 +134,9 @@ class SettingsActions:
 
 
     def _bind_settings_events(self) -> None:
-        self.settings_page.copy_browser_ws_btn.clicked.connect(
-            lambda: QApplication.clipboard().setText(self.settings_page.browser_ws_edit.text()))
         self.settings_page.port_edit.valueChanged.connect(self._apply_service_port)
         self.settings_page.theme_combo.currentIndexChanged.connect(self._apply_theme_mode)
-        self.settings_page.gui_font_edit.valueChanged.connect(self._apply_gui_font_size)
+        self.settings_page.gui_font_slider.valueChanged.connect(self._apply_gui_font_size)
         self.settings_page.log_dir_btn.clicked.connect(self._choose_log_dir)
         self.settings_page.game_exe_btn.clicked.connect(lambda: self._choose_game_dir(select_exe=True))
         self.settings_page.game_dir_btn.clicked.connect(self._choose_game_dir)

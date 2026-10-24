@@ -184,6 +184,7 @@ def test_missing_prerequisite_retains_history(main_window, missing, monkeypatch,
     window = main_window
     monkeypatch.setattr(capture_actions, 'has_npcap', lambda: missing != 'npcap')
     monkeypatch.setattr(capture_actions, '_is_valid_game_dir', lambda path: missing != 'directory')
+    monkeypatch.setattr(capture_actions, '_run_game_directory_wizard', lambda *args: False)
     key = tmp_path / 'synthetic-presence-only.pem'
     if missing != 'key':
         key.write_text('synthetic marker', encoding='utf8')
