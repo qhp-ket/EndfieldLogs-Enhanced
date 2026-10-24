@@ -123,4 +123,4 @@ python -B _development/tools/release.py build --component uploader # 可选：�
 上游 MIT 代码仍保留其版权声明及许可；各依赖继续按各自许可证授权。
 GPLv3 允许商业使用，分发程序需履行对应源码、许可和修改说明等义务，不另加禁止商用条件。
 来源及边界见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)，具体交付要求见 [许可与再分发](_development/docs/licensing.md)。
-仓库内第三方资源有明确许可的保留许可，未附明确许可的注明来源；数据来源包括 AKEData 与固定版本的 ZMDLogs 发行包，不由本项目 GPLv3 重新授权。
+数据来源包括 AKEData 与固定版本的 ZMDLogs 发行包，版本和哈希见各数据来源记录；本项目 GPLv3 不重新授权第三方数据。

@@ -1,4 +1,4 @@
-"""Local history details use canonical reports and never execute the userscript."""
+"""Local history details use canonical reports and AKEData display names."""
 from copy import deepcopy
 from dataclasses import replace
 import threading

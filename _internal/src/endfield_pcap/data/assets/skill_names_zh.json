@@ -1072,9 +1072,16 @@
     "chr_0035_liino_ultimate_skill": "chr_0035_liino_UltimateSkill"
   },
   "_source": {
-    "file": "zmdlogs技能中文化油猴脚本.js",
-    "sha256": "d7b60bd1c96898c24c81cc282322342417abeebbca714dd04095ddd342b462f9",
-    "method": "JSONDecoder.raw_decode of const DICT only; JavaScript not executed",
-    "upstream": "AKEData CharGrowthTable / I18nTextTable_CN / CharacterTable (as stated in supplied dictionary)"
+    "provider": "AKEData",
+    "repository": "https://github.com/NagiYume/AKEDatabase",
+    "base_url": "https://data.akedata.wiki",
+    "version": "1.6.4@11123848-6",
+    "table_cfg_path": "public/1.6.4/11123848-6/TableCfg",
+    "tables_sha256": {
+      "CharGrowthTable": "89a5d8eae6145593490665dcd0ecd0861639793648773dc021491324fccd665a",
+      "CharacterTable": "9d8a1d8036a833c8f8cd47039b155422c9ab48a18b84270f68d03bdd8516dde6",
+      "I18nTextTable_CN": "84bc67165390c0bb89feb108cbf725ed4921c176bd197e5595a7042cbdf5cf52"
+    },
+    "method": "Field projection verified against the pinned original tables"
   }
 }

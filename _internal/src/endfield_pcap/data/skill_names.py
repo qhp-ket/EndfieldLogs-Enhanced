@@ -1,4 +1,4 @@
-"""Chinese display names from the supplied dictionary; never executes scripts.
+"""Chinese display names verified against the pinned AKEData tables.
 
 This is a view adapter. Keys, grouping and canonical analysis stay unchanged.
 Unknown identifiers remain visible and are never matched by character alone.

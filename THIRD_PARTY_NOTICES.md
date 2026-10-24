@@ -5,8 +5,8 @@
 
 上游项目：
 
-- ZMDLogs：<https://github.com/deepdarkssj/ZMDLogs>
-- Endfield Logs 公开源码套件：<https://github.com/medps16000/endfield-suite-open>
+- ZMDLogs 客户端源码：<https://github.com/deepdarkssj/ZMDLogs>
+- Endfield Logs Suite（网站、解析器和客户端套件）：<https://github.com/medps16000/endfield-suite-open>
 - ZMDLogs 完整发行包：<https://zmdlogs.com/>
 
 开发版修改由本项目贡献者维护，Copyright (c) 2026 EndfieldLogs contributors。
@@ -17,21 +17,15 @@
 
 ## 入库资源来源
 
-以下列出源码仓库中保留的第三方资源。有明确许可的保留其许可和版权声明；
-未附明确许可的记录来源，不将本项目 GPLv3 标注为这些资源的许可。
+| 内容 | 来源与记录 |
+| --- | --- |
+| 精简运行数据 `runtime-data.zip` 及清单 | [ZMDLogs](https://zmdlogs.com/) 3.0.12（2026-10-16）完整发行包；固定下载地址及 SHA-256 见 `_internal/data/resource-manifest.json` |
+| 中文名称、技力与技能帧规则 | [AKEData 数据站](https://data.akedata.wiki/)、[网站](https://www.akedata.wiki/)及 [AKEDatabase 仓库](https://github.com/NagiYume/AKEDatabase)；版本、提交和原表哈希保留在数据的 `source` / `_source` 中 |
+| 解析测试中的文案、公式与审核证据 | 固定 ZMDLogs 资源基线及 AKEData 文案快照；版本、表名与哈希见测试 JSON 和 fixtures 说明 |
+| 官网风格分析界面参考 | [Endfield Logs Suite](https://github.com/medps16000/endfield-suite-open)，参考提交 `4e65587b36feb4081eadf669391db64fd7469807`；MIT 原文保留在 `_internal/src/endfield_pcap/gui/battle/assets/THIRD_PARTY_NOTICE.txt` |
 
-| 内容 | 来源与记录 | 许可说明 |
-| --- | --- | --- |
-| 精简运行数据 `runtime-data.zip` 及清单 | ZMDLogs 3.0.12（2026-10-16）完整发行包；固定下载地址、整包及逐文件 SHA-256 见 `_internal/data/resource-manifest.json` | 未附独立数据许可，按来源记录 |
-| AKEData 派生的技力、技能帧规则 | AKEData / `NagiYume/AKEDatabase`；版本、提交或资源摘要保留在对应 JSON 的 `source` 中 | 未附独立数据许可，按来源记录 |
-| 中文技能名称词典 `_internal/src/endfield_pcap/data/assets/skill_names_zh.json` | 用户提供的 `zmdlogs技能中文化油猴脚本.js` 中的 `DICT`，仅提取词典；原脚本注明数据来自 AKEData，文件哈希及表名见词典 `_source` | 未附独立词典许可，按来源记录 |
-| 解析测试中的文案、公式与审核证据 | 固定 ZMDLogs 资源基线及其中的 AKEData 文案快照；版本、表名和哈希保留在测试 JSON 与 fixtures 说明中 | 未附独立数据许可，按来源记录 |
-| 官网风格分析界面参考 | Endfield Logs 公开源码套件，参考提交 `4e65587b36feb4081eadf669391db64fd7469807` | MIT；原文保留在 `_internal/src/endfield_pcap/gui/battle/assets/THIRD_PARTY_NOTICE.txt` |
-
-AKEData：[数据站](https://data.akedata.wiki/)、[网站](https://www.akedata.wiki/)、
-[Git 仓库](https://github.com/NagiYume/AKEDatabase)。
 运行包中沿用 `akedata` 目录的数据经固定 ZMDLogs 发行包取得；
-技力和技能帧规则则另有 AKEData 来源记录，不把两者混写为同一版本。
+中文名称词典、技力和技能帧规则则各自记录对应的 AKEData 版本。
 数据范围、字段提取和更新方法见 `_internal/data/README.md`。
 
 `_development/portable/licenses/Upstream-THIRD_PARTY_NOTICES.md` 是上游声明的原文副本，

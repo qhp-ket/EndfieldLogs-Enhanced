@@ -3,7 +3,7 @@
 开发环境和便携版共用这份数据。运行数据包提取自固定的 ZMDLogs 3.0.12 / 2026-10-16
 资源，另保留本项目维护的四份开发规则。
 
-## 来源与许可记录
+## 来源记录
 
 - `runtime-data.zip`：直接来源是固定 ZMDLogs 发行包，下载地址与哈希见 `resource-manifest.json`；
   其中 `akedata` 沿用上游目录名，相关资料来自 [AKEData 数据站](https://data.akedata.wiki/)，不据此推定某个 AKEDatabase commit。
@@ -12,8 +12,7 @@
 - `local_semantics/skill_frame_rules.json`：依据 AKEDatabase 的角色 SkillData 提取，资源时间、摘要及文件数保留在 `source` 中。
 - `game_resource_snapshot.json` 与 `packet_semantics/rdps_semantics_registry.json`：本项目维护的快照元数据和开发版解析规则，保留输入哈希、证据及修改说明。
 
-上述外部数据未附独立数据许可，按来源记录，不套用本项目代码许可证；
-上游代码的 MIT 声明另行保留。完整来源表见根目录 `THIRD_PARTY_NOTICES.md`。
+上游源码与 AKEData 的链接集中列在根目录 `THIRD_PARTY_NOTICES.md`；上游 MIT 声明保留原文。
 
 ## 体积
 
