@@ -10,14 +10,14 @@
 
 新采集的 `trace_*.log` 与 `.log.status.json` 可直接交给**官网版 uploader** 的自动归档入口，
 不需导出转换版。`launcher.log`、`session_*.ndjson` 不能代替 trace。
-status 是归档门禁上下文，不是通用完整性 proof；旧日志、损坏证明及后端校验仍可能拒绝。
+status 是归档门禁上下文，不是通用完整性 proof；上传还需日志及证明完整且满足后端校验。
 参见 [外部资源](runtime-resources.md)。
 
 ## 通用腐蚀
 
 补充 `buff_common_natural_fire_triggered`（329）动态减抗批准；来源读取 trace，
 不硬编码为诀。只读取实际 def_decrease / additional_def_decrease 和对应实例属性刷新证据，
-不积分 tick，也不按本次 start/max 钳制继承状态。try/wrapper 不重复记账。
+不积分 tick，也不按当前 start/max 钳制继承状态。try/wrapper 不重复记账。
 抗性反事实及跨乘区 ln 分配不变，证据不足时保守标记。
 
 ## 祀笔意

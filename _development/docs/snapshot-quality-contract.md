@@ -1,12 +1,12 @@
 # Snapshot Quality Contract v1
 
-本次范围仅为 canonical parser 结果增加证据质量投影和四入口回归门禁。输入窗口、战斗边界、伤害与 rDPS 分配算法、DPS 时长算法、旧数值、fingerprint、parser/rules version 均沿用原实现。
+`snapshot_quality` 是 canonical parser 结果的证据质量投影，覆盖 rDPS 归因和计时两个维度；它独立于伤害、贡献分配和时长计算。
 
 ## 接口与兼容性
 
-直接 `parse_raw_battle_log_text` 的两类成功返回（正常战斗、有上下文但无伤害）均新增顶层 `snapshot_quality`。`parse_upload_battle_log_text` 自然继承；hit viewer、overlay 显式透传相同对象，`LiveOverlayBattleParser` 通过 overlay 接口自然继承。live 的窗口、刷新、缓存与时钟策略没有修改。
+直接 `parse_raw_battle_log_text` 的两类成功返回（正常战斗、有上下文但无伤害）均包含顶层 `snapshot_quality`。`parse_upload_battle_log_text` 继承该字段；hit viewer、overlay 透传相同对象，`LiveOverlayBattleParser` 通过 overlay 接口继承。
 
-Overlay 还补传原来的 `rdps_preflight`、`unresolved_hits`、`unresolved_buff_actions`，原有 `rdps_damage_basis` 保留。viewer 原来已有这四个证据字段，本次增加 quality。四入口的含义为 raw / hit viewer / overlay snapshot / live snapshot；上传 wrapper 另外检查与直接 raw 等价。
+Overlay 和 viewer 提供 `rdps_preflight`、`unresolved_hits`、`unresolved_buff_actions`、`rdps_damage_basis` 及质量投影。四入口指 raw / hit viewer / overlay snapshot / live snapshot；上传 wrapper 另行检查与直接 raw 等价。
 
 ```json
 {
@@ -72,9 +72,9 @@ verified 必须有正数且有限的 `duration_ms`、非空 `time_source`、显�
 
 缺失证据投影为 `null`，已知的 0 保持 0；缺失列表为 `null`，已知空列表为 `[]`。无伤害 report 的既有 0 数值和 roster 展示仍保留；rDPS/timing quality 为 unavailable。完全空输入仍由 raw/viewer/overlay 抛出原 `ValueError`，live 初始/重置后仍可能返回 `None`，没有伪造一个 report。
 
-quality evidence 是递归复制的数据，修改 quality evidence 不会修改原始 preflight、basis 或未解析列表。复制时，绝对值超过 `2^53-1` 的整数转成十进制字符串以防 JavaScript 舍入；UID 字符串原样保留；非有限浮点投影为 `null`，对应不可用计时带理由。旧字段不转换、不删除、不覆写。quality 必须能通过 `json.dumps(..., allow_nan=False)`。
+quality evidence 是递归复制的数据，修改 quality evidence 不会修改原始 preflight、basis 或未解析列表。复制时，绝对值超过 `2^53-1` 的整数转成十进制字符串以防 JavaScript 舍入；UID 字符串原样保留；非有限浮点投影为 `null`，对应不可用计时带理由。原始报告字段保持其数据类型和值。quality 必须能通过 `json.dumps(..., allow_nan=False)`。
 
-没有写入 `battle.rdps_available`。旧 Overlay 用该字段控制 rDPS/DPS 显示回退，因此质量必须作为独立字段供未来消费者采用，本次不改变旧 UI 的数值与显示。
+`snapshot_quality` 与 `battle.rdps_available` 独立。后者控制 rDPS/DPS 显示回退；消费者应按各字段的语义分别读取。
 
 ## 回归门禁
 
@@ -82,7 +82,7 @@ quality evidence 是递归复制的数据，修改 quality evidence 不会修改
 
 门禁还覆盖官方计时成功与冲突、每个必要验证字段缺失、负面 rDPS 与计时证据、null/0、上下文无伤害、空文本原异常、uint64 与证据副本隔离、live 无新输入缓存、reset、连续官方战斗的质量隔离。单纯投影的正控用显式合成证据验证 verified 路径，不声称该合成对象是真实完整战斗。
 
-测试使用准备好的开发环境，不需要真实抓包密钥或私人日志。
+测试使用准备好的开发环境和合成数据，无需私人日志。
 
 ## 边界与后续
 

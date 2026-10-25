@@ -41,8 +41,7 @@ typed roots 的整体结构和证明保持原样；被解析器计算字节哈�
 
 ## 读取范围与体积复核
 
-2026-10-24 对应用、parser_core、uploader_core 的路径构造和读取调用作了复核，
-包括按角色、技能、Buff ID 动态拼接路径的分支。当前分组如下：
+资源读取覆盖应用、parser_core、uploader_core，包括按角色、技能、Buff ID 动态拼接路径的分支。当前分组如下：
 
 | 资源组 | 大小 MB | 主要读取者 / 用途 |
 | --- | ---: | --- |
@@ -55,8 +54,7 @@ typed roots 的整体结构和证明保持原样；被解析器计算字节哈�
 | `public` | 0.02 | parser；关卡词条名称 |
 | `jsondata` | 0.007 | data/names、gui/resources、service、trace/bridge；名称、头像映射和关卡辅助表 |
 
-第二轮把等级属性表从 3.53 MB 减到 1.27 MB；技能 manifest 从 1.04 MB 减到约 5 KB，
-两处再减少 3.31 MB。各等级、突破阶段及记录顺序保留；层数提示与创建 Buff 列表的回退顺序保留。
+等级属性表约 1.27 MB，技能 manifest 约 5 KB。数据保留各等级、突破阶段、记录顺序，以及层数提示与创建 Buff 列表的回退顺序。
 剩余最大的 `typed_roots.json.gz` 为 3.56 MB、`damage_element_catalog.json` 为 3.34 MB，
 含严格解析依赖的对象边界、动作、公式与来源证明，不能当作展示字段直接删除。
 其余资源未发现可在保持现有读取和证明语义的前提下再裁去 MB 级内容的项目。
@@ -79,7 +77,7 @@ python -B _development/tools/prepare_resources.py --check
 python -B _development/tools/audit_runtime_data.py
 ```
 
-默认仅解开源码附带的包，无网络请求，不获取密钥或 uploader。
+默认仅解开源码附带的精简数据包，无网络请求。
 `resource-manifest.json` schema 2 记录恢复包及每个输出文件的大小和 SHA-256；
 开发规则在源码中单独保留，不由包覆盖。已有文件被改动时提示人工核对。
 便携构建只复制清单中的输出文件，不递归收集 data、不附带恢复 ZIP 或原始数据。
@@ -103,7 +101,7 @@ python -B _development/tools/verify_runtime_projection.py --raw _development/raw
 
 开发规则始终从当前源码取值。审核通过后，在 Python 中调用提取工具的
 `activate(project_root, projection_root)`，或使用一个新输出目录重新执行提取命令并添加 `--install`。
-首次安装会先完整校验并归档旧输入；输出 ZIP 采用固定时间戳，可重复生成。
+首次安装会先完整校验并归档安装前的输入；输出 ZIP 采用固定时间戳，可重复生成。
 
 等价检查覆盖规范化解析目录、所有技能动作索引、Buff 派生规则、合成 trace 的完整报告、
 Overlay 和 uploader payload，以及 GUI 数据。另需运行应用、parser_core 和 uploader_core 全套回归。
@@ -116,8 +114,8 @@ Overlay 和 uploader payload，以及 GUI 数据。另需运行应用、parser_c
 避免因下载不完整而悄悄漏掉角色。增加一个角色不需要增加一份专用提取代码。
 
 更新上游版本时，先核实完整发行 ZIP、SHA-256 和数据解码版本，再同步提取工具的 `SOURCE`、
-原始输入清单和对应的 typed 证据绑定。使用新的本地原始目录，保留旧版用于比较；
-不要把网站最新 JSON 直接覆盖进旧版已校验目录。确认共享 manifest、数字映射及技能/Buff 条目一起更新。
+原始输入清单和对应的 typed 证据绑定。使用新的本地原始目录，保留基准版本用于比较；
+不要把网站最新 JSON 直接覆盖进基准版本的已校验目录。确认共享 manifest、数字映射及技能/Buff 条目一起更新。
 四份开发规则从当前源码保留；新的外部 rDPS 效果仍须单独审核批准，不能因出现新 ID 就自动批准。
 随后按上面的“重建、对照、回归、安装”步骤生成恢复包和新清单，再构建发行版。
 

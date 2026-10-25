@@ -12,7 +12,7 @@
 
 本程序不向游戏进程注入代码，不对游戏进程做 Hook、读写内存或修改游戏文件，即不含针对游戏进程的运行时侵入。
 实时数据来自 Npcap 被动抓包；登录解码会在本程序自己的进程内加载游戏目录的 `GameAssembly.dll`，
-调用其导出函数，再通过 RSA／会话密钥处理捕获数据。它不向游戏通信链路插入代理，游戏 DLL 也不随包分发。
+调用其导出函数参与登录解码。它不向游戏通信链路插入代理，游戏 DLL 也不随包分发。
 
 | 功能 | 实现链路 | 主要代码入口（`_internal/src/endfield_pcap/` 下） |
 | --- | --- | --- |
@@ -31,7 +31,6 @@
 连携 CD、输入记录各自独立，无需 Npcap 或开始抓包，默认关闭。在悬浮窗页启用连携，首页独立启停输入记录并查看两项服务状态；抓包可为连携补充角色姓名与头像。
 连携支持圆形图标和纵向进度条两种样式，CD 就绪时变绿；画面暂时不可读时延续已有状态，成功识别后更新。
 输入记录只采集游戏前台期间的输入，设置中可开启「启动时记录输入」，默认关闭。普通权限启动时仅记录子进程申请管理员权限，已是管理员时直接运行；取消授权不影响其他功能。
-BUFF 浮窗和最近输入浮窗入口已停用，历史 BUFF 轨道及输入记录保留。
 两项独立服务的设置、证据边界与故障处理见 [独立服务说明](_development/docs/independent-services.md)。更多入口见 [源码导航](_internal/src/README.md)，
 接口细节见 [实时摘要接口](_development/docs/live-summary-publisher.md)。
 
@@ -45,7 +44,7 @@ BUFF 浮窗和最近输入浮窗入口已停用，历史 BUFF 轨道及输入记
 GUI 默认不启动抓包，首页同一按钮启动/停止；可在设置中开启「启动时开始抓包」，主动停止后不会自行重启。
 首页「隐藏到托盘」或 `Ctrl+Shift+O` 一起隐藏/恢复 GUI 窗口，后台服务和浮窗继续运行；托盘图标保持可见，设置中可修改快捷键，关闭按钮仍退出。
 停止后再启动无法接续正在运行的游戏会话，需要重开游戏。运行输出在左侧「运行日志」查看，
-同时保留磁盘日志；缺少 Npcap、密钥或游戏目录不影响历史分析。详见 [GUI 启动说明](_development/docs/gui-launch.md)。
+同时保留磁盘日志；缺少 Npcap 或游戏目录不影响历史分析。详见 [GUI 启动说明](_development/docs/gui-launch.md)。
 
 悬浮窗列表可拖拽排序，顺序保存在便携配置中。「启用」控制相应功能是否运行，「显示浮窗」及一键显隐只控制桌面显隐；隐藏期间仍绘制，供 OBS 的 Windows 10 窗口采集使用。
 伤害浮窗随窗口尺寸缩放，字体与头像大小各有独立百分比滑条；显示列变化时自动调整窗口宽度。
@@ -54,7 +53,7 @@ GUI 默认不启动抓包，首页同一按钮启动/停止；可在设置中开
 可以忽略某一版本或打开下载页自行更新，不自动下载或替换文件。未发现新版时显示「未检测到新版」。
 
 输入文件与战斗 trace 放在同一日期目录：无抓包时使用 `input_*.input.jsonl`，开始抓包或 trace 换文件后切换为对应的 `trace_*.input.jsonl`。
-战斗分析自动发现同名配套文件，也可为每场战斗手动「绑定 input log」，再单独勾选「显示输入」。请选择覆盖该场战斗时间的文件，不能继续使用已在战斗前结束的旧文件。
+战斗分析自动发现同名配套文件，也可为每场战斗手动「绑定 input log」，再单独勾选「显示输入」。请选择覆盖该场战斗时间的文件。
 输入按毫秒级系统时间对齐到战斗本身的时间范围，文件时长无需与战斗相同；输入意图不代表游戏成功释放技能，也不改变伤害和贡献计算。输入文件不会交给 uploader。
 
 **新采集的 `trace_*.log` 连同 `.log.status.json` 兼容 ZMDLogs 官网版 uploader，无需导出转换版。**
@@ -65,20 +64,15 @@ uploader 包自带依赖，可在任意目录独立运行；所有文件从校�
 ## 从源码开发
 
 当前验证环境是 Windows x64、CPython 3.14.2、PySide6 及 Qt WebEngine。
-源码仓库只保留开发必要内容及提取后的运行数据：Python 运行时、依赖、上游原始数据、密钥、官网 uploader、
+源码仓库只保留开发必要内容及提取后的运行数据：Python 运行时、依赖、上游原始数据、本地敏感文件、官网 uploader、
 真实战斗、个人配置、实施记录和发行 ZIP 均不提交。
 
 1. 执行 `Setup-Dev.cmd`：已有依赖能导入就复用，缺什么才安装，不锁版本或主动升级；
    从源码附带的精简数据包离线恢复运行数据并校验，开发版规则不会被覆盖；不下载完整原始数据。
    没有 Python 时会准备项目内环境；详见 [开发环境说明](_development/docs/development-environment.md)。
-2. 按 [运行资源说明](_development/docs/runtime-resources.md) 从可信的 ZMDLogs 完整发行包
-   取得 `client_privkey.pem`，放入 `_internal/secrets/`。不要生成随机密钥替代抓包密钥。
-3. 本地分析使用恢复后的运行数据，来源、用途、校验与维护见
+2. 本地分析使用恢复后的运行数据，来源、用途、校验与维护见
    [data 说明](_internal/data/README.md) 和 [jsondata 说明](_internal/jsondata/README.md)。
-4. 双击 `Start-GUI.cmd`，或执行 `Start-GUI.cmd --check` 检查启动前提。
-
-缺少抓包密钥时会提示，仍可打开 GUI 和分析本地日志。
-普通解析与界面测试不需要这份真实密钥；依赖官网密钥的测试单独运行。
+3. 双击 `Start-GUI.cmd`，或执行 `Start-GUI.cmd --check` 检查启动前提。
 
 ## 测试
 
@@ -89,15 +83,6 @@ python -B _development/run_tests.py live
 python -B _development/run_tests.py parser_core
 python -B _development/run_tests.py uploader_core
 ```
-
-默认应用测试跳过 `requires_capture_key` 集成测试。准备好官网抓包密钥后，单独执行：
-
-```powershell
-python -B _development/run_tests.py capture-key
-```
-
-也可通过 `--capture-key-path` 指定密钥文件。显式选择该测试后，文件缺失或不匹配会报错，
-不会以跳过代替成功。测试只校验发行资源，不抓包、不登录、不上传。
 
 普通回归的 6 份 `.log` 均为合成样本，按精确白名单保留；真实战斗原件不提交。
 样本生成方式和证据边界见 [fixture 说明](_internal/packages/parser_core/tests/fixtures/README.md)。
@@ -111,7 +96,7 @@ python -B _development/run_tests.py capture-key
 - `.dev-gui/`、`_releases/`、`Uploader/`：本地状态、便携发行、可选官网 uploader，均忽略。
 
 更多功能文档见 [_development/README.md](_development/README.md)。
-提交时保留源码和测试，排除个人日志、配置、密钥及安装后的依赖。
+提交时保留源码和测试，排除个人日志、配置、敏感文件及安装后的依赖。
 `.gitattributes` 定义源码 LF、Windows 启动脚本 CRLF；协议样本和校验敏感资源保留原始字节。
 
 ## 版本与打包

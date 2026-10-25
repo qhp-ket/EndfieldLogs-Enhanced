@@ -18,14 +18,14 @@ python -B _development/tools/release.py version 0.1.0-dev.2
 
 ```powershell
 .\Setup-Dev.cmd
-python -B _development/tools/prepare_resources.py --with-capture-key
+python -B _development/tools/prepare_resources.py
 python -B _development/tools/release.py build
 ```
 
 资源脚本校验固定官网 3.0.12 ZIP 的 SHA-256，保护开发版覆盖规则。
 可以 `--archive PATH --offline` 使用本地 ZIP。
 官网 uploader 从通过 SHA-256 校验的官方 ZIP 直接提取，不使用本地 uploader 的运行状态，
-程序、依赖和数据均保持原字节。构建拒绝未知私钥和账号状态。
+程序、依赖和数据均保持原字节。构建拒绝未经允许的敏感文件和账号状态。
 
 build 依次执行应用、parser_core、uploader_core 回归，校验资源、建立干净 staging、
 生成 ZIP/CRC/`.zip.sha256`，最后解压到新的中文和空格路径并验证。
@@ -66,7 +66,7 @@ python -B _development/tools/release.py verify "_releases/Endfield-Logs-Enhanced
 开发环境和发行版共用 schema 2 的精简资源清单，约 16.9 MB。
 构建器只收集清单成员；本地原始数据、测试证据、审计材料和源码恢复 ZIP 均不进入运行包。
 缺少运行数据时先执行 `prepare_resources.py`；普通准备从源码附带的约 5.8 MB 包离线恢复。
-重新提取见 [data 说明](../../_internal/data/README.md)。旧发行 ZIP 不会自动重建或覆盖。
+重新提取见 [data 说明](../../_internal/data/README.md)。资源变化后须重新构建发行 ZIP。
 
 ## 依赖裁剪与解压后体积
 

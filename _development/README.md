@@ -3,7 +3,7 @@
 - [源码目录导航](../_internal/src/README.md)：功能分组、侧栏操作、服务和浮窗的修改入口。
 
 - [环境准备](docs/development-environment.md)：零环境、部分环境、完整环境的复用与安装。
-- [外部资源](docs/runtime-resources.md)：运行数据、抓包密钥、官网 uploader 与上传兼容。
+- [外部资源](docs/runtime-resources.md)：运行数据、官网 uploader 与上传兼容。
 - [GUI 启动](docs/gui-launch.md)、[浮窗模板](docs/overlay-templates.md)。
 - [输入记录与连携图像识别](docs/independent-services.md)：独立服务、校准、历史输入证据及故障边界。
 - [本地战斗分析](docs/local-battle-analysis.md)、[trace 导入与贡献口径](docs/trace-import-and-rdps.md)。
@@ -12,7 +12,7 @@
 - [版本与打包](docs/portable-packaging.md)。
 - [许可与再分发](docs/licensing.md)：GPLv3 组合程序、上游 MIT、对应源码及外部资源的边界。
 
-`tests/` 为应用回归，核心回归位于 `_internal/packages/*/tests/`；[测试分类与精简记录](tests/README.md)说明各目录覆盖范围、预期失败、跳过条件和分类运行命令。
+`tests/` 为应用回归，核心回归位于 `_internal/packages/*/tests/`；[测试分类与运行](tests/README.md)说明各目录覆盖范围、预期失败、跳过条件和分类运行命令。
 `tools/` 只入库当前维护工具；下载、缓存、性能实验、历史实施记录与验证产物留在本地。
 
 ```powershell
@@ -21,5 +21,5 @@ python -B _development/run_tests.py parser_core
 python -B _development/run_tests.py uploader_core
 ```
 
-普通回归使用合成数据。依赖真实官网密钥的测试单独执行 `capture-key`；
-缺少官网源码副本的可选兼容检查明确跳过。测试不会登录、上传或抓包。
+普通回归使用合成数据；缺少官网源码副本的可选兼容检查明确跳过。
+测试不会登录、上传或抓包。

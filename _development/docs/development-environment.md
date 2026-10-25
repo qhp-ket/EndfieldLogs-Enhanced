@@ -10,12 +10,12 @@
 PySide6 发行物自带 Qt 和 WebEngine，无需另装 Qt SDK 或 Node 服务。
 脚本从源码附带的精简数据包恢复缺少的运行数据，校验恢复包及逐文件 SHA-256；
 数据准备无需网络，也不恢复原始配置或覆盖开发版规则。脚本不安装 Npcap，不改系统 PATH、注册表、
-游戏目录或抓包私钥。完整原始数据不提交 Git。
+游戏目录或本地敏感文件。完整原始数据不提交 Git。
 
 ```powershell
 .\Setup-Dev.cmd -Check                 # 只读检查；缺项返回退出码 2
 .\Setup-Dev.cmd                        # 自动复用或补齐
-.\Setup-Dev.cmd -Isolated              # 即使旧工作区可用，也建立独立项目环境
+.\Setup-Dev.cmd -Isolated              # 建立独立项目环境
 .\Setup-Dev.cmd -PythonPath C:/Python314/python.exe -Isolated
 ```
 
@@ -50,9 +50,9 @@ PySide6 发行物自带 Qt 和 WebEngine，无需另装 Qt SDK 或 Node 服务�
 `Start-GUI.cmd` 优先级：显式 `ENDFIELD_GUI_PYTHON`、便携包内 Python、
 初始化记录的项目环境、默认 `.venv`、系统 Python。
 环境选择只写入 `.dev-gui/dev-python.txt`，不改已有 GUI 设置。
-虚拟环境不混入 `_internal/python_deps`；旧源码环境和便携包保留原有依赖使用方式。
+虚拟环境不混入 `_internal/python_deps`；便携包使用随包依赖。
 
-缺少抓包私钥时 GUI 提示后仍可进行离线分析；实时服务另需私钥、Npcap 和自己的游戏安装。
+离线分析可直接使用本地日志；实时抓包需要 Npcap 和自己的游戏安装。
 详见 [运行资源说明](runtime-resources.md)。环境检查只报告资源清单是否存在，
 运行数据默认离线恢复，无需 `-ResourceArchive`；该参数保留用于官网外部组件。
 单独准备数据用 `python -B _development/tools/prepare_resources.py`。
@@ -71,4 +71,4 @@ python -B _development/tools/audit_runtime_data.py --exercise
 .venv/Scripts/python.exe -B _development/run_tests.py uploader_core
 ```
 
-复用现有环境时改用对应解释器。普通回归使用公开合成样本；真实密钥、官网基准和实际游戏采集各有独立入口。
+复用现有环境时改用对应解释器。普通回归使用公开合成样本；官网基准对照和实际游戏采集单独验证。

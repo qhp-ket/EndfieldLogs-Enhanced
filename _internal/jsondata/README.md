@@ -1,6 +1,6 @@
 # GUI 辅助表
 
-`CharacterNameIndex.json`、`ActorImageTable.json`、`Dungeon.json` 分别提供旧角色名称索引、
+`CharacterNameIndex.json`、`ActorImageTable.json`、`Dungeon.json` 分别提供角色名称索引、
 头像对应关系和关卡辅助映射。当前角色名称还会合并 data 中的角色 manifest。
 
 这些文件属于精简运行数据的一部分，由源码附带的 `data/runtime-data.zip` 离线恢复，

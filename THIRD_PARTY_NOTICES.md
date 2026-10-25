@@ -13,7 +13,6 @@
 开发版新增和修改代码、包含 GPLv3 GUI 依赖的组合程序采用 GPL-3.0-only，见根目录 `LICENSE`；上游 MIT 原文副本保留在
 `_development/portable/licenses/EndfieldLogs-MIT.txt`，便于打包时带上原有声明。
 上游原始代码的 MIT 授权继续有效；分发组合程序应满足 GPLv3，同时保留 MIT 的版权和许可声明。
-此前已按 MIT 发布的版本不因本次修改被追溯撤销许可。
 
 ## 入库资源来源
 

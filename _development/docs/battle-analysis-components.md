@@ -16,7 +16,7 @@
 | GUI 通用字体缩放 | `_internal/src/endfield_pcap/gui/shared/typography.py` | `apply_fonts()`；影响范围大于本窗口 |
 | 角色头像及缓存 | `_internal/src/endfield_pcap/data/avatars.py`、`gui/shared/avatars.py` | 按角色 ID 解析离线共享头像，Qt 缓存按资源版本、尺寸、DPI 区分；显示开关在 `gui/battle/detail.py` |
 
-本次仅提高角色名与技能类型的基础字号。BUFF 名称、层数、持续时间、轴刻度保持原基础字号；它们仍服从已有的全局字体/图形缩放设置。
+角色名和技能类型分别使用 17px、16px 基础字号；BUFF 名称、层数、持续时间及轴刻度使用各自基础字号。它们共同服从全局字体/图形缩放设置。
 
 详情处于收起状态时，第二个 splitter 面板高度为 0，并未 `hide()`，这样仍可拖动分隔线重新打开。检查状态请用 `details_expanded()` / `details_maximized()`，不要用 `isHidden()`。顶部按钮、拖动、详情角落按钮统一通过 splitter 状态同步。
 
@@ -27,7 +27,7 @@
 | 文件 | 内容 |
 | --- | --- |
 | `index.html` | 页面结构、工具栏、详情按钮、右上角时间显示 |
-| `analysis.css` | 颜色、间距、字号、详情面板最大化布局；`.character-name` 与 `.track-cell.expand` 为此次放大的文字 |
+| `analysis.css` | 颜色、间距、字号、详情面板最大化布局；`.character-name` 与 `.track-cell.expand` 控制角色名和技能类型文字 |
 | `shared.js` | 默认状态、时间格式、通用提示与格式化 |
 | `app.js` | 栏目切换、筛选、`syncDetails()`、详情展开/收起/最大化同步 |
 | `timeline.js` | 时间轴行、技能块、BUFF、列宽拖动、右上角鼠标时间 |
@@ -49,4 +49,4 @@
 
 相关验证：`_development/tests/battle/test_timeline_intervals_and_details.py`、`test_battle_analysis_compact.py`、`test_battle_web_analysis.py`。截图保存在忽略目录 `_development/verification/`，使用合成战斗数据。
 
-原生时间轴左侧角色、轨道列由 `timeline/labels.py` 的 `fit_label_columns()` 测量文字及头像宽度；打开战斗、调整界面字号、头像大小或显隐时重新适配。普通重绘与图形缩放保留手动拖动的列宽。技能构成表的姓名、分类列随字体和头像变化重新测量。仿官网页面不参与此轮列宽维护。
+原生时间轴左侧角色、轨道列由 `timeline/labels.py` 的 `fit_label_columns()` 测量文字及头像宽度；打开战斗、调整界面字号、头像大小或显隐时重新适配。普通重绘与图形缩放保留手动拖动的列宽。技能构成表的姓名、分类列随字体和头像变化重新测量。

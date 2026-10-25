@@ -50,14 +50,13 @@
 
 `trace/bridge.py` 是转换入口，其他模块按战斗上下文、角色、技能、伤害、BUFF 分工。
 `TraceBridge._append_line()` 仍是写盘与分析 sink 共用的唯一行出口。
-目录拆分不改变协议、trace 格式、伤害公式或归因口径。
-canonical 解析与分配仍在 `_internal/packages/parser_core/`。
+canonical 解析与分配位于 `_internal/packages/parser_core/`。
 
 ## Overlay 资源
 
 每套内置模板在 `overlays/assets/<类型>/` 下拥有自己的 `template.json` 和 `index.html`，
-需要时附带 `app.js`、`style.css`。启用类型为 `damage`、`uid_mask`、`combo_skill`；`buff`、`input` 的入口停用，底层资产暂保留。
-已有配置 ID `combo_skill` 继续映射到 `combo/`，不改变保存的配置。
+需要时附带 `app.js`、`style.css`。GUI 支持的内置类型为 `damage`、`uid_mask`、`combo_skill`。
+配置 ID `combo_skill` 对应 `combo/` 目录。
 通用宿主桥和展示辅助脚本在 `shared/`。
 
 `overlays/templates.py` 解析模板，`config.py` 提供默认几何与内置入口，
@@ -68,7 +67,7 @@ canonical 解析与分配仍在 `_internal/packages/parser_core/`。
 `gui/battle/input_history.py` 为两种分析风格共享输入证据；原生绘制在 `timeline/inputs.py`，网页绘制在 `assets/inputs.js`。
 `inputlog/backends/windows.py` 隔离 Windows 消息线程，`windows_state.py` 提供带精度标记的状态采样兜底；`inputlog/bindings.py` 保存每场战斗的输入文件绑定。
 `inputlog/elevation.py` 仅为输入记录器申请管理员权限，通过认证的本机命名管道转发控制和状态，不提升主 GUI 权限。
-这些展示证据不写入 canonical snapshot 或 trace，旧抓包连携计时器不恢复。
+这些展示证据不写入 canonical snapshot 或 trace。
 
 ## 维护约定
 
