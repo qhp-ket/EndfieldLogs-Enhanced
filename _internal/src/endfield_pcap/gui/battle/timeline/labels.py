@@ -1,13 +1,42 @@
 """Resizable sticky character/track columns and full-text label tooltips."""
 from PySide6.QtCore import Qt, QRectF, QPointF
-from PySide6.QtGui import QPen
+from PySide6.QtGui import QPen, QFont, QFontMetricsF
 from endfield_pcap.analysis.battle.buffs.states import buff_state_text
 from endfield_pcap.analysis.battle.buffs.labels import buff_source_text
+from endfield_pcap.gui.shared.avatars import avatar_pixmap
+from endfield_pcap.data.skill_names import character_name
+from endfield_pcap.analysis.battle.layout import CATEGORY_NAMES
 
 
 ROLE_LABEL_PIXELS = 17
 SKILL_TYPE_LABEL_PIXELS = 16
 BASE_LABEL_PIXELS = 13  # BUFF names, stacks, axes and ruler retain this size.
+ROLE_AVATAR_PIXELS = 40
+
+
+def fit_label_columns(view):
+    """Measure on open/appearance changes; ordinary repaints keep dragged widths."""
+    scale = view._graphics_zoom*view._font_scale
+    def width(text, pixels):
+        font = QFont(view.font())
+        font.setPixelSize(round(pixels*scale))
+        return QFontMetricsF(font).horizontalAdvance(text)/scale
+    blocks = view._display_blocks()
+    owners = set(b.character_key for b in blocks)
+    roles = [width(character_name(key) if key else '公共 BUFF', ROLE_LABEL_PIXELS)
+             + (ROLE_AVATAR_PIXELS*view.avatar_scale+5
+                if view.show_character_avatars and key.startswith('chr_') else 0)
+             for key in owners]
+    view._role_column_width = max(64., width('角色', BASE_LABEL_PIXELS)+16,
+                                  max(roles, default=0)+10)
+    tracks = [width('轨道 / 时间', BASE_LABEL_PIXELS)+16]
+    for block in blocks:
+        if block.lane == 'skill':
+            tracks.append(width('▸ '+CATEGORY_NAMES.get(block.category, block.category), SKILL_TYPE_LABEL_PIXELS)+16)
+        else:
+            tracks.append(max(width(block.name, BASE_LABEL_PIXELS),
+                              width(buff_state_text(block.buff_states), BASE_LABEL_PIXELS))+16)
+    view._track_column_width = max(96., min(900., max(tracks)))
 
 
 def layout_columns(view, scale):
@@ -64,8 +93,21 @@ def draw_sticky_labels(view, painter):
     for y, height, name, owner in view._role_cells:
         cell = QRectF(origin.x(), y, role_width, height-4)
         visible = cell.intersected(below_ruler)
-        painter.drawText(visible.adjusted(5, 0, -5, 0),
-            Qt.AlignmentFlag.AlignCenter | Qt.TextFlag.TextWordWrap, name)
+        text_rect = visible.adjusted(5, 0, -5, 0)
+        if view.show_character_avatars and owner.startswith('chr_'):
+            size = min(ROLE_AVATAR_PIXELS*scale*view.avatar_scale, max(1, visible.height()-4), max(1, role_width-10))
+            pixmap = avatar_pixmap(owner, size, view.devicePixelRatioF())
+            # Compact cells use one line; tall cross-row cells center the group.
+            if visible.height() >= size+font.pixelSize()+8:
+                top = visible.center().y()-(size+font.pixelSize()+6)/2
+                painter.drawPixmap(QPointF(visible.center().x()-size/2, top), pixmap)
+                text_rect.setTop(top+size+4)
+                text_rect.setHeight(font.pixelSize()+5)
+            else:
+                painter.drawPixmap(QPointF(visible.left()+5, visible.center().y()-size/2), pixmap)
+                text_rect.setLeft(text_rect.left()+size+5)
+        text = painter.fontMetrics().elidedText(name, Qt.TextElideMode.ElideRight, max(1, int(text_rect.width())))
+        painter.drawText(text_rect, Qt.AlignmentFlag.AlignCenter, text)
         painter.setPen(view._grid)
         painter.drawLine(cell.topRight(), cell.bottomRight())
         painter.drawLine(cell.bottomLeft(), QPointF(origin.x()+view.LEFT, cell.bottom()))

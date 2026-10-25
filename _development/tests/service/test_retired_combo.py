@@ -1,4 +1,4 @@
-"""The retired CD display cannot be re-enabled by saved settings or WS."""
+"""Visual CD configuration is optional; capture service never restores its old timer."""
 import asyncio
 import json
 import endfield_pcap.gui.config as gui_config
@@ -8,17 +8,18 @@ from app_test_support.ui.window import entry
 from app_test_support.runtime.service import service_factory
 
 
-def test_config_removes_retired_combo_and_never_adds_it_back(tmp_path):
-    assert 'combo_skill' not in {row.source_value for row in gui_config.default_overlay_entries()}
+def test_visual_combo_is_opt_in_and_preserves_existing_window_settings(tmp_path):
+    assert not next(row for row in gui_config.default_overlay_entries() if row.source_value=='combo_skill').enabled
     path = tmp_path / 'settings.json'
     config = gui_config.AppConfig(service=gui_config.default_service_config(),
                                  overlays=[entry(), entry(id='retired', source_value='combo_skill', enabled=True)])
     gui_config.save_app_config(config, path)
     restored = gui_config.load_app_config(path)
-    assert 'combo_skill' not in {row.source_value for row in restored.overlays}
-    manager = overlay_host.OverlayManager(1, visible=False)
-    manager.apply_entry(entry(id='retired', source_value='combo_skill', enabled=True))
-    assert not manager._entries and not manager.opened_window_count()
+    combo=next(row for row in restored.overlays if row.source_value=='combo_skill')
+    assert combo.id=='retired' and combo.enabled
+    defaults=gui_config.load_app_config(tmp_path/'new.json')
+    assert not next(row for row in defaults.overlays if row.source_value=='combo_skill').enabled
+    assert 'buff' not in {row.source_value for row in restored.overlays}
 
 
 def test_retired_combo_has_no_service_analysis_input_queue_or_ws_frames(service_factory):

@@ -27,6 +27,7 @@ class OverlayManager:
         self._analysis_snapshot: dict[str, object] | None = None
         self._combo_snapshot: dict[str, object] | None = None
         self._buff_snapshot: dict[str, object] | None = None
+        self._input_snapshot = None
         self._live_snapshot: dict[str, object] | None = None
         self._history_mode = False
         self._presentation_stream = str(uuid4())
@@ -127,10 +128,14 @@ class OverlayManager:
         for window in self._windows.values():
             window.apply_buff_snapshot(self._buff_snapshot)
 
-    def apply_entry(self, entry: OverlayEntry) -> None:
-        if entry.source_value == 'combo_skill' or 'combo_snapshot' in template_for(entry).subscriptions:
-            self.remove_entry(entry.id)
+    def apply_input_snapshot(self, message):
+        if not isinstance(message,dict) or message.get('type') != 'input_snapshot':
             return
+        self._input_snapshot = copy.deepcopy(message)
+        for window in self._windows.values():
+            window.apply_input_snapshot(self._input_snapshot)
+
+    def apply_entry(self, entry: OverlayEntry) -> None:
         self._entries[entry.id] = replace(entry)
         self._notify_full_requirement()
         if entry.enabled:
@@ -158,6 +163,8 @@ class OverlayManager:
                     window.apply_combo_snapshot(self._combo_snapshot)
                 if self._buff_snapshot is not None:
                     window.apply_buff_snapshot(self._buff_snapshot)
+                if self._input_snapshot is not None:
+                    window.apply_input_snapshot(self._input_snapshot)
                 window.show()
             else:
                 window.apply_entry(replace(entry))
@@ -209,6 +216,9 @@ class OverlayManager:
         if entry is None:
             return
         updated = replace(entry, geometry=geometry)
+        window = self._windows.get(entry_id)
+        if window is not None and getattr(window, 'content_size', None) is not None:
+            updated = replace(updated, template_settings=dict(window.entry.template_settings))
         self._entries[entry_id] = updated
         if self.on_entry_changed is not None:
             self.on_entry_changed(replace(updated))

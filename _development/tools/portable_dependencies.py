@@ -7,10 +7,10 @@ from pathlib import Path, PurePosixPath
 import struct
 
 QT_BINDINGS = frozenset({'QtCore', 'QtGui', 'QtWidgets', 'QtNetwork', 'QtPrintSupport',
-                         'QtSvg', 'QtSvgWidgets', 'QtXml', 'QtWebChannel',
+                         'QtSvg', 'QtSvgWidgets', 'QtXml', 'QtWebChannel', 'QtMultimedia',
                          'QtWebEngineCore', 'QtWebEngineWidgets'})
 QT_PLUGIN_GROUPS = frozenset({'platforms', 'styles', 'imageformats', 'iconengines',
-                             'networkinformation', 'tls', 'platforminputcontexts'})
+                             'networkinformation', 'tls', 'platforminputcontexts', 'multimedia'})
 QT_RESOURCES = frozenset({'icudtl.dat', 'qtwebengine_resources.pak',
                          'qtwebengine_resources_100p.pak', 'qtwebengine_resources_200p.pak',
                          'v8_context_snapshot.bin'})
@@ -84,6 +84,8 @@ def qt_runtime_files(root):
             elif p.name.startswith('pyside6') and p.suffix == '.dll':
                 selected.add(relative)
         elif p.parts[0] == 'plugins' and p.parts[1] in QT_PLUGIN_GROUPS and p.suffix == '.dll':
+            if p.parts[1] == 'multimedia' and p.name != 'ffmpegmediaplugin.dll':
+                continue
             if p.parts[1] != 'platforms' or p.name in {'qwindows.dll', 'qoffscreen.dll'}:
                 selected.add(relative)
         elif p.parts[0] == 'resources' and len(p.parts) == 2 and p.name in QT_RESOURCES:

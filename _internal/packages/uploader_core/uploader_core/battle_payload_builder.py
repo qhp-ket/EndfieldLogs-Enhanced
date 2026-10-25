@@ -1436,8 +1436,10 @@ def _build_payload_from_segment(
             "dungeonName": parsed["battle"]["dungeon_name"],
             "bossKey": parsed["battle"]["boss_key"],
             "bossName": parsed["battle"]["boss_name"],
-            "battleStartAt": parsed["battle"]["battle_start_at"],
-            "battleEndAt": parsed["battle"]["battle_end_at"],
+            # Internal analysis retains milliseconds for input alignment. The
+            # existing uploader contract keeps its second-precision dates.
+            "battleStartAt": datetime.fromisoformat(parsed["battle"]["battle_start_at"]).isoformat(timespec="seconds"),
+            "battleEndAt": datetime.fromisoformat(parsed["battle"]["battle_end_at"]).isoformat(timespec="seconds"),
             "durationMs": parsed["battle"]["duration_ms"],
             "clearFlag": clear_flag,
             "totalDamage": parsed["battle"]["total_damage"],

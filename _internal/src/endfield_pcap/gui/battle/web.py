@@ -15,6 +15,7 @@ from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QWidget, QVBoxLayout
 from qfluentwidgets import isDarkTheme
 from endfield_pcap.analysis.battle.web_data import WebBattleModel
+from endfield_pcap.data.avatars import ROOT as PORTRAITS, avatar_catalog
 
 
 ASSETS = Path(__file__).with_name('assets').resolve()
@@ -27,6 +28,9 @@ class _LocalAssetsOnly(QWebEngineUrlRequestInterceptor):
         if url.scheme() == 'qrc' and url.path() == '/qtwebchannel/qwebchannel.js':
             return
         if url.isLocalFile():
+            path = Path(url.toLocalFile()).resolve()
+            if path.parent == PORTRAITS and path.suffix == '.png':
+                return
             try:
                 Path(url.toLocalFile()).resolve().relative_to(ASSETS)
                 return
@@ -51,6 +55,7 @@ class AnalysisBridge(QObject):
     labelChanged = Signal(str)
     stateChanged = Signal(str)
     stateEdited = Signal(str)
+    inputsChanged = Signal(str)
 
     def __init__(self, model, parent):
         super().__init__(parent)
@@ -59,10 +64,12 @@ class AnalysisBridge(QObject):
         self.theme = 'dark' if isDarkTheme() else 'light'
         self.font_scale = 1.15
         self.state_json = '{}'
+        self.input_evidence = dict(actions=[],raw=[])
 
     @Slot(result=str)
     def payload(self):
-        return self.model.json()
+        import json
+        return json.dumps(dict(self.model.payload(), avatars=avatar_catalog(), inputs=self.input_evidence), ensure_ascii=False)
 
     @Slot(int, result=str)
     def blockDetails(self, index):
@@ -120,6 +127,11 @@ class WebBattleView(QWidget):
         self.bridge.theme = 'dark' if isDarkTheme() else 'light'
         self.page.setBackgroundColor(QColor('#0c1016' if isDarkTheme() else '#f1f4f8'))
         self.bridge.environmentChanged.emit(self.bridge.theme, self.bridge.font_scale)
+
+    def set_input_evidence(self, evidence):
+        import json
+        self.bridge.input_evidence = evidence
+        self.bridge.inputsChanged.emit(json.dumps(evidence, ensure_ascii=False))
 
     def set_gui_font_scale(self, scale):
         self.bridge.font_scale = scale

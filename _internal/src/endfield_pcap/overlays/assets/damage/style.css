@@ -486,7 +486,7 @@ html, body { color: var(--ink); }
 @media (max-width: 620px) { .overlay-shell { padding: 5px; } .table-head, .table-body { padding-left: 7px; padding-right: 7px; } .table-grid, .row { gap: 4px; }  }
 @media (max-height: 325px) { .overlay-header { padding-top: 4px; padding-bottom: 4px; }  .row { height: 39px; } .rows { gap: 4px; } }
 
-/* Window dimensions control available space; font size is independent. */
+/* Window fit and the user's font multiplier are combined by the host. */
 :root { font-size: calc(16px * var(--overlay-font-scale, 1)); }
 .overlay-header { padding-right: 28px; }
 .table-body { overflow: auto; scrollbar-width: none; }
@@ -513,3 +513,22 @@ html, body { color: var(--ink); }
 .header-metric-group { min-width: 0; max-width: 100%; }
 .header-metric { min-width: 0; max-width: 100%; }
 .metric-value, .clock-value { white-space: nowrap; }
+.character-avatar {
+  width: var(--character-avatar-size);
+  height: var(--character-avatar-size);
+  flex: 0 0 auto; border-radius: 50%; object-fit: contain;
+  pointer-events: none; user-select: none;
+}
+:root { --character-avatar-size: calc(32px * var(--overlay-window-scale, 1) * var(--avatar-scale, 1)); }
+.row:has(.character-avatar:not([hidden])) { min-height: max(2.3rem, calc(var(--character-avatar-size) + 4px * var(--overlay-window-scale, 1))); }
+.character-avatar[hidden], .row-stat[hidden] { display: none; }
+.row-name { display: flex; flex-direction: row; align-items: center; gap: calc(6px * var(--overlay-window-scale, 1)); min-width: 0; }
+.player-text { min-width: 0; }
+.player-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Fit the visible card to the rows instead of reserving an empty body. */
+.overlay-shell { height: auto; max-height: 100%; display: flex; flex-direction: column; }
+.overlay-card { height: auto; max-height: calc(100vh - .75rem); flex: 0 1 auto; }
+.table-body { flex: 0 1 auto; }
+.empty-state { position: relative; inset: auto; height: auto; min-height: 2.3rem; letter-spacing: normal; }
+.table-body:has(.empty-state:not(.hidden)) { flex-shrink: 0; }

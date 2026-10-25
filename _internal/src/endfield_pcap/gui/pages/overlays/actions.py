@@ -78,8 +78,8 @@ class OverlayActions:
         if template.error:
             QMessageBox.warning(self, "模板无效", template.error)
             return
-        if 'combo_snapshot' in template.subscriptions:
-            QMessageBox.information(self, '功能已停用', '连携 CD 显示已停用。')
+        if {'buff_snapshot', 'input_snapshot'} & set(template.subscriptions):
+            QMessageBox.information(self, '功能已停用', 'BUFF / 最近输入浮窗暂不维护，GUI 入口已关闭；输入日志仍可在首页记录。')
             return
         if template.path:
             entry = replace(entry, name=template.name)
@@ -218,7 +218,15 @@ class OverlayActions:
             self._replace_overlay_entry(replace(entry, hidden=not bool(checked)))
 
 
+    def _apply_overlay_order(self, ordered_ids: list[str]) -> None:
+        entries = {entry.id: entry for entry in self.app_config.overlays}
+        if len(ordered_ids) != len(entries) or set(ordered_ids) != set(entries):
+            return
+        self.app_config.overlays = [entries[key] for key in ordered_ids]
+        save_app_config(self.app_config, self.config_path)
+
     def _bind_overlay_events(self) -> None:
+        self.overlay_page.order_changed.connect(self._apply_overlay_order)
         self.overlay_page.status_card.visibility_button.clicked.connect(self._toggle_overlay_visibility)
         self.overlay_page.overlay_list.currentItemChanged.connect(self._sync_overlay_selection)
         self.overlay_page.add_url_btn.clicked.connect(self._add_url_overlay)
@@ -235,6 +243,6 @@ class OverlayActions:
         self.overlay_page.locked_switch.checkedChanged.connect(self._apply_overlay_locked)
         self.overlay_page.click_switch.checkedChanged.connect(self._apply_overlay_click_through)
         self.overlay_page.opacity_slider.valueChanged.connect(self._apply_overlay_opacity)
-        self.overlay_page.font_size_edit.valueChanged.connect(self._apply_overlay_font_size)
+        self.overlay_page.font_size_slider.valueChanged.connect(self._apply_overlay_font_size)
         self.overlay_page.width_edit.valueChanged.connect(self._apply_overlay_dimensions)
         self.overlay_page.height_edit.valueChanged.connect(self._apply_overlay_dimensions)

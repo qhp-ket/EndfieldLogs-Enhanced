@@ -10,6 +10,8 @@ A.syncDetails=function() {
 A.applyState=function(raw) {
   let state;try {state=JSON.parse(raw);}catch{return;}
   Object.assign(A.state,state);
+  document.body.classList.toggle('avatars-off',A.state.avatars===false);
+  document.documentElement.style.setProperty('--avatar-scale',Math.max(50,Math.min(300,Number(A.state.avatarPercent)||100))/100);
   if(state.selectedBlock!==undefined)A.selectedBlock=state.selectedBlock;
   if(state.selectedHit!==undefined)A.selectedHit=state.selectedHit;
   if(state.detailTab)A.detailTab=state.detailTab;
@@ -22,7 +24,7 @@ A.applyState=function(raw) {
 A.ensureTimeline=function() {
   if(A.$('timeline').hidden)return;
   const s=A.state,width=A.$('timeline-scroll').clientWidth;
-  const key=JSON.stringify([width,s.character,s.buffs,s.fallback,s.zoom,s.graphics,s.unit,s.curve,s.expanded,s.roleWidth,s.trackWidth]);
+  const key=JSON.stringify([width,s.character,s.avatars,s.buffs,s.fallback,s.zoom,s.graphics,s.unit,s.curve,s.expanded,s.roleWidth,s.trackWidth]);
   if(width>0&&key!==A.timelineKey){A.renderTimeline();A.timelineKey=key;}
 };
 A.scheduleTimeline=function() {
@@ -46,8 +48,8 @@ A.initialize=function(data) {
   A.data=data;A.$('record-name').textContent=data.label;A.$('record-name').title=data.label;
   const b=data.battle;A.$('metrics').innerHTML=`<span><small>DMG</small><strong>${A.num(b.total_damage)}</strong></span><span><small>DPS</small><strong>${A.num(b.total_dps)}</strong></span><span><small>时长</small><strong>${A.num(Number(b.duration_ms||0)/1000)}s</strong></span>`;
   const quality=JSON.stringify(data.quality,null,2);A.$('quality').textContent=quality;A.$('metrics').title=quality;
-  A.$('roster').innerHTML=data.participants.map(p=>`<button class="roster-card" data-owner="${A.esc(p.character_key)}" style="--color:${A.color(p.character_key)}"><strong>${A.esc(p.display_name)}</strong><span>DMG ${A.num(p.total_damage)} · rDMG ${A.num(p.total_rd)}<br>DPS ${A.num(p.dps)} · rDPS ${A.num(p.rdps)}</span></button>`).join('');
-  A.$('roster').querySelectorAll('[data-owner]').forEach(n=>n.onclick=()=>A.setCharacter(A.state.character===n.dataset.owner?'':n.dataset.owner));
+  A.$('roster').innerHTML=data.participants.map(p=>`<button class="roster-card" data-owner="${A.esc(p.character_key)}" style="--color:${A.color(p.character_key)}"><strong class="character-identity">${A.avatar(p.character_key,p.display_name)}<span>${A.esc(p.display_name)}</span></strong><span>DMG ${A.num(p.total_damage)} · rDMG ${A.num(p.total_rd)}<br>DPS ${A.num(p.dps)} · rDPS ${A.num(p.rdps)}</span></button>`).join('');
+  A.$('roster').querySelectorAll('[data-owner]').forEach(n=>{n.title=data.names[n.dataset.owner]||n.dataset.owner;n.onclick=()=>A.setCharacter(A.state.character===n.dataset.owner?'':n.dataset.owner);});
   const options='<option value="">全部角色</option>'+data.participants.map(p=>`<option value="${A.esc(p.character_key)}">${A.esc(p.display_name)}</option>`).join('');
   A.$('character').innerHTML=options;A.$('skill-character').innerHTML=options;
   A.$('character').onchange=e=>A.setCharacter(e.target.value);A.$('skill-character').onchange=e=>A.setCharacter(e.target.value);
@@ -82,5 +84,6 @@ else new QWebChannel(qt.webChannelTransport,channel=>{
   A.bridge.environmentChanged.connect((theme,scale)=>{document.documentElement.dataset.theme=theme;document.documentElement.style.setProperty('--font-scale',scale);});
   A.bridge.labelChanged.connect(label=>{A.data.label=label;A.$('record-name').textContent=label;A.$('record-name').title=label;});
   A.bridge.stateChanged.connect(raw=>{if(A.data)A.applyState(raw);});
+  A.bridge.inputsChanged.connect(raw=>{if(A.data){A.data.inputs=JSON.parse(raw);A.timelineKey=null;A.ensureTimeline();}});
   A.bridge.payload(raw=>{try{A.initialize(JSON.parse(raw));}catch(e){A.fail(e.stack||e);}});
 });

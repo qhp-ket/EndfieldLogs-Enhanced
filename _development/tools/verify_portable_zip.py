@@ -3,6 +3,7 @@ import argparse
 import hashlib
 import json
 import os
+import runpy
 from pathlib import Path, PurePosixPath
 import subprocess
 import sys
@@ -45,11 +46,13 @@ assert len(folders) == 1
 app_root = folders[0]
 manifest = json.loads((app_root / 'BUILD-MANIFEST.json').read_text(encoding='utf8'))
 component = manifest.get('component', 'application')
-app_name = 'EndfieldLogs' if component == 'application' else 'EndfieldLogsUploader'
+identity=runpy.run_path(str(app_root/'_internal/src/endfield_pcap/_version.py')) if component=='application' else {}
+app_name = identity.get('APP_NAME') if component == 'application' else 'EndfieldLogsUploader'
+package_name=identity.get('APP_PACKAGE_NAME',app_name) if component=='application' else app_name
 assert component in {'application', 'official_uploader'}
 assert manifest['application']['name'] == app_name
 assert manifest['application']['artifact'] == app_root.name == archive_path.stem
-assert app_root.name == f"{app_name}-{manifest['application']['version']}-windows-x64"
+assert app_root.name == f"{package_name}-{manifest['application']['version']}-windows-x64"
 actual = {p.relative_to(app_root).as_posix() for p in app_root.rglob('*') if p.is_file()}
 assert actual == set(manifest['files']) | {'BUILD-MANIFEST.json'}
 for relative, entry in manifest['files'].items():

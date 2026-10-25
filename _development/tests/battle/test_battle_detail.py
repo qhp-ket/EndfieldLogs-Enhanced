@@ -85,7 +85,7 @@ def test_detail_filters_sort_zoom_and_empty_report(app):
         empty.close(); app.processEvents()
 
 
-def test_history_details_load_only_requested_record_and_reuse_last_report(main_window, app, tmp_path, monkeypatch):
+def test_history_details_load_only_requested_record_reuse_open_and_release_closed_report(main_window, app, tmp_path, monkeypatch):
     window = main_window
     source = tmp_path / 'trace_20261022-100000.log'
     source.write_text(two_battles(), encoding='utf8')
@@ -105,9 +105,16 @@ def test_history_details_load_only_requested_record_and_reuse_last_report(main_w
     wait_for(lambda: window._history_detail_dialog is not None, app)
     assert calls == [target.record_index], 'Inspect must not eagerly parse every selected/file record'
     assert window._history_detail_dialog.snapshot['battle']['total_damage'] == target.total_damage
-    window._history_detail_dialog.close()
+    dialog = window._history_detail_dialog
     window.records_page.analysis_detail_btn.click()
     assert calls == [target.record_index]
+    assert window._history_detail_dialog is dialog
+    dialog.close()
+    assert window._history_detail_snapshot is None
+    assert not target.snapshot
+    window.records_page.analysis_detail_btn.click()
+    wait_for(lambda: window._history_detail_dialog is not None, app)
+    assert calls == [target.record_index, target.record_index]
     assert window._history_detail_dialog is not None
     window._return_live_overlay()
     assert not window.overlay_manager._history_mode

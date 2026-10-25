@@ -10,7 +10,7 @@ python -B _development/tools/release.py version 0.1.0-dev.2
 ```
 
 改版本、测试、提交源码后构建，便于清单记录源 commit。
-产物固定为 `_releases/EndfieldLogs-<版本>-windows-x64.zip`，解压顶层目录同名。
+产物固定为 `_releases/Endfield-Logs-Enhanced-<版本>-windows-x64.zip`，解压顶层目录同名。
 同版本目录或 ZIP 已存在则拒绝覆盖。
 
 源码开发依赖不锁版本。便携构建目前使用已验证的 Windows x64 CPython 3.14；
@@ -52,8 +52,8 @@ Python/依赖实际版本、各文件大小和 SHA-256。
 手工检查 staging 可用 `build --stage-only`，之后执行：
 
 ```powershell
-python -B _development/tools/build_portable.py --zip-stage "_releases/EndfieldLogs-0.1.0-dev.1-windows-x64"
-python -B _development/tools/release.py verify "_releases/EndfieldLogs-0.1.0-dev.1-windows-x64.zip"
+python -B _development/tools/build_portable.py --zip-stage "_releases/Endfield-Logs-Enhanced-0.1.0-dev.1-windows-x64"
+python -B _development/tools/release.py verify "_releases/Endfield-Logs-Enhanced-0.1.0-dev.1-windows-x64.zip"
 ```
 
 解压验证使用包内 Python，清除外部 Python 配置和系统 Python PATH，

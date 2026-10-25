@@ -45,6 +45,10 @@ function Save-Environment([string]$Executable) {
     if ($Offline) { $ResourceArgs += '--offline' }
     & $Executable @ResourceArgs
     if ($LASTEXITCODE -ne 0) { throw 'Runtime resource preparation failed; no environment selection was saved.' }
+    $NativeArgs = @('-B', (Join-Path $PSScriptRoot 'prepare_native.py'))
+    if ($Offline) { $NativeArgs += '--offline' }
+    & $Executable @NativeArgs
+    if ($LASTEXITCODE -ne 0) { Write-Warning 'SDL3 unavailable: keyboard/mouse input recording and existing GUI remain usable; prepare_native.py can be retried later.' }
     [IO.Directory]::CreateDirectory((Join-Path $Root '.dev-gui')) | Out-Null
     $SelectedPython = $Executable
     if ($Executable.StartsWith($Root + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {

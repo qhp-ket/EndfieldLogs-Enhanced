@@ -1,7 +1,7 @@
-# EndfieldLogs
+# Endfield Logs - Enhanced
 
 《明日方舟：终末地》的第三方战斗日志客户端，基于 ZMDLogs / Endfield Logs 源码开发。
-提供 Python + PySide6（Qt）GUI、实时伤害浮窗、本地 trace 导入和战斗分析。
+提供 Python + PySide6（Qt）GUI、实时伤害浮窗、图像识别连携 CD、输入记录及本地战斗分析。
 此项目是独立开发版，项目中的“官网版”指 ZMDLogs 的发行版。
 相关项目：[ZMDLogs 官网](https://zmdlogs.com/)、[AKEData 网站](https://www.akedata.wiki/)、
 [AKEData Git 仓库](https://github.com/NagiYume/AKEDatabase)。
@@ -21,13 +21,18 @@
 | 完整实时接口 | 按消费者需求启动独立工作进程 → 同一核心生成完整报告 → WebSocket 完整快照；摘要流独立发布 | `analysis/live/`、`service/runtime/websocket.py` |
 | 历史记录 | 引用原文件 → 分场索引 → 选中后后台解析 → canonical 完整报告；批量加载仅显示最后选择 | `history/`、`gui/pages/history/` |
 | 战斗分析 | 完整报告 → 技能/BUFF/敌方/技力等界面投影 → 原生 Qt 或本地 WebEngine 时间轴与详情 | `analysis/battle/`、`gui/battle/` |
-| BUFF 浮窗 | trace 生命周期与层数 → 当前状态 → 独立展示快照及倒计时；显示估算不参与 rDPS 判定 | `analysis/buffs/`、`overlays/assets/buff/` |
 | 浮窗与 OBS | 模板订阅 → Qt/WebEngine 渲染 → Windows 10 窗口采集；显隐与分析启用分开 | `overlays/manager.py`、`overlays/window.py` |
+| 连携 CD 识别 | 游戏 HWND → Qt Multimedia / WGC → HUD 小区域像素 → 跨帧状态 → 连携浮窗；无需 Npcap，抓包仅补角色身份 | `vision/`、`gui/independent/vision_settings.py` |
+| 输入记录与证据 | 独立输入进程 → Windows Raw Input（含兼容采集）/ SDL3 → 游戏前台 JSONL → 每场绑定与输入解释 → 战斗时间轴；显示开关独立于绑定 | `inputlog/`、`gui/services.py`、`gui/battle/input_history.py` |
 | 官网上传 | 原始 `trace_*.log` 与配套 status → 独立官网 uploader → 官网解析及上传；本体不代替官网处理 | `trace/`、独立 `Uploader/` |
 | 数据与环境 | 源码附带精简数据包 → 清单校验恢复；便携包自带 Python、Qt 和所需依赖 | `runtime/`、`data/`、`_development/tools/` |
 
 增量分析允许迟到证据修正及异常重放；轻量摘要与完整报告共用计算口径，不跳过归因证据。
-连携 CD 功能已停用，代码保留。更多入口见 [源码导航](_internal/src/README.md)，
+连携 CD、输入记录各自独立，无需 Npcap 或开始抓包，默认关闭。在悬浮窗页启用连携，首页独立启停输入记录并查看两项服务状态；抓包可为连携补充角色姓名与头像。
+连携支持圆形图标和纵向进度条两种样式，CD 就绪时变绿；画面暂时不可读时延续已有状态，成功识别后更新。
+输入记录只采集游戏前台期间的输入，设置中可开启「启动时记录输入」，默认关闭。普通权限启动时仅记录子进程申请管理员权限，已是管理员时直接运行；取消授权不影响其他功能。
+BUFF 浮窗和最近输入浮窗入口已停用，历史 BUFF 轨道及输入记录保留。
+两项独立服务的设置、证据边界与故障处理见 [独立服务说明](_development/docs/independent-services.md)。更多入口见 [源码导航](_internal/src/README.md)，
 接口细节见 [实时摘要接口](_development/docs/live-summary-publisher.md)。
 
 ## 使用便携包
@@ -36,10 +41,21 @@
 无需另装 Python 或 Qt。个人配置、日志和历史列表写入 `.dev-gui/`。
 实时抓包另需安装 [Npcap（官方下载安装页）](https://npcap.com/#download)，
 并在「设置 → 游戏路径」选择 `Endfield.exe` 或游戏目录；以后也可在这里重新选择。程序不附带游戏 DLL。
-启动时 CMD 短暂出现后退出，运行期间只显示 GUI 和 Overlay；`--check` 保持控制台检查。
-GUI 打开后自动尝试启动抓包一次，首页同一按钮启动/停止；主动停止后不会自行重启。
+启动时 CMD 提示正在打开 GUI，窗口显示后自动退出，运行期间只显示 GUI 和 Overlay；`--check` 保持控制台检查。
+GUI 默认不启动抓包，首页同一按钮启动/停止；可在设置中开启「启动时开始抓包」，主动停止后不会自行重启。
+首页「隐藏到托盘」或 `Ctrl+Shift+O` 一起隐藏/恢复 GUI 窗口，后台服务和浮窗继续运行；托盘图标保持可见，设置中可修改快捷键，关闭按钮仍退出。
 停止后再启动无法接续正在运行的游戏会话，需要重开游戏。运行输出在左侧「运行日志」查看，
 同时保留磁盘日志；缺少 Npcap、密钥或游戏目录不影响历史分析。详见 [GUI 启动说明](_development/docs/gui-launch.md)。
+
+悬浮窗列表可拖拽排序，顺序保存在便携配置中。「启用」控制相应功能是否运行，「显示浮窗」及一键显隐只控制桌面显隐；隐藏期间仍绘制，供 OBS 的 Windows 10 窗口采集使用。
+伤害浮窗随窗口尺寸缩放，字体与头像大小各有独立百分比滑条；显示列变化时自动调整窗口宽度。
+伤害浮窗及两种战斗分析界面共用离线圆形角色头像，可通过「显示角色头像」关闭。
+设置中的「关于」显示当前版本并支持检查更新；启动时默认后台检查，仅提示正式 Release 的版本号与发布日期，
+可以忽略某一版本或打开下载页自行更新，不自动下载或替换文件。未发现新版时显示「未检测到新版」。
+
+输入文件与战斗 trace 放在同一日期目录：无抓包时使用 `input_*.input.jsonl`，开始抓包或 trace 换文件后切换为对应的 `trace_*.input.jsonl`。
+战斗分析自动发现同名配套文件，也可为每场战斗手动「绑定 input log」，再单独勾选「显示输入」。请选择覆盖该场战斗时间的文件，不能继续使用已在战斗前结束的旧文件。
+输入按毫秒级系统时间对齐到战斗本身的时间范围，文件时长无需与战斗相同；输入意图不代表游戏成功释放技能，也不改变伤害和贡献计算。输入文件不会交给 uploader。
 
 **新采集的 `trace_*.log` 连同 `.log.status.json` 兼容 ZMDLogs 官网版 uploader，无需导出转换版。**
 官网原版 uploader 单独打包，主程序包不含它；只使用本地分析与 Overlay 时无需下载。
@@ -110,7 +126,7 @@ python -B _development/tools/release.py build                   # 回归、构�
 python -B _development/tools/release.py build --component uploader # 可选：单独构建官网上传器
 ```
 
-输出到 `_releases/EndfieldLogs-<版本>-windows-x64.zip`，附 SHA-256 和逐文件构建清单。
+输出到 `_releases/Endfield-Logs-Enhanced-<版本>-windows-x64.zip`，附 SHA-256 和逐文件构建清单。
 同版本不覆盖；不自动上传发行附件或修改远程仓库。完整流程见 [打包说明](_development/docs/portable-packaging.md)。
 重打包先比较源码及包内文件差异，再按变化选择测试；只改文档无需重复全套回归。
 同一源码已通过相应回归时使用 `build --skip-tests`，仍校验 ZIP 清单和解压启动。

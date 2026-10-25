@@ -153,5 +153,7 @@ def test_controller_constructs_off_thread_and_does_not_reuse_generated_paths(mon
         controller.join()
     assert len(created) == 2 and created[0] is not created[1]
     assert config.trace_file is None and config.status_file is None
+    assert controller.queue.get_nowait() == ('trace_path',str(tmp_path/'trace-0.log'))
     assert controller.queue.get_nowait() == ('stopped', None)
+    assert controller.queue.get_nowait() == ('trace_path',str(tmp_path/'trace-1.log'))
     assert controller.queue.get_nowait() == ('stopped', None)

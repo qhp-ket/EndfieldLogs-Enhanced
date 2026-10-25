@@ -9,7 +9,7 @@ from endfield_pcap.models import OverlayEntry, OverlaySourceType
 
 ASSETS = Path(__file__).resolve().parent / "assets"
 BUILTIN_DIRECTORIES = {"combo_skill": "combo"}
-SNAPSHOTS = {"analysis_snapshot", "analysis_summary", "combo_snapshot", "buff_snapshot"}
+SNAPSHOTS = {"analysis_snapshot", "analysis_summary", "combo_snapshot", "buff_snapshot", "input_snapshot"}
 
 
 @dataclass(slots=True)
@@ -33,7 +33,7 @@ def read_template(path: Path) -> OverlayTemplate:
         raise ValueError("模板 entry 必须指向存在的 HTML 文件")
     subscriptions = data.get("subscriptions", [])
     if not isinstance(subscriptions, list) or any(s not in SNAPSHOTS for s in subscriptions):
-        raise ValueError("模板订阅仅支持 analysis_snapshot / combo_snapshot / buff_snapshot")
+        raise ValueError("模板订阅仅支持 analysis_snapshot / analysis_summary / combo_snapshot / buff_snapshot / input_snapshot")
     settings = data.get("settings", [])
     keys = set()
     if not isinstance(settings, list):
@@ -43,8 +43,14 @@ def read_template(path: Path) -> OverlayTemplate:
         if not isinstance(key, str) or not key or key in keys:
             raise ValueError("模板设置 key 不能为空或重复")
         keys.add(key)
-        if item.get("type") not in {"select", "multiselect"}:
-            raise ValueError("模板设置类型仅支持 select / multiselect")
+        if item.get("type") not in {"select", "multiselect", "slider"}:
+            raise ValueError("模板设置类型仅支持 select / multiselect / slider")
+        if item["type"] == "slider":
+            if (any(type(item.get(k)) is not int for k in ("min", "max", "default"))
+                    or not -16384 <= item["min"] <= item["default"] <= item["max"] <= 16384
+                    or item.get("legacy_field") is not None):
+                raise ValueError("模板滑条需要有效的整数 min / max / default，不能绑定 legacy_field")
+            continue
         options = item.get("options", [])
         values = [o["value"] for o in options]
         if not values or any(not isinstance(v, str) for v in values) or len(set(values)) != len(values):
@@ -92,6 +98,10 @@ def template_values(entry: OverlayEntry, template: OverlayTemplate | None = None
     for item in template.settings:
         legacy = getattr(entry, item.get("legacy_field") or "", item["default"])
         value = entry.template_settings.get(item["key"], legacy)
+        if item["type"] == "slider":
+            value = max(item["min"], min(item["max"], value)) if type(value) is int else item["default"]
+            result[item["key"]] = value
+            continue
         allowed = [option["value"] for option in item["options"]]
         if item["type"] == "multiselect":
             value = [v for v in allowed if v in value] if isinstance(value, (list, tuple)) else item["default"]
@@ -109,6 +119,10 @@ def with_template_value(entry: OverlayEntry, key: str, value: object) -> Overlay
     settings = {**template_values(entry, template), key: value}
     candidate = replace(entry, template_settings=settings)
     normalized = template_values(candidate, template)
+    if '_damage_window_scale' in entry.template_settings:
+        normalized['_damage_window_scale'] = entry.template_settings['_damage_window_scale']
+    if entry.source_value == 'combo_skill' and '_combo_window_scale' in entry.template_settings:
+        normalized['_combo_window_scale'] = entry.template_settings['_combo_window_scale']
     changes = {"template_settings": normalized}
     # Keep the old serialized fields readable by older dev builds.
     if legacy := item.get("legacy_field"):

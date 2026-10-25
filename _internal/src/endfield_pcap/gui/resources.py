@@ -14,7 +14,7 @@ ICON_DIR = ROOT / "icon" / "Texture2D"
 
 ACTOR_IMAGE_TABLE = ROOT / "jsondata" / "ActorImageTable.json"
 
-APP_USER_MODEL_ID = "EndfieldLogs.Desktop"
+APP_USER_MODEL_ID = "EndfieldLogsEnhanced.Desktop"
 
 def _app_icon_path() -> Path | None:
     if APP_ICON_ICO.exists():

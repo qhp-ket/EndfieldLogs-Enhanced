@@ -11,6 +11,9 @@
   的技力机制与技能表提取，提交 `31b53147cd88fb6e9576b5c389967d21687c85cf`、表版本和哈希保留在 `source` 中。
 - `local_semantics/skill_frame_rules.json`：依据 AKEDatabase 的角色 SkillData 提取，资源时间、摘要及文件数保留在 `source` 中。
 - `game_resource_snapshot.json` 与 `packet_semantics/rdps_semantics_registry.json`：本项目维护的快照元数据和开发版解析规则，保留输入哈希、证据及修改说明。
+- `ui/characters/`：独立的离线展示资源，来自 AKEData 图片索引的 35 个角色圆形头像，约 1.18 MB。
+  角色映射、原始链接和校验值见该目录 `manifest.json`，更新工具与缺图规则见 [头像维护说明](ui/characters/README.md)。
+  不进入 trace、canonical 报告或上传数据，不属于 `runtime-data.zip` 的解析字段投影。
 
 上游源码与 AKEData 的链接集中列在根目录 `THIRD_PARTY_NOTICES.md`；上游 MIT 声明保留原文。
 

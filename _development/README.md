@@ -5,6 +5,7 @@
 - [环境准备](docs/development-environment.md)：零环境、部分环境、完整环境的复用与安装。
 - [外部资源](docs/runtime-resources.md)：运行数据、抓包密钥、官网 uploader 与上传兼容。
 - [GUI 启动](docs/gui-launch.md)、[浮窗模板](docs/overlay-templates.md)。
+- [输入记录与连携图像识别](docs/independent-services.md)：独立服务、校准、历史输入证据及故障边界。
 - [本地战斗分析](docs/local-battle-analysis.md)、[trace 导入与贡献口径](docs/trace-import-and-rdps.md)。
 - [界面组件位置](docs/battle-analysis-components.md)：控件、字号、时间轴和网页资产。
 - [实时摘要接口](docs/live-summary-publisher.md)、[质量契约](docs/snapshot-quality-contract.md)。

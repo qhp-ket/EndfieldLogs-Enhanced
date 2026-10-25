@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from PySide6.QtGui import QKeySequence
 from PySide6.QtWidgets import QFileDialog, QMessageBox
 from endfield_pcap.gui.config import save_app_config
 from endfield_pcap.gui.resources import ROOT
@@ -28,6 +29,13 @@ def _directory_size(path: Path) -> int:
 
 class SettingsActions:
     def _refresh_settings_page(self) -> None:
+        for switch, value in (
+                (self.settings_page.start_capture_switch, self.app_config.start_capture_on_launch),
+                (self.settings_page.start_input_switch, self.app_config.start_input_recording_on_launch),
+                (self.settings_page.auto_update_switch, self.app_config.check_updates_on_start)):
+            switch.blockSignals(True)
+            switch.setChecked(value)
+            switch.blockSignals(False)
         self.settings_page.gui_font_slider.blockSignals(True)
         self.settings_page.gui_font_slider.setValue(self.app_config.gui_font_percent)
         self.settings_page.gui_font_value.setText(f'{self.app_config.gui_font_percent}%')
@@ -48,6 +56,10 @@ class SettingsActions:
         self.settings_page.set_service_info(self.app_config.service)
         self._refresh_log_dir_size()
         self._update_overlay_shortcut()
+        self.settings_page.gui_hotkey_edit.blockSignals(True)
+        self.settings_page.gui_hotkey_edit.setKeySequence(QKeySequence(self.app_config.toggle_gui_hotkey))
+        self.settings_page.gui_hotkey_edit.blockSignals(False)
+        self._update_gui_shortcut()
 
     def _refresh_log_dir_size(self) -> None:
         self.settings_page.set_log_size(_directory_size(self.app_config.service.log_dir))
@@ -134,6 +146,9 @@ class SettingsActions:
 
 
     def _bind_settings_events(self) -> None:
+        self.settings_page.gui_hotkey_edit.editingFinished.connect(self._apply_gui_hotkey)
+        self.settings_page.start_capture_switch.checkedChanged.connect(self._set_start_capture_on_launch)
+        self.settings_page.start_input_switch.checkedChanged.connect(self._set_start_input_on_launch)
         self.settings_page.port_edit.valueChanged.connect(self._apply_service_port)
         self.settings_page.theme_combo.currentIndexChanged.connect(self._apply_theme_mode)
         self.settings_page.gui_font_slider.valueChanged.connect(self._apply_gui_font_size)
@@ -143,3 +158,20 @@ class SettingsActions:
         self.settings_page.log_dir_refresh_btn.clicked.connect(self._refresh_log_dir_size)
         self.settings_page.hotkey_edit.editingFinished.connect(self._apply_overlay_hotkey)
         self.settings_page.merge_multi_phase_switch.checkedChanged.connect(self._apply_merge_multi_phase_enemy_battles)
+
+    def _set_start_capture_on_launch(self, enabled):
+        self.app_config.start_capture_on_launch = bool(enabled)
+        save_app_config(self.app_config, self.config_path)
+
+    def _apply_gui_hotkey(self):
+        key=self.settings_page.gui_hotkey_edit.keySequence().toString(QKeySequence.SequenceFormat.PortableText)
+        if key and self._update_gui_shortcut(key):
+            self.app_config.toggle_gui_hotkey=key
+            save_app_config(self.app_config,self.config_path)
+        self.settings_page.gui_hotkey_edit.blockSignals(True)
+        self.settings_page.gui_hotkey_edit.setKeySequence(QKeySequence(self.app_config.toggle_gui_hotkey))
+        self.settings_page.gui_hotkey_edit.blockSignals(False)
+
+    def _set_start_input_on_launch(self, enabled):
+        self.app_config.start_input_recording_on_launch = bool(enabled)
+        save_app_config(self.app_config, self.config_path)

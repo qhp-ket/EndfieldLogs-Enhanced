@@ -71,6 +71,8 @@ class ServiceController:
         def runner() -> None:
             try:
                 self._service = DamageLogService(self.running_config, observer=observer)
+                if getattr(self.running_config,'trace_file',None) is not None:
+                    self.queue.put(('trace_path',str(self.running_config.trace_file)))
                 self._service.observer.on_analysis_snapshot = self._on_full_snapshot if self._full_analysis_required else None
                 self._service.set_full_analysis_required(self._full_analysis_required)
                 if self._analysis_streams is not None:

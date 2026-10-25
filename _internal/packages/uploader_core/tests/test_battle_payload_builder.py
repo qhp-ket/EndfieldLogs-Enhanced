@@ -312,8 +312,8 @@ def test_build_payload_preserves_contract_tags(monkeypatch) -> None:
             "dungeon_name": "危机合约",
             "boss_key": "eny_0114_jzmking",
             "boss_name": "破潮之像",
-            "battle_start_at": "2026-06-18T12:00:00+08:00",
-            "battle_end_at": "2026-06-18T12:01:28+08:00",
+            "battle_start_at": "2026-06-18T12:00:00.968+08:00",
+            "battle_end_at": "2026-06-18T12:01:28.532+08:00",
             "duration_ms": 88000,
             "clear_flag": True,
             "total_damage": 1200000,
@@ -362,6 +362,8 @@ def test_build_payload_preserves_contract_tags(monkeypatch) -> None:
         proof=None,
     )
 
+    assert payload["battle"]["battleStartAt"] == "2026-06-18T12:00:00+08:00"
+    assert payload["battle"]["battleEndAt"] == "2026-06-18T12:01:28+08:00"
     assert payload["battle"]["contractTagScore"] == 5
     assert payload["battle"]["contractTags"][0] == {
         "tagId": 102802,

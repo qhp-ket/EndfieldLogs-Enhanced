@@ -217,7 +217,7 @@ class BattleLogPage(InterfacePage):
             self.table.setRowCount(0)
             return
 
-        started_at = datetime.fromtimestamp(record.started_at_ms / 1000).strftime("%Y-%m-%d %H:%M:%S")
+        started_at = datetime.fromtimestamp(record.started_at_ms / 1000).isoformat(sep=" ", timespec="milliseconds")
         self.summary_total.setText(f"{record.total_damage:.2f}" if record.analysis_loaded else "待加载")
         self.summary_dps.setText(f"{record.dps:.2f}" if record.analysis_loaded else "待加载")
         self.summary_duration.setText(_format_duration(record.duration_ms) if record.analysis_loaded else "待加载")

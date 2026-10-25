@@ -8,6 +8,8 @@ import os
 from pathlib import Path
 import sys
 import subprocess
+import tempfile
+import time
 import traceback
 
 ROOT = Path(__file__).resolve().parent
@@ -21,13 +23,13 @@ def show_startup_error(message: str) -> None:
     text = f'{message}\n\n日志：{log_path}'
     if sys.platform == 'win32':
         import ctypes
-        ctypes.windll.user32.MessageBoxW(None, text, 'EndfieldLogs GUI 启动失败', 0x10)
+        ctypes.windll.user32.MessageBoxW(None, text, 'Endfield Logs - Enhanced GUI 启动失败', 0x10)
     elif sys.stderr is not None:
         print(text, file=sys.stderr)
 
 
 def launch_detached(arguments: list[str]) -> int:
-    """Keep --check synchronous; only normal GUI startup leaves the CMD."""
+    """Keep the CMD until the windowless child has shown its GUI."""
     interpreter = Path(sys.executable)
     windowless = interpreter.with_name('pythonw.exe')
     if sys.platform == 'win32' and windowless.is_file():
@@ -38,14 +40,36 @@ def launch_detached(arguments: list[str]) -> int:
     if sys.flags.isolated:
         command.append('-I')
     command.extend(['-B', str(Path(__file__).resolve()), *arguments])
-    with (log_dir / 'launcher-stdio.log').open('a', encoding='utf8') as output:
-        subprocess.Popen(
-            command,
-            cwd=ROOT, stdin=subprocess.DEVNULL, stdout=output, stderr=output,
-            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0,
-            close_fds=True,
-        )
+    reconfigure = getattr(getattr(sys, 'stdout', None), 'reconfigure', None)
+    if reconfigure is not None:
+        reconfigure(encoding='utf8')
+    print('正在打开 GUI，请稍候…', flush=True)
+    with tempfile.TemporaryDirectory(prefix='startup-', dir=log_dir) as temporary:
+        ready = Path(temporary) / 'ready'
+        environment = dict(os.environ, ENDFIELD_GUI_READY_FILE=str(ready))
+        with (log_dir / 'launcher-stdio.log').open('a', encoding='utf8') as output:
+            process = subprocess.Popen(
+                command,
+                cwd=ROOT, stdin=subprocess.DEVNULL, stdout=output, stderr=output,
+                creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0,
+                close_fds=True, env=environment,
+            )
+        while not ready.is_file():
+            result = process.poll()
+            if result is not None:
+                print('GUI 尚未打开便已退出，请查看 .dev-gui\\logs\\launcher.log。', flush=True)
+                return result or 1
+            time.sleep(.05)
     return 0
+
+
+def notify_gui_ready() -> None:
+    ready = os.environ.pop('ENDFIELD_GUI_READY_FILE', '')
+    if ready:
+        try:
+            Path(ready).touch()
+        except OSError:
+            logging.getLogger('gui-launcher').warning('启动控制台已退出，GUI 继续运行。')
 
 
 def bootstrap() -> None:
@@ -109,7 +133,7 @@ def prepare_config(game_dir: Path | None = None, ws_port: int | None = None) -> 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Start the source Qt GUI; no EXE build.")
     parser.add_argument("--check", action="store_true", help="Check imports and capture prerequisites without starting capture or GUI.")
-    parser.add_argument('--detach', action='store_true', help='Start GUI without a console and return immediately; --check remains synchronous.')
+    parser.add_argument('--detach', action='store_true', help='Start GUI without a console; return once its window is shown. --check remains synchronous.')
     parser.add_argument("--game-dir", type=Path, help="Save the Endfield Game directory; otherwise use the GUI first-run wizard.")
     parser.add_argument("--ws-port", type=int, help="Save an alternate localhost WebSocket port.")
     arguments = list(sys.argv[1:] if argv is None else argv)
@@ -141,12 +165,12 @@ def main(argv: list[str] | None = None) -> int:
             logger.info("GUI imports: OK")
             logger.info("Npcap DLL available: %s", has_npcap())
             logger.info("Game directory configured: %s", _is_valid_game_dir(config.service.dll_dir))
-            logger.info("EndfieldLogs GUI and damage overlay imports are ready; no capture started.")
+            logger.info("Endfield Logs - Enhanced GUI and damage overlay imports are ready; no capture started.")
             return 0
         if not has_npcap():
             logger.warning('未检测到 Npcap：实时抓包不可用；GUI 仍可导入和分析本地日志。')
-        logger.info("Start this tool before starting the game. Capture starts once automatically; missing prerequisites leave history available.")
-        return run_gui(config_path=config_path)
+        logger.info('GUI 默认不启动抓包；可在首页手动启动，或在设置中开启随启动抓包。')
+        return run_gui(config_path=config_path, on_ready=notify_gui_ready)
     except Exception as exc:
         logger.exception("GUI startup failed")
         log_path = PROFILE / 'logs' / 'launcher.log'

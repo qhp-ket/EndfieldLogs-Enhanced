@@ -47,6 +47,43 @@ def test_buff_actual_name_or_recorded_source_without_guessing_from_id():
     assert buff_display_name({**base, 'event_name': '实际状态名'}) == '实际状态名'
     assert buff_display_name(dict(event_key='buff_no_source', event_name='增伤')).startswith('未知来源')
 
+
+def test_native_label_columns_fit_on_open_font_and_avatar_changes(app):
+    from endfield_pcap.gui.shared.typography import apply_fonts
+    snapshot = sample()
+    snapshot['role_skill_stats'] = [dict(character_key='chr_0004_pelica',
+        skill_key='chr_0004_pelica_normal_skill', cast_count=1, total_damage=200)]
+    dialog = BattleDetailDialog(snapshot, '自动列宽')
+    try:
+        dialog.show(); QTest.qWait(80)
+        view = dialog.timeline
+        base = view._role_width
+        assert view._role_column_width > 0 and view._track_column_width > 0
+        dialog.avatar_size_slider.setValue(200)
+        assert view._role_width > base
+        large_avatar = view._role_width
+        dialog.avatar_check.setChecked(False)
+        assert view._role_width < large_avatar
+        text_width = view._role_width
+        apply_fonts(dialog, 1.6)
+        assert view._role_width > text_width
+        # A manual adjustment persists across ordinary paints/zoom; changing
+        # appearance opts back into measured widths.
+        view._track_column_width = 420
+        view.render_timeline()
+        assert view._track_column_width == 420
+        apply_fonts(dialog, 1.3)
+        assert view._track_column_width != 420
+        dialog.tabs.setCurrentIndex(1)
+        QTest.qWait(40)
+        text_column = dialog.skill_table.columnWidth(0)
+        dialog.avatar_check.setChecked(True)
+        dialog.avatar_size_slider.setValue(250)
+        QTest.qWait(40)
+        assert dialog.skill_table.columnWidth(0) > text_column
+    finally:
+        dialog.close(); app.processEvents()
+
 def test_each_buff_track_has_border_and_both_columns_drag_independently(app):
     snapshot = sample()
     before = deepcopy(snapshot)

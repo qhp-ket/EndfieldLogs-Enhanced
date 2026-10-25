@@ -28,6 +28,7 @@ from endfield_pcap.gui.battle.timeline.labels import (
     column_handle,
     label_tooltip,
     draw_sticky_labels,
+    fit_label_columns,
 )
 
 
@@ -96,11 +97,15 @@ class BattleTimeline(QGraphicsView):
         self.setDragMode(self.DragMode.ScrollHandDrag)
         self.setMinimumHeight(160)
         self._snapshot, self._blocks = {}, []
+        self.input_evidence = {}
+        self.input_markers = 0
         self._character, self._show_buffs, self._zoom = '', True, 1.
         self._graphics_zoom, self._font_scale = 1., 1.
         self._hover_ms = None
         self._time_unit = 'seconds'
         self._show_skill_frames = False
+        self.show_character_avatars = True
+        self.avatar_scale = 1.
         self._role_column_width, self._track_column_width = 82., 180.
         self._role_width = 82.
         self._column_drag = None
@@ -120,10 +125,15 @@ class BattleTimeline(QGraphicsView):
         self._snapshot = snapshot
         self._blocks = timeline_blocks(snapshot)
         self.enemy_tracks, _ = enemy_observations(snapshot)
+        fit_label_columns(self)
         self.render_timeline()
 
     def sizeHint(self):
         return QSize(700, 280)
+
+    def set_input_evidence(self, evidence):
+        self.input_evidence = evidence
+        self.render_timeline()
 
     def set_filter(self, character, show_buffs=True):
         self._character, self._show_buffs = character, show_buffs
@@ -161,7 +171,12 @@ class BattleTimeline(QGraphicsView):
     def set_gui_font_scale(self, scale):
         if self._font_scale != scale:
             self._font_scale = scale
+            fit_label_columns(self)
             self.render_timeline()
+
+    def fit_columns(self):
+        fit_label_columns(self)
+        self.render_timeline()
 
     def wheelEvent(self, event):
         if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
@@ -260,12 +275,9 @@ class BattleTimeline(QGraphicsView):
         self.setBackgroundBrush(QBrush(self._bg))
         blocks = self._display_blocks()
         energy = energy_tracks(self._snapshot, self._character)
-        stamps = [p['time_ms'] for t in energy for p in t['samples']]
-        hit_stamps = [float(e.get('ts_ms_from_start') or 0) for b in blocks for e in b.events if e.get('event_type') == 'damage']
         bounds = lambda block: display_bounds(block, self._show_skill_frames)
-        end_ms = max([float(self._snapshot.get('battle', {}).get('duration_ms') or 0), 1.]
-                     + [max(b.end_ms, bounds(b)[1]) for b in blocks] + stamps + hit_stamps)
-        start_ms = min([0.] + [min(b.start_ms, bounds(b)[0]) for b in blocks] + stamps)
+        end_ms = max(1.,float(self._snapshot.get('battle', {}).get('duration_ms') or 0))
+        start_ms = 0.
         duration = max(1., end_ms-start_ms)
         plot_width = max(240, self.viewport().width()-self.LEFT-24) * self._zoom * self._graphics_zoom
         self._time_extent = start_ms, duration, plot_width
@@ -353,6 +365,8 @@ class BattleTimeline(QGraphicsView):
         y = draw_energy_tracks(self, y, scale, scene_font, x_at)
         # Enemy observations stay global when filtering an attacker.
         y = draw_poise_tracks(self, y, scale, scene_font, x_at)
+        from endfield_pcap.gui.battle.timeline.inputs import draw_inputs
+        y = draw_inputs(self, y, scale, x_at)
         scene.setSceneRect(0, 0, self._plot_right+22, max(200, y+8))
         for stamp, label in ruler_ticks(start_ms, end_ms, plot_width, scale, self._time_unit):
             x = x_at(stamp)

@@ -27,6 +27,17 @@ def rename_log(path: Path, label: str) -> Path:
     if destination == path:
         return path
     pairs = [(path, destination)]
+    from endfield_pcap.inputlog.storage import companion
+    old_input, new_input = companion(path), companion(destination)
+    sidecars = [(old_input,new_input)]
+    old_prefix = old_input.name.removesuffix('.input.jsonl')
+    new_prefix = new_input.name.removesuffix('.input.jsonl')
+    for part in sorted(path.parent.glob(old_prefix+'.part-*.input.jsonl')):
+        sidecars.append((part,part.with_name(new_prefix+part.name[len(old_prefix):])))
+    for old,new in sidecars:
+        if new.exists():
+            raise ValueError(f'文件已存在：{new.name}')
+        if old.exists(): pairs.append((old,new))
     for old, new in ((Path(str(path)+'.integrity.json'), Path(str(destination)+'.integrity.json')),
                      (path.with_suffix('.integrity.json'), destination.with_suffix('.integrity.json')),
                      (Path(str(path)+'.status.json'), Path(str(destination)+'.status.json'))):

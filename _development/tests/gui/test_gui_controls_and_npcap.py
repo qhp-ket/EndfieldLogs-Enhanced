@@ -6,7 +6,6 @@ from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest
 from qfluentwidgets import Slider, Theme, setTheme
 from endfield_pcap.gui.shared.widgets import FluentSwitchButton
-from endfield_pcap.gui.shared.widgets import IntegerStepEdit
 from app_test_support.ui.window import main_window
 from app_test_support.scenarios.trace import two_battles, wait_for
 from app_test_support.ui.qt import EVIDENCE
@@ -68,7 +67,7 @@ def test_invalid_or_cancelled_game_exe_selection_preserves_saved_path(main_windo
     assert bool(warnings) == (selection != 'cancel')
 
 
-def test_gui_font_slider_and_overlay_font_integer_controls(main_window, app):
+def test_gui_and_overlay_font_sliders(main_window, app):
     window = main_window
     slider = window.settings_page.gui_font_slider
     assert isinstance(slider, Slider)
@@ -82,11 +81,19 @@ def test_gui_font_slider_and_overlay_font_integer_controls(main_window, app):
     slider.setValue(180)
     QTest.keyClick(slider, Qt.Key.Key_Right)
     assert slider.value() == 180
-    overlay = window.overlay_page.font_size_edit
-    assert isinstance(overlay, IntegerStepEdit)
+    overlay = window.overlay_page.font_size_slider
+    assert isinstance(overlay, Slider)
     overlay.setValue(125)
-    overlay.increase_button.click()
+    QTest.keyClick(overlay, Qt.Key.Key_Right)
     assert window._selected_overlay().font_scale == 1.26
+    assert window.overlay_page.font_size_value.text() == '126%'
+    avatar = window.overlay_page.setting_widgets['avatar_size_percent']
+    assert isinstance(avatar, Slider)
+    avatar.setValue(175)
+    assert window._selected_overlay().template_settings['avatar_size_percent'] == 175
+    from endfield_pcap.gui.config import load_app_config
+    saved = load_app_config(window.config_path)
+    assert next(e for e in saved.overlays if e.id == window._selected_overlay().id).template_settings['avatar_size_percent'] == 175
 
 
 def test_default_game_path_is_independent_of_application_directory(tmp_path, monkeypatch):
@@ -163,6 +170,7 @@ def test_missing_game_startup_prompts_once_and_allows_manual_setup_or_history(
     from endfield_pcap.gui.config import load_app_config
     window = main_window
     original = tmp_path / 'missing-game'
+    window.app_config.start_capture_on_launch = True
     window.app_config.service.dll_dir = original
     directory = tmp_path / 'selected game'
     directory.mkdir()

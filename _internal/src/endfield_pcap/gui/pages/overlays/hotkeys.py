@@ -20,6 +20,7 @@ MOD_WIN = 0x0008
 MOD_NOREPEAT = 0x4000
 
 GLOBAL_HOTKEY_ID = 0xB100
+GUI_HOTKEY_ID = 0xB101
 
 USER32 = ctypes.WinDLL("user32", use_last_error=True) if sys.platform == "win32" else None
 
@@ -83,6 +84,34 @@ def _portable_hotkey_to_native(hotkey: str) -> tuple[int, int] | None:
 
 
 class OverlayHotkeys:
+    def _update_gui_shortcut(self,hotkey=None):
+        target=hotkey or self.app_config.toggle_gui_hotkey
+        native=_portable_hotkey_to_native(target)
+        status=self.settings_page.gui_hotkey_status
+        if sys.platform!='win32' or USER32 is None or native is None:
+            status.setText('主界面快捷键不可用，请使用托盘恢复')
+            return False
+        hwnd=int(self.winId())
+        previous=self._registered_gui_hotkey
+        self._unregister_gui_hotkey()
+        modifiers,vk=native
+        if USER32.RegisterHotKey(hwnd,GUI_HOTKEY_ID,modifiers|MOD_NOREPEAT,vk):
+            self._gui_hotkey_registered=True
+            self._registered_gui_hotkey=target
+            status.setText(f'主界面全局快捷键：{target}')
+            return True
+        old=_portable_hotkey_to_native(previous) if previous else None
+        if old and USER32.RegisterHotKey(hwnd,GUI_HOTKEY_ID,old[0]|MOD_NOREPEAT,old[1]):
+            self._gui_hotkey_registered=True
+            self._registered_gui_hotkey=previous
+        status.setText(f'快捷键冲突：{target}，可通过托盘恢复主界面')
+        return False
+
+    def _unregister_gui_hotkey(self):
+        if sys.platform=='win32' and USER32 is not None and self._gui_hotkey_registered:
+            USER32.UnregisterHotKey(int(self.winId()),GUI_HOTKEY_ID)
+        self._gui_hotkey_registered=False
+
     def _update_overlay_shortcut(self, hotkey: str | None = None) -> bool:
         target_hotkey = hotkey or self.app_config.toggle_overlays_hotkey or "Ctrl+O"
         if sys.platform != "win32" or USER32 is None:
@@ -126,5 +155,8 @@ class OverlayHotkeys:
                 msg = wintypes.MSG.from_address(int(message))
                 if msg.message == WM_HOTKEY and int(msg.wParam) == GLOBAL_HOTKEY_ID:
                     self._toggle_overlay_visibility()
+                    return True, 0
+                if msg.message == WM_HOTKEY and int(msg.wParam) == GUI_HOTKEY_ID:
+                    self._toggle_gui_visibility()
                     return True, 0
         return super().nativeEvent(eventType, message)

@@ -1,5 +1,5 @@
 """Release boundaries: no personal state, no extra keys, no host Python fallback."""
-from app_test_support.runtime.packaging import builder, spec
+from app_test_support.runtime.packaging import builder
 from app_test_support.paths import ROOT
 import json
 import shutil
@@ -8,8 +8,6 @@ import sys
 from types import SimpleNamespace
 import pytest
 from Crypto.PublicKey import RSA
-
-spec.loader.exec_module(builder)
 
 def put(root, relative, text='fixture'):
     path = root / relative
@@ -46,6 +44,11 @@ def test_gitignore_keeps_source_and_tests_but_excludes_private_and_generated_fil
                 '_development/tests/tmp/record.json', '_internal/src/trace_20261024.log.status.json',
                 '_development/tests/.cache/state.json', '_internal/data/akedata/character/items/chr_9999_future.json',
                 '_development/raw-resources/_internal/data/new.json']
+    ignored += ['_internal/data/ui/raw/portrait.png', '_internal/data/ui/characters/original.psd']
+    ignored += ['_internal/native/SDL3.dll','_internal/src/private.input.jsonl','trace.input.jsonl']
+    ignored += ['_internal/src/nested/.dev-gui/settings.json',
+                '_internal/src/nested/private.input.jsonl.part',
+                '_development/tests/recorded_events.jsonl']
     retained = ['launch_gui.py', 'Start-GUI.cmd', '_internal/src/endfield_pcap/service/runtime/server.py',
                 '_internal/packages/parser_core/tests/reporting/test_unified.py', '_development/tests/resources/test_portable_packaging.py',
                 '_development/tools/build_portable.py', '_internal/secrets/README.md', '.env.example',
@@ -62,7 +65,11 @@ def test_gitignore_keeps_source_and_tests_but_excludes_private_and_generated_fil
                 '_internal/data/packet_semantics/rdps_semantics_registry.json',
                 '_internal/data/runtime-data.zip', '_development/tools/extract_runtime_data.py',
                 '_development/tools/verify_runtime_projection.py', '_development/tests/resources/test_runtime_projection.py',
-                '_development/tools/prepare_resources.py', '_development/tools/release.py']
+                '_development/tools/prepare_resources.py', '_development/tools/release.py',
+                '_development/tools/build_character_avatars.py', '_internal/data/ui/characters/manifest.json',
+                '_internal/data/ui/characters/chr_0002_endminm.png']
+    retained += ['_internal/native/manifest.json','_internal/native/SDL3-LICENSE.txt',
+                 '_development/tools/prepare_native.py','_development/docs/independent-services.md']
     for name in ignored + retained:
         put(tmp_path, name)
     result = subprocess.run(['git', '-c', 'core.excludesFile=NUL', '-c', 'core.quotepath=false', 'check-ignore', '--no-index', '--stdin'],
@@ -74,7 +81,7 @@ def test_gitignore_keeps_source_and_tests_but_excludes_private_and_generated_fil
 @pytest.mark.parametrize('relative', ['.dev-gui/settings.json', '_internal/secrets/extra.pem',
                                      '_internal/secrets/client_privkey.pem', '_internal/src/.env',
                                      '_development/tests/fixture.log', '_internal/src/session.json',
-                                     'Uploader/tool/uploader_settings.json'])
+                                     'Uploader/tool/uploader_settings.json', '_internal/src/private.input.jsonl'])
 def test_release_rejects_personal_state_or_unapproved_key(tmp_path, relative):
     put(tmp_path, relative)
     with pytest.raises(ValueError):
@@ -107,6 +114,7 @@ def test_portable_stage_includes_verified_capture_key(tmp_path, monkeypatch):
                      '_development/docs/licensing.md',
                      '_internal/src/app.py', '_internal/packages/core.py'):
         put(source, relative)
+    portrait = put(source, '_internal/data/ui/characters/placeholder.png')
     key = put(source, '_internal/secrets/client_privkey.pem')
     key.write_bytes(RSA.generate(1024).export_key())
     monkeypatch.setattr(builder, 'ROOT', source)
@@ -114,6 +122,9 @@ def test_portable_stage_includes_verified_capture_key(tmp_path, monkeypatch):
     monkeypatch.setattr(builder, 'CAPTURE_KEY_SHA256', builder.digest(key))
     monkeypatch.setitem(sys.modules, 'prepare_resources', SimpleNamespace(prepare=lambda *a, **kw: 0))
     monkeypatch.setitem(sys.modules, 'audit_runtime_data', SimpleNamespace(verify=lambda: None))
+    monkeypatch.setitem(sys.modules, 'prepare_native', SimpleNamespace(prepare_native=lambda *a, **kw: None))
+    for name in ('SDL3.dll','SDL3-LICENSE.txt','manifest.json'):
+        put(source,'_internal/native/'+name)
     monkeypatch.setattr(builder, 'copy_runtime_data', lambda stage: None)
     monkeypatch.setattr(builder, 'copy_python', lambda stage: None)
     monkeypatch.setattr(builder, 'copy_dependencies', lambda stage: {})
@@ -123,6 +134,7 @@ def test_portable_stage_includes_verified_capture_key(tmp_path, monkeypatch):
     assert (stage / 'licenses/EndfieldLogs-LICENSING.zh-CN.md').read_bytes() == (source / '_development/docs/licensing.md').read_bytes()
     assert (stage / 'licenses/EndfieldLogs-LICENSE.txt').read_bytes() == (source / 'LICENSE').read_bytes()
     assert not (stage / 'Uploader').exists()
+    assert (stage / '_internal/data/ui/characters/placeholder.png').read_bytes() == portrait.read_bytes()
 
 def test_application_rejects_accidentally_bundled_uploader(tmp_path):
     put(tmp_path, 'Uploader/EndfieldLogsUploader/EndfieldLogsUploader.exe')

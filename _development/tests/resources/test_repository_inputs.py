@@ -3,6 +3,7 @@ from app_test_support.runtime.tools import tool
 from app_test_support.paths import ROOT
 import hashlib
 import json
+import pytest
 from pathlib import Path
 
 def test_public_protocol_fixtures_are_constructed_without_opening_a_recording(monkeypatch):
@@ -40,3 +41,19 @@ def test_active_virtual_environment_cannot_mix_legacy_native_dependencies(tmp_pa
     assert all('python_deps' not in p for p in sys.path)
     configure_paths(tmp_path, isolated=False)
     assert any('python_deps' in p for p in sys.path)
+
+
+@pytest.mark.parametrize('configured,expected', [(None, '1'), ('3', '3')])
+def test_runtime_limits_unused_blas_pool_without_overriding_user(tmp_path, monkeypatch, configured, expected):
+    import os
+    import sys
+    from endfield_pcap.runtime.environment import configure_paths
+
+    monkeypatch.setattr(sys, 'path', list(sys.path))
+    monkeypatch.setattr(os, 'add_dll_directory', lambda path: None)
+    if configured is None:
+        monkeypatch.delenv('OPENBLAS_NUM_THREADS', raising=False)
+    else:
+        monkeypatch.setenv('OPENBLAS_NUM_THREADS', configured)
+    configure_paths(tmp_path, isolated=True)
+    assert os.environ['OPENBLAS_NUM_THREADS'] == expected

@@ -2,7 +2,7 @@ Website-style layout references Endfield Logs Suite (ZMDLogs).
 Source: https://github.com/medps16000/endfield-suite-open
 Reference commit: 4e65587b36feb4081eadf669391db64fd7469807
 Local implementation uses the existing canonical snapshot adapters.
-No extracted game artwork is included.
+Shared local portrait sources: _internal/data/ui/characters/README.md.
 
 MIT License
 

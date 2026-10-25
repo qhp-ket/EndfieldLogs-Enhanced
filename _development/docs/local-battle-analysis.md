@@ -17,5 +17,6 @@
 
 关闭分析窗口不改变浮窗来源；“返回实时日志”才恢复实时。GUI 字号在设置中调整，
 角色名/技能类型另有较大基础字号，BUFF 保持原基础字号。
+顶部「显示角色头像」和「头像大小」百分比滑条在两种界面间共享并保存；角色概览和时间轴使用同一份离线头像，时间轴每个角色只显示一次。头像比例默认 100%，范围 50%–300%；概览基准 32px，时间轴基准 40px，再乘 GUI 字号比例，时间轴还乘图形比例。原生时间轴受角色列宽及可见单元格高度限制；源 PNG 的 128×128 是分辨率，不是显示大小。默认比例在 `gui/config.py` 的 `character_avatar_percent`，基准尺寸分别在 `gui/battle/detail.py` 的 `SKILL_AVATAR_PIXELS`、`gui/battle/timeline/labels.py` 的 `ROLE_AVATAR_PIXELS`；网页对应 `assets/shared.js` 的 `A.avatar` 默认尺寸及 `assets/timeline.js` 的头像调用。
 控件与字号入口见 [组件位置](battle-analysis-components.md)。
 名称词典保留来源与校验，未覆盖名称回退核心名称或代码。

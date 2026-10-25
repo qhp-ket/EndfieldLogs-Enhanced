@@ -12,7 +12,7 @@ def test_only_local_ws_template_url_receives_browser_capability(remote, in_proce
     selected = entry(source_type=OverlaySourceType.URL, source_value='https://outside.invalid/overlay') if remote else entry()
     token = 'A' * 43
     urls = []
-    window = SimpleNamespace(entry=selected,
+    window = SimpleNamespace(entry=selected, content_size=object(),
         config=OverlayWindowConfig(entry=selected, ws_port=29325, ws_browser_token=token,
                                    use_in_process_snapshots=in_process),
         webview=SimpleNamespace(setUrl=urls.append))

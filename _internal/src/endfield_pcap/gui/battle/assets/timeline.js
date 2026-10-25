@@ -13,9 +13,7 @@ A.renderTimeline=function() {
   const previous=[scroll.scrollLeft,scroll.scrollTop];grid.replaceChildren();
   A.scale=A.state.graphics/100;
   const blocks=A.data.blocks.filter(b=>(!A.state.character||b.owner===A.state.character)&&(A.state.buffs||b.lane!=='buff'));
-  const stamps=[0,Number(A.data.battle.duration_ms)||1,...A.data.energy.samples.map(p=>p.time_ms)];
-  for(const b of blocks){stamps.push(b.start,b.end,...A.bounds(b),...b.hits.map(h=>Number(h.ts_ms_from_start||0)));}
-  A.start=Math.min(...stamps);A.duration=Math.max(1,Math.max(...stamps)-A.start);
+  A.start=0;A.duration=Math.max(1,Number(A.data.battle.duration_ms)||1);
   A.plotWidth=Math.max(320,scroll.clientWidth-A.state.roleWidth-A.state.trackWidth-24)*A.state.zoom/100*A.scale;
   A.x=t=>(t-A.start)/A.duration*A.plotWidth;
   const unit=A.state.unit==='frames'?.03:.001;
@@ -46,7 +44,7 @@ A.renderTimeline=function() {
       });
       const pitch=43*A.scale,parts=placed.map(p=>A.blockHtml(p.b,p.left,p.right,p.row*pitch)).join('');
       const row=A.addRow(A.data.names[owner],`${expanded?'▾':'▸'} ${A.data.category_names[cat]||cat}`,Math.max(1,edges.length)*pitch+5,parts);
-      row.role.classList.add('character-name');row.track.classList.add('expand');row.track.dataset.lane=key;row.track.title+=' · 点击展开 / 收起重叠技能';
+      row.plot.dataset.inputOwner=owner;row.role.classList.add('character-name');row.track.classList.add('expand');row.track.dataset.lane=key;row.track.title+=' · 点击展开 / 收起重叠技能';
       row.track.onclick=()=>{A.state.expanded=expanded?A.state.expanded.filter(k=>k!==key):[...A.state.expanded,key];A.ensureTimeline();A.changed();};
       if(!first)first=row.role;else row.role.remove();rowCount++;
     }
@@ -54,14 +52,14 @@ A.renderTimeline=function() {
     for(const track of tracks) {
       const items=own.filter(b=>b.lane==='buff'&&JSON.stringify(b.track)===track);
       const row=A.addRow(A.data.names[owner],items[0].name,43*A.scale,items.map(b=>A.blockHtml(b,A.x(b.start),Math.max(A.x(b.start)+.8,A.x(b.end)),0)).join(''));
-      row.role.classList.add('character-name');
+      row.plot.dataset.inputOwner=owner;row.role.classList.add('character-name');
       row.track.title=items[0].name+' · '+items[0].buff_text;
       if(!first)first=row.role;else row.role.remove();rowCount++;
     }
-    if(first){first.style.gridRow=`span ${rowCount}`;first.style.height='auto';}
+    if(first){first.style.gridRow=`span ${rowCount}`;first.style.height='auto';first.innerHTML=`<span class="character-identity timeline-identity">${A.avatar(owner,A.data.names[owner],40)}<span>${A.esc(A.data.names[owner])}</span></span>`;}
   }
   if(!blocks.length)A.addRow('—','技能 / BUFF',64,'<div class="empty">此筛选没有技能 / BUFF 事件</div>');
-  A.renderCharts();
+  A.renderCharts(); if(A.renderInputEvidence)A.renderInputEvidence();
   grid.querySelectorAll('[data-block]').forEach(node=>{
     const b=A.data.blocks[Number(node.dataset.block)];
     node.addEventListener('click',()=>A.inspectBlock(b.id,node.dataset.hitIndex));
@@ -77,6 +75,7 @@ A.renderTimeline=function() {
   grid.querySelectorAll('.plot-row').forEach(row=>row.addEventListener('mousemove',e=>{
     const stamp=Math.max(A.start,Math.min(A.start+A.duration,A.start+(e.clientX-row.getBoundingClientRect().left)/A.plotWidth*A.duration));
     A.$('hover-time').textContent='时间 '+A.time(stamp);
+    if(A.inputHover?.(row,e,stamp))return;
     if(e.target===row&&!row.classList.contains('chart')) {
       A.hover(e,'energy',0,stamp);
     }

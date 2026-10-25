@@ -61,7 +61,7 @@ def acquire_archive(root, manifest, explicit=None, offline=False):
     target.parent.mkdir(parents=True, exist_ok=True)
     pending = target.with_suffix('.zip.download')
     print('Downloading pinned official resource archive (cached for reuse).', flush=True)
-    request = Request(manifest['source_url'], headers={'User-Agent': 'EndfieldLogs resource setup',
+    request = Request(manifest['source_url'], headers={'User-Agent': 'Endfield-Logs-Enhanced resource setup',
                                                      'Referer': 'https://zmdlogs.com/'})
     with urlopen(request, timeout=60) as response, pending.open('wb') as stream:
         shutil.copyfileobj(response, stream, 1024*1024)

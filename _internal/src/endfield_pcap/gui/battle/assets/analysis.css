@@ -1,5 +1,5 @@
 /* Website-style presentation inspired by ZMDLogs / Endfield Logs Suite (MIT).
-   See THIRD_PARTY_NOTICE.txt. No online resources or game artwork are loaded. */
+   See THIRD_PARTY_NOTICE.txt. Shared portraits are loaded from the local bundle. */
 :root { color-scheme: dark; --bg:#0c1016; --panel:#131a24; --raised:#1b2635; --fg:#eaf0f7; --muted:#a7b5c7; --border:#354457; --accent:#61c4df; --grid:#283545; --hover:#243c51; --role:120px; --track:200px; --font-scale:1.15; }
 :root[data-theme="light"] { color-scheme:light; --bg:#f1f4f8; --panel:#fff; --raised:#edf2f8; --fg:#1b2b3d; --muted:#50647a; --border:#b7c5d4; --accent:#087b9d; --grid:#dbe4ec; --hover:#dceef7; }
 * { box-sizing:border-box; } [hidden] { display:none!important; }
@@ -65,3 +65,9 @@ details>summary { cursor:pointer; padding:10px 0; font-weight:600; } #inspector 
 .quality { padding:3px 16px; color:var(--muted); } .quality pre { max-height:300px; overflow:auto; font-size:.85rem; }
 #failure { margin:20px; padding:20px; border:1px solid #f46a72; white-space:pre-wrap; }
 @media(max-width:850px) { main { padding:12px; } .heading { flex-wrap:wrap; gap:8px; } .roster { grid-template-columns:repeat(2,minmax(0,1fr)); } #metrics { gap:12px; } .panel { padding:12px; } }
+.character-avatar { width: calc(var(--avatar-size, 32) * 1px * var(--row-scale, 1) * var(--font-scale, 1) * var(--avatar-scale, 1)); height: calc(var(--avatar-size, 32) * 1px * var(--row-scale, 1) * var(--font-scale, 1) * var(--avatar-scale, 1)); object-fit: contain; border-radius: 50%; flex: 0 0 auto; pointer-events: none; user-select: none; }
+.character-identity, .roster-card strong.character-identity { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.character-identity > span { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.timeline-identity { flex-direction: column; justify-content: center; width: 100%; }
+.timeline-identity .character-avatar { max-width:100%; }
+.avatars-off .character-avatar { display: none; }

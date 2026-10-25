@@ -1,6 +1,15 @@
 from parser_core.battle_log_parser import parse_raw_battle_log_text
 
 
+def test_battle_dates_preserve_milliseconds_without_changing_numeric_timing():
+    from datetime import date,datetime
+    from parser_core.battle_log_parser import _build_iso_datetime
+    start=datetime.fromisoformat(_build_iso_datetime(date(2026,10,25),58_235_968))
+    end=datetime.fromisoformat(_build_iso_datetime(date(2026,10,25),58_312_532))
+    assert start.microsecond==968000 and end.microsecond==532000
+    assert (end-start).total_seconds()==76.564
+
+
 def _parse_with_timer(*, pass_time_ms: int, end_wall_ms: int, packet_elapsed_ms: int):
     end_seconds = end_wall_ms // 1000
     end_millis = end_wall_ms % 1000

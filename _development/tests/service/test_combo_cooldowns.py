@@ -92,15 +92,6 @@ def test_non_skill_non_roster_and_unknown_skills_do_not_create_ready():
         p.feed_event(event)
     assert all(row["status"] == "unknown" for row in p.current_message()["snapshot"]["slots"])
 
-def test_combo_renderer_uses_replacement_for_web_and_qt():
-    p, clock = publisher()
-    p.feed_event(scene())
-    p.feed_event(trigger())
-    result = subprocess.run(["node", str(TESTS / "overlays/combo_snapshot.test.cjs")],
-                            input=json.dumps(p.current_message(), ensure_ascii=True), text=True,
-                            capture_output=True, encoding="utf-8", timeout=15)
-    assert result.returncode == 0, result.stdout + result.stderr
-
 def test_mifu_cast_uses_attached_instance_and_actions_never_restart_it():
     p, clock = publisher()
     p.feed_event(scene())

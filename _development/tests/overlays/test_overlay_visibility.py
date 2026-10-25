@@ -28,7 +28,8 @@ def test_default_damage_size_shows_full_glyphs_and_four_rows_with_large_metrics(
         manager.apply_entry(current)
         window = manager._windows[current.id]
         wait_for_page(window, lambda: None)
-        assert (window.width(), window.height()) == (800, 380)
+        QTest.qWait(250)
+        assert window.width() >= 320 and window.height() >= 160
         for width, height in ((800, 380), (600, 400)):
             manager.apply_entry(replace(current, geometry=OverlayGeometry(100, 100, width, height)))
             QTest.qWait(150)

@@ -6,6 +6,9 @@ from pathlib import Path
 
 
 def configure_paths(root: Path, *, isolated: bool | None = None):
+    # HUD recognition uses small elementwise arrays, not BLAS calculations.
+    # Avoid starting a large unused thread pool (and its committed stacks).
+    os.environ.setdefault('OPENBLAS_NUM_THREADS','1')
     if isolated is None:
         isolated = sys.prefix != sys.base_prefix
     internal = root / '_internal'

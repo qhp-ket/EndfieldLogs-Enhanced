@@ -19,7 +19,6 @@ _LEGACY_BUILTIN_NAMES = {
 }
 _BUILTIN_DAMAGE_NAME = "伤害统计"
 _BUILTIN_COMBO_NAME = "连携cd监控"
-_BUILTIN_BUFF_NAME = "buff监控"
 _BUILTIN_UID_MASK_NAME = "UID遮挡"
 
 
@@ -30,10 +29,21 @@ class AppConfig:
     theme_mode: str = "system"
     gui_font_percent: int = 115
     toggle_overlays_hotkey: str = "Ctrl+O"
+    toggle_gui_hotkey: str = "Ctrl+Shift+O"
     imported_trace_files: list[Path] = field(default_factory=list)
     hidden_history_records: list[str] = field(default_factory=list)
     battle_analysis_view: str = 'native'
     overlay_restore_ids: list[str] = field(default_factory=list)
+    start_capture_on_launch: bool = False
+    check_updates_on_start: bool = True
+    ignored_update_version: str = ''
+    show_character_avatars: bool = True
+    character_avatar_percent: int = 100
+    input_recording_enabled: bool = False
+    start_input_recording_on_launch: bool = False
+    input_settings: dict = field(default_factory=dict)
+    input_log_bindings: dict = field(default_factory=dict)
+    vision_settings: dict = field(default_factory=dict)
 
 
 def default_config_path() -> Path:
@@ -77,18 +87,7 @@ def default_overlay_entries() -> list[OverlayEntry]:
             scale=1.0,
             geometry=None,
         ),
-        OverlayEntry(
-            id=str(uuid.uuid4()),
-            name=_BUILTIN_BUFF_NAME,
-            source_type=OverlaySourceType.BUILTIN,
-            source_value="buff",
-            enabled=True,
-            locked=False,
-            click_through=False,
-            opacity=1.0,
-            scale=1.0,
-            geometry=None,
-        ),
+        _optional_overlay('combo_skill','连携 CD（图像识别）'),
         OverlayEntry(
             id=str(uuid.uuid4()),
             name=_BUILTIN_UID_MASK_NAME,
@@ -110,7 +109,7 @@ def load_app_config(path: Path | None = None) -> AppConfig:
         for legacy_path in _legacy_config_paths():
             if legacy_path.exists():
                 return load_app_config(legacy_path)
-        return AppConfig(service=default_service_config(), overlays=default_overlay_entries())
+        return AppConfig(service=default_service_config(), overlays=_ensure_builtin_entries(default_overlay_entries()))
     payload = json.loads(target.read_text(encoding="utf-8"))
     service_default = default_service_config()
     service_payload = payload.get("service", {})
@@ -144,8 +143,18 @@ def load_app_config(path: Path | None = None) -> AppConfig:
         overlays=[_overlay_entry_from_dict(item) for item in overlays_payload] or default_overlay_entries(),
         theme_mode=_normalize_theme_mode(payload.get("theme_mode")),
         gui_font_percent=_normalize_font_percent(payload.get('gui_font_percent', 115)),
+        start_capture_on_launch=payload.get('start_capture_on_launch') is True,
+        check_updates_on_start=payload.get('check_updates_on_start', True) is True,
+        ignored_update_version=str(payload.get('ignored_update_version') or ''),
+        show_character_avatars=payload.get('show_character_avatars', True) is True,
+        character_avatar_percent=_normalize_avatar_percent(payload.get('character_avatar_percent', 100)),
+        start_input_recording_on_launch=payload.get('start_input_recording_on_launch') is True,
+        input_settings=payload.get('input_settings') if isinstance(payload.get('input_settings'),dict) else {},
+        input_log_bindings=payload.get('input_log_bindings') if isinstance(payload.get('input_log_bindings'),dict) else {},
+        vision_settings=payload.get('vision_settings') if isinstance(payload.get('vision_settings'),dict) else {},
         battle_analysis_view='web' if payload.get('battle_analysis_view') == 'web' else 'native',
         toggle_overlays_hotkey=_normalize_hotkey(payload.get("toggle_overlays_hotkey")),
+        toggle_gui_hotkey=str(payload.get('toggle_gui_hotkey') or 'Ctrl+Shift+O'),
         imported_trace_files=list(dict.fromkeys(Path(value).resolve() for value in imported_paths
             if isinstance(value, str) and value.strip())),
         hidden_history_records=[value for value in payload.get('hidden_history_records', []) if isinstance(value, str)]
@@ -199,8 +208,18 @@ def save_app_config(config: AppConfig, path: Path | None = None) -> None:
                 'overlay_restore_ids': config.overlay_restore_ids,
                 "theme_mode": _normalize_theme_mode(config.theme_mode),
                 "gui_font_percent": _normalize_font_percent(config.gui_font_percent),
+                "start_capture_on_launch": config.start_capture_on_launch,
+                "check_updates_on_start": config.check_updates_on_start,
+                "ignored_update_version": config.ignored_update_version,
+                "show_character_avatars": config.show_character_avatars,
+                "character_avatar_percent": _normalize_avatar_percent(config.character_avatar_percent),
+                "start_input_recording_on_launch": config.start_input_recording_on_launch,
+                "input_settings": config.input_settings,
+                "input_log_bindings": config.input_log_bindings,
+                "vision_settings": config.vision_settings,
                 "battle_analysis_view": 'web' if config.battle_analysis_view == 'web' else 'native',
                 "toggle_overlays_hotkey": _normalize_hotkey(config.toggle_overlays_hotkey),
+                "toggle_gui_hotkey": config.toggle_gui_hotkey,
                 "imported_trace_files": [str(path) for path in config.imported_trace_files],
                 "hidden_history_records": config.hidden_history_records,
             },
@@ -234,7 +253,7 @@ def _overlay_entry_from_dict(payload: dict[str, object]) -> OverlayEntry:
     elif source_type == OverlaySourceType.BUILTIN and source_value == "combo_skill":
         name = raw_name or _BUILTIN_COMBO_NAME
     elif source_type == OverlaySourceType.BUILTIN and source_value == "buff":
-        name = raw_name or _BUILTIN_BUFF_NAME
+        name = raw_name or "BUFF"
     elif source_type == OverlaySourceType.BUILTIN and source_value == "uid_mask":
         name = raw_name or _BUILTIN_UID_MASK_NAME
     else:
@@ -265,10 +284,13 @@ def _overlay_entry_from_dict(payload: dict[str, object]) -> OverlayEntry:
 def _ensure_builtin_entries(entries: list[OverlayEntry]) -> list[OverlayEntry]:
     normalized: list[OverlayEntry] = []
     damage_present = False
-    buff_present = False
     uid_mask_present = False
+    combo_present = False
     for entry in entries:
         if entry.source_type != OverlaySourceType.BUILTIN:
+            from endfield_pcap.overlays.templates import template_for
+            if {'input_snapshot', 'buff_snapshot'} & set(template_for(entry).subscriptions):
+                continue
             normalized.append(entry)
             continue
         source_value = (entry.source_value or "damage").strip().lower()
@@ -277,10 +299,10 @@ def _ensure_builtin_entries(entries: list[OverlayEntry]) -> list[OverlayEntry]:
             normalized.append(replace(entry, source_value="damage", name=_BUILTIN_DAMAGE_NAME))
             continue
         if source_value == "combo_skill":
+            combo_present = True
+            normalized.append(entry)
             continue
-        if source_value == "buff":
-            buff_present = True
-            normalized.append(replace(entry, source_value="buff", name=entry.name or _BUILTIN_BUFF_NAME))
+        if source_value in {"buff", "input"}:
             continue
         if source_value == "uid_mask":
             uid_mask_present = True
@@ -290,11 +312,17 @@ def _ensure_builtin_entries(entries: list[OverlayEntry]) -> list[OverlayEntry]:
     defaults = default_overlay_entries()
     if not damage_present:
         normalized.insert(0, defaults[0])
-    if not buff_present:
-        normalized.append(defaults[1])
     if not uid_mask_present:
-        normalized.append(defaults[2])
+        normalized.append(defaults[-1])
+    if not combo_present:
+        index=next((i for i,e in enumerate(normalized) if e.source_value in ('input','uid_mask')),len(normalized))
+        normalized.insert(index,_optional_overlay('combo_skill','连携 CD（图像识别）'))
     return normalized
+
+
+def _optional_overlay(source, name):
+    return OverlayEntry(id=str(uuid.uuid4()),name=name,source_type=OverlaySourceType.BUILTIN,
+                        source_value=source,enabled=False,locked=False,click_through=False,opacity=1.,scale=1.)
 
 
 def _overlay_entry_to_dict(entry: OverlayEntry) -> dict[str, object]:
@@ -342,3 +370,7 @@ def _normalize_font_percent(value) -> int:
         return max(80, min(180, int(value)))
     except (TypeError, ValueError, OverflowError):
         return 115
+
+
+def _normalize_avatar_percent(value) -> int:
+    return max(50, min(300, value)) if type(value) is int else 100

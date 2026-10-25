@@ -20,7 +20,7 @@ SEMVER = re.compile(r'(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*
 
 def identity():
     data = runpy.run_path(str(VERSION_FILE))
-    return data['APP_NAME'], data['__version__']
+    return data['APP_PACKAGE_NAME'], data['__version__']
 
 
 def set_version(value):

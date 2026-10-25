@@ -23,7 +23,8 @@ ROOT = Path(__file__).resolve().parents[2]
 RELEASES = ROOT / '_releases'
 IDENTITY = runpy.run_path(str(ROOT / '_internal/src/endfield_pcap/_version.py'))
 APP_NAME, VERSION = IDENTITY['APP_NAME'], IDENTITY['__version__']
-RELEASE_NAME = f'{APP_NAME}-{VERSION}-windows-x64'
+APP_PACKAGE_NAME = IDENTITY['APP_PACKAGE_NAME']
+RELEASE_NAME = f'{APP_PACKAGE_NAME}-{VERSION}-windows-x64'
 UPLOADER_NAME = 'EndfieldLogsUploader'
 UPLOADER_VERSION = '3.0.12'
 UPLOADER_RELEASE_NAME = f'{UPLOADER_NAME}-{UPLOADER_VERSION}-windows-x64'
@@ -55,6 +56,7 @@ def excluded(relative):
     path = PurePosixPath(str(relative).replace('\\', '/'))
     return (bool(set(path.parts) & SKIP_DIRS) or any(p.endswith('.egg-info') for p in path.parts)
             or path.suffix.lower() in {'.pyc', '.pyo', '.log', '.ndjson', '.pcap', '.pcapng'}
+            or path.name.lower().endswith('.input.jsonl')
             or path.name.lower() in PRIVATE_NAMES or path.name.lower().startswith('.env.'))
 
 
@@ -240,6 +242,11 @@ def stage_release(name=None):
         print(f'Runtime resources: {folder}', flush=True)
         copy_tree(ROOT / '_internal' / folder, stage / '_internal' / folder)
     copy_runtime_data(stage)
+    copy_tree(ROOT / '_internal/data/ui/characters', stage / '_internal/data/ui/characters')
+    from prepare_native import prepare_native
+    prepare_native(ROOT,check=True)
+    for name in ('SDL3.dll','SDL3-LICENSE.txt','manifest.json'):
+        copy_file(ROOT / '_internal/native' / name,stage / '_internal/native' / name)
     if digest(key) != CAPTURE_KEY_SHA256:
         raise ValueError('Refusing to distribute a changed/private capture key')
     copy_file(key, stage / '_internal/secrets/client_privkey.pem')
@@ -286,8 +293,9 @@ def zip_stage(stage):
             raise ValueError(f'Build file changed: {p.relative_to(stage)}')
     identity = manifest.get('application') or {}
     expected_name = APP_NAME if component == 'application' else UPLOADER_NAME
+    expected_package = APP_PACKAGE_NAME if component == 'application' else UPLOADER_NAME
     if (identity.get('name') != expected_name or identity.get('artifact') != stage.name
-            or stage.name != f"{expected_name}-{identity.get('version')}-windows-x64"):
+            or stage.name != f"{expected_package}-{identity.get('version')}-windows-x64"):
         raise ValueError('Staged artifact identity does not match its canonical versioned name')
     output = RELEASES / f'{stage.name}.zip'
     # Exclusive creation avoids silently replacing an existing tested release.

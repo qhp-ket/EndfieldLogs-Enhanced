@@ -14,6 +14,7 @@
 | 技力曲线 | `_internal/src/endfield_pcap/gui/battle/plots/energy.py` | 曲线绘制与悬浮信息 |
 | 敌方失衡曲线 | `_internal/src/endfield_pcap/gui/battle/plots/poise.py` | 曲线绘制与悬浮信息 |
 | GUI 通用字体缩放 | `_internal/src/endfield_pcap/gui/shared/typography.py` | `apply_fonts()`；影响范围大于本窗口 |
+| 角色头像及缓存 | `_internal/src/endfield_pcap/data/avatars.py`、`gui/shared/avatars.py` | 按角色 ID 解析离线共享头像，Qt 缓存按资源版本、尺寸、DPI 区分；显示开关在 `gui/battle/detail.py` |
 
 本次仅提高角色名与技能类型的基础字号。BUFF 名称、层数、持续时间、轴刻度保持原基础字号；它们仍服从已有的全局字体/图形缩放设置。
 
@@ -47,3 +48,5 @@
 | `_internal/packages/parser_core/parser_core/` | 解析、贡献计算与质量证据核心；与外观修改分开 |
 
 相关验证：`_development/tests/battle/test_timeline_intervals_and_details.py`、`test_battle_analysis_compact.py`、`test_battle_web_analysis.py`。截图保存在忽略目录 `_development/verification/`，使用合成战斗数据。
+
+原生时间轴左侧角色、轨道列由 `timeline/labels.py` 的 `fit_label_columns()` 测量文字及头像宽度；打开战斗、调整界面字号、头像大小或显隐时重新适配。普通重绘与图形缩放保留手动拖动的列宽。技能构成表的姓名、分类列随字体和头像变化重新测量。仿官网页面不参与此轮列宽维护。

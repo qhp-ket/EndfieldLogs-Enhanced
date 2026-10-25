@@ -13,6 +13,7 @@ LOGGER = logging.getLogger(__name__)
 
 class CaptureActions:
     def _update_service_status(self) -> None:
+        if getattr(self,'_gui_hidden',False):return
         lifecycle = self.service_controller.lifecycle
         if self._stop_pending or (lifecycle == CaptureLifecycle.STOPPED and self.service_controller.is_running()):
             lifecycle = CaptureLifecycle.STOPPING
@@ -63,11 +64,13 @@ class CaptureActions:
             self._update_service_status()
             return
         if not _is_valid_game_dir(self.app_config.service.dll_dir):
-            self._show_game_dir_infobar()
-            self._capture_error = '未设置有效游戏目录；仍可使用历史分析。'
-            LOGGER.warning(self._capture_error)
-            self._update_service_status()
-            return
+            if not _run_game_directory_wizard(self.app_config, self.config_path, self):
+                self._show_game_dir_infobar()
+                self._capture_error = '未设置有效游戏目录；仍可使用历史分析。'
+                LOGGER.warning(self._capture_error)
+                self._update_service_status()
+                return
+            self._refresh_settings_page()
         if not self.app_config.service.rsa_key_txt.is_file():
             self._show_capture_error('缺少抓包密钥；请准备 _internal/secrets/client_privkey.pem。仍可使用历史分析。')
             return
@@ -87,6 +90,8 @@ class CaptureActions:
         self._update_service_status()
 
     def _auto_start_service(self):
+        if not self.app_config.start_capture_on_launch:
+            return
         if not self._auto_start_attempted and not self._closing:
             # Mark before opening a modal dialog: its nested event loop must not
             # trigger another automatic attempt. Deferring still permits history.

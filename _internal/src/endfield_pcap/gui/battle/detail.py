@@ -1,7 +1,8 @@
 """Native, lazy history detail window using the existing canonical snapshot."""
 from __future__ import annotations
-from PySide6.QtCore import Qt, QRectF, QSignalBlocker
-from PySide6.QtGui import QGuiApplication
+from PySide6.QtCore import Qt, QRectF, QSignalBlocker, QSize
+from PySide6.QtGui import QGuiApplication, QIcon
+from endfield_pcap.gui.shared.avatars import avatar_pixmap
 from PySide6.QtWidgets import (
     QDialog,
     QWidget,
@@ -35,6 +36,9 @@ from endfield_pcap.gui.battle.inspector import BlockInspector, EnemyEvidencePage
 from endfield_pcap.gui.battle.panel import BattleDetailSplitter
 
 
+SKILL_AVATAR_PIXELS = 32
+
+
 class _NumberItem(QTableWidgetItem):
     def __init__(self, value, text):
         super().__init__(text)
@@ -65,7 +69,8 @@ class BattleDetailDialog(QDialog):
         self._web_extra_state = {}
         self._web_pending_state = None
         self.setObjectName('battleDetailDialog')
-        self.setWindowTitle(f'战斗分析 · {label}')
+        from endfield_pcap._version import APP_NAME
+        self.setWindowTitle(f'{APP_NAME} · 战斗分析 · {label}')
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         screen = parent.screen() if parent else QGuiApplication.primaryScreen()
         available = screen.availableGeometry() if screen else QRectF(0, 0, 1200, 840)
@@ -84,8 +89,23 @@ class BattleDetailDialog(QDialog):
         self.view_mode_combo.addItem('官网风格（本地）', userData='web')
         self.view_mode_combo.setToolTip('两个界面使用同一份本地分析结果；切换不重新解析日志。')
         mode_bar.addWidget(self.view_mode_combo)
-        mode_bar.addStretch()
+        self.avatar_check = CheckBox('显示角色头像', self)
+        self.avatar_check.setChecked(getattr(getattr(parent, 'app_config', None), 'show_character_avatars', True))
+        mode_bar.addWidget(self.avatar_check)
+        mode_bar.addWidget(CaptionLabel('头像大小', self))
+        self.avatar_size_slider = Slider(Qt.Orientation.Horizontal, self)
+        self.avatar_size_slider.setRange(50, 300)
+        self.avatar_size_slider.setValue(getattr(getattr(parent, 'app_config', None), 'character_avatar_percent', 100))
+        self.avatar_size_slider.setMinimumWidth(60)
+        self.avatar_size_slider.setMaximumWidth(150)
+        self.avatar_size_slider.setToolTip('独立调整头像比例，并随界面字号、时间轴图形缩放；不改变文字大小。')
+        self.avatar_size_value = CaptionLabel(f'{self.avatar_size_slider.value()}%', self)
+        mode_bar.addWidget(self.avatar_size_slider, 1)
+        mode_bar.addWidget(self.avatar_size_value)
         outer.addLayout(mode_bar)
+        from endfield_pcap.gui.battle.input_history import InputHistoryBar
+        self.input_history = InputHistoryBar(self)
+        outer.addWidget(self.input_history)
         self.view_stack = QStackedWidget(self)
         outer.addWidget(self.view_stack, 1)
         body = _DetailBody(self)
@@ -166,6 +186,8 @@ class BattleDetailDialog(QDialog):
         toolbar.addStretch()
         tl.addLayout(toolbar)
         self.timeline = BattleTimeline(timeline_page)
+        self.timeline.show_character_avatars = self.avatar_check.isChecked()
+        self.timeline.avatar_scale = self.avatar_size_slider.value()/100
         self.inspector = BlockInspector(timeline_page)
         split = BattleDetailSplitter(self.timeline, self.inspector, timeline_page)
         self.detail_split = split
@@ -216,9 +238,12 @@ class BattleDetailDialog(QDialog):
         self.buff_check.stateChanged.connect(self._refresh_filter)
         self.character_combo.currentIndexChanged.connect(self._refresh_filter)
         self.skill_character_combo.currentIndexChanged.connect(self._refresh_filter)
+        self.avatar_check.toggled.connect(self._set_character_avatars)
+        self.avatar_size_slider.valueChanged.connect(self._set_avatar_size)
         qconfig.themeChanged.connect(self._apply_theme)
         self._apply_theme()
         self._refresh_filter()
+        self.skill_table.set_gui_font_scale = self._scale_skill_avatars
         from endfield_pcap.gui.shared.typography import apply_fonts
         scale = getattr(getattr(parent, 'app_config', None), 'gui_font_percent', 115)/100
         apply_fonts(self, scale)
@@ -239,6 +264,8 @@ class BattleDetailDialog(QDialog):
         selected = self.inspector._block
         selected_id = next((i for i, block in enumerate(self.timeline._blocks) if block is selected), None)
         return dict(self._web_extra_state, character=self.character_combo.currentData() or '',
+            avatars=self.avatar_check.isChecked(),
+            avatarPercent=self.avatar_size_slider.value(),
             buffs=self.buff_check.isChecked(), fallback=self.skill_frames_check.isChecked(),
             zoom=self.zoom_slider.value(), graphics=self.graphics_zoom_slider.value(),
             unit=self.time_unit_combo.currentData(), details=self.detail_split.details_expanded(),
@@ -287,6 +314,7 @@ class BattleDetailDialog(QDialog):
             if self.web_analysis is None:
                 from endfield_pcap.gui.battle.web import WebBattleView
                 self.web_analysis = WebBattleView(self.snapshot, self._record_label, self)
+                self.input_history.publish()
                 self.web_analysis.set_gui_font_scale(self.property('gui_font_scale') or 1.15)
                 self.web_analysis.bridge.stateEdited.connect(self._read_web_state)
                 self.view_stack.addWidget(self.web_analysis)
@@ -312,6 +340,33 @@ class BattleDetailDialog(QDialog):
             key = str(participant['character_key'])
             combo.addItem(character_name(key, participant.get('character_name', '')), userData=key)
         return combo
+
+    def _set_character_avatars(self, visible):
+        self.timeline.show_character_avatars = bool(visible)
+        self.timeline.fit_columns()
+        self._refresh_filter()
+        if self.web_analysis is not None:
+            state = dict(self._web_pending_state or self._native_view_state(), avatars=bool(visible))
+            self.web_analysis.set_view_state(state)
+        parent = self.parentWidget()
+        if getattr(parent, 'app_config', None) is not None:
+            from endfield_pcap.gui.config import save_app_config
+            parent.app_config.show_character_avatars = bool(visible)
+            save_app_config(parent.app_config, parent.config_path)
+
+    def _set_avatar_size(self, percent):
+        self.avatar_size_value.setText(f'{percent}%')
+        self.timeline.avatar_scale = percent/100
+        self.timeline.fit_columns()
+        self._scale_skill_avatars(self.property('gui_font_scale') or 1.15)
+        if self.web_analysis is not None:
+            state = dict(self._web_pending_state or self._native_view_state(), avatarPercent=percent)
+            self.web_analysis.set_view_state(state)
+        parent = self.parentWidget()
+        if getattr(parent, 'app_config', None) is not None:
+            from endfield_pcap.gui.config import save_app_config
+            parent.app_config.character_avatar_percent = percent
+            save_app_config(parent.app_config, parent.config_path)
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -378,10 +433,17 @@ class BattleDetailDialog(QDialog):
         table = self.skill_table
         table.setSortingEnabled(False)
         table.setRowCount(len(rows))
+        icon_size = round(SKILL_AVATAR_PIXELS*(self.property('gui_font_scale') or 1.15)*self.avatar_size_slider.value()/100)
+        table.setIconSize(QSize(icon_size, icon_size))
+        table.verticalHeader().setDefaultSectionSize(max((icon_size+8) if self.avatar_check.isChecked() else 0, table.fontMetrics().height()+8))
         for i, row in enumerate(rows):
             for j, value in enumerate([row['display_character'], row['category'], row['display_skill']]):
                 item = QTableWidgetItem(value)
-                item.setToolTip(str(row.get('skill_key') or ''))
+                if j == 0:
+                    item.setData(Qt.ItemDataRole.UserRole, row.get('character_key'))
+                if j == 0 and self.avatar_check.isChecked():
+                    item.setIcon(QIcon(avatar_pixmap(row.get('character_key'), icon_size, self.devicePixelRatioF())))
+                item.setToolTip(str(row['display_character']) if j == 0 else str(row.get('skill_key') or ''))
                 table.setItem(i, j, item)
             for j, field in enumerate(['cast_count', 'total_damage', 'damage_percent', 'avg_damage', 'max_damage'], 3):
                 value = float(row.get(field) or 0)
@@ -390,3 +452,17 @@ class BattleDetailDialog(QDialog):
         table.setSortingEnabled(True)
         table.sortItems(4, Qt.SortOrder.DescendingOrder)
         self.skill_empty.setVisible(not rows)
+
+    def _scale_skill_avatars(self, scale):
+        size = round(SKILL_AVATAR_PIXELS*scale*self.avatar_size_slider.value()/100)
+        table = self.skill_table
+        changed = table.iconSize().width() != size
+        table.setIconSize(QSize(size, size))
+        table.verticalHeader().setDefaultSectionSize(max((size+8) if self.avatar_check.isChecked() else 0, table.fontMetrics().height()+8))
+        if changed and self.avatar_check.isChecked():
+            for i in range(table.rowCount()):
+                item = table.item(i, 0)
+                if item:
+                    item.setIcon(QIcon(avatar_pixmap(item.data(Qt.ItemDataRole.UserRole), size, self.devicePixelRatioF())))
+        for column in (0, 1):
+            table.resizeColumnToContents(column)

@@ -41,8 +41,32 @@ def digest(path):
 def resources():
     for folder in ('data', 'jsondata'):
         for path in sorted((ROOT / '_internal' / folder).rglob('*')):
-            if path.is_file() and path != MANIFEST and path.name != 'runtime-data.zip' and path.suffix.lower() != '.md':
+            if (path.is_file() and path != MANIFEST and path.name != 'runtime-data.zip' and path.suffix.lower() != '.md'
+                    and not path.is_relative_to(ROOT/'_internal/data/ui/characters')):
                 yield path
+
+
+def verify_portraits():
+    """UI images have their own manifest, separate from parser field projections."""
+    root = ROOT/'_internal/data/ui/characters'
+    data = json.loads((root/'manifest.json').read_text(encoding='utf8'))
+    if data.get('schema_version') != 1 or not data.get('portraits'):
+        raise ValueError('Invalid portrait manifest')
+    expected = {'manifest.json', 'README.md'}
+    for key, row in [*data['portraits'].items(), ('placeholder', data.get('placeholder', {}))]:
+        name = row.get('path')
+        if name != key+'.png':
+            raise ValueError('Invalid portrait path: '+str(name))
+        path = root/name
+        if not path.is_file() or path.stat().st_size != row['bytes'] or digest(path) != row['sha256']:
+            raise ValueError('Missing or changed portrait: '+name)
+        expected.add(name)
+    if any(value not in data['portraits'] for value in data.get('aliases', {}).values()):
+        raise ValueError('Unknown portrait alias target')
+    actual = {p.relative_to(root).as_posix() for p in root.rglob('*') if p.is_file()}
+    if actual != expected:
+        raise ValueError('Portrait file set changed; review manifest')
+    print(f"Verified {len(data['portraits'])} offline portraits and placeholder hashes.")
 
 
 def generate(archive):
@@ -88,6 +112,7 @@ def verify():
     if actual != expected:
         raise ValueError('Resource file set changed; review inventory rather than silently accepting it')
     print(f'Verified {len(expected)} retained runtime resources and SHA-256 hashes.')
+    verify_portraits()
 
 
 def exercise():

@@ -10,12 +10,19 @@ const script = fs.readFileSync(path.join(__dirname,
 class Element {
   constructor() {
     this.children = []; this.style = {}; this.textContent = ''; this.className = '';
-    this.classes = new Set();
+    this.classes = new Set(); this.dataset = {}; this.parentNode = null;
     this.classList = { toggle: (name, enabled) => enabled ? this.classes.add(name) : this.classes.delete(name) };
   }
-  append(...nodes) { this.children.push(...nodes); }
-  appendChild(node) { this.children.push(node); }
-  replaceChildren(...nodes) { this.children = nodes; }
+  append(...nodes) { nodes.forEach(node => this.appendChild(node)); }
+  appendChild(node) { this.insertBefore(node, null); }
+  insertBefore(node, reference) {
+    node.remove(); node.parentNode = this;
+    this.children.splice(reference ? this.children.indexOf(reference) : this.children.length, 0, node);
+  }
+  remove() { if (this.parentNode) { this.parentNode.children.splice(this.parentNode.children.indexOf(this), 1); this.parentNode = null; } }
+  replaceChildren(...nodes) { [...this.children].forEach(node => node.remove()); this.append(...nodes); }
+  addEventListener() {}
+  getAttribute(name) { return this[name]; }
 }
 
 function mount(inProcess, token = '') {
@@ -57,7 +64,7 @@ for (const inProcess of [false, true]) {
     rate: row.children[3].textContent,
     rdamage: row.children[4].textContent,
     rrate: row.children[5].textContent,
-    crit: row.children[1].children[1].textContent,
+    crit: row.children[1].children[1].children[1].textContent,
     bar: row.children[0].style.width,
   }));
   app.send(message);

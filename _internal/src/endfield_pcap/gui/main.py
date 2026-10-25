@@ -7,6 +7,7 @@ import queue
 import sys
 import threading
 from pathlib import Path
+from collections.abc import Callable
 from PySide6.QtCore import QTimer
 from PySide6.QtGui import QFont, QIcon
 from PySide6.QtWidgets import QApplication
@@ -45,16 +46,22 @@ from endfield_pcap.gui.pages.home.actions import CaptureActions
 from endfield_pcap.gui.pages.overlays.actions import OverlayActions
 from endfield_pcap.gui.pages.settings.actions import SettingsActions
 from endfield_pcap.gui.pages.overlays.hotkeys import OverlayHotkeys
+from endfield_pcap.gui.updates import UpdateActions
+from endfield_pcap.gui.services import IndependentServices
+from endfield_pcap.gui.lifecycle import GuiLifecycle
 
 
 LOGGER = logging.getLogger(__name__)
 
 
 class MainWindow(
+    GuiLifecycle,
+    IndependentServices,
     CaptureActions,
     OverlayActions,
     SettingsActions,
     OverlayHotkeys,
+    UpdateActions,
     WindowTheme,
     HistoryActions,
     FluentWindow,
@@ -63,16 +70,18 @@ class MainWindow(
         super().__init__()
         self.app_config = app_config
         self.app_config.overlays = [entry for entry in app_config.overlays
-            if entry.source_value != 'combo_skill' and 'combo_snapshot' not in template_for(entry).subscriptions]
+            if entry.source_value != 'buff'
+            and 'buff_snapshot' not in template_for(entry).subscriptions]
         self.config_path = config_path
         self.service_controller = ServiceController(self.app_config.service)
+        self._init_independent_services()
         self.overlay_manager = OverlayManager(
             self.app_config.service.ws_port,
             ws_browser_token=self.app_config.service.ws_browser_token,
             on_entry_changed=self._handle_overlay_entry_changed,
             use_in_process_snapshots=True,
             on_full_requirement=self.service_controller.set_full_analysis_required,
-            on_analysis_requirement=self.service_controller.set_analysis_streams,
+            on_analysis_requirement=self._set_analysis_requirements,
         )
         self.avatar_index = _load_avatar_index()
         self.records: list[CombatRecord] = []
@@ -123,6 +132,7 @@ class MainWindow(
         self.logs_page = RuntimeLogPage(runtime_log_directory(config_path.parent / 'logs'), self)
 
         self._init_window()
+        self._init_gui_lifecycle()
         self._bind_events()
         self.home_page.status_card.set_squad_members([])
         self._refresh_overlay_views()
@@ -134,12 +144,16 @@ class MainWindow(
         self._ensure_game_directory_ready()
         self._update_service_status()
 
+        self._init_update_check()
+
         self.queue_timer = QTimer(self)
         self.queue_timer.setInterval(33)
         self.queue_timer.timeout.connect(self._drain_queue)
         self.queue_timer.start()
+        self._bind_independent_services()
 
     def _drain_queue(self) -> None:
+        self._drain_independent_services()
         while True:
             try:
                 event_type, payload = self.service_controller.queue.get_nowait()
@@ -155,6 +169,8 @@ class MainWindow(
                 self._update_service_status()
             elif event_type == 'started':
                 self._update_service_status()
+            elif event_type == 'trace_path':
+                self.input_controller.set_trace(payload)
             elif event_type == "metrics":
                 data = payload if isinstance(payload, dict) else {}
                 self.current_metrics = data.get("metrics", RuntimeMetrics())
@@ -182,6 +198,8 @@ class MainWindow(
                 reason = (str(exc).splitlines() or [type(exc).__name__])[0][:180]
                 self._show_capture_error(f'抓包失败：{reason}')
             elif event_type == "stopped":
+                self.input_controller.set_trace(None)
+                self.vision_controller.set_identity([],None)
                 self._finish_service_stop()
 
     def _handle_service_event(self, event: dict[str, object]) -> None:
@@ -205,10 +223,14 @@ class MainWindow(
             )
         self.current_squad = members
         self.home_page.status_card.set_squad_members(self.current_squad)
+        self.vision_controller.set_identity(members,self.current_session_id)
 
     def showEvent(self, event) -> None:
         super().showEvent(event)
         schedule_initial_placement(self)
+        self._update_gui_poll_interval()
+        if hasattr(self,'home_page'):
+            QTimer.singleShot(0,self._update_service_status)
 
     def _init_window(self) -> None:
         self.resize(1200, 800)
@@ -245,8 +267,12 @@ class MainWindow(
         self.queue_timer.stop()
         logging.getLogger().removeHandler(self.log_handler)
         self._unregister_overlay_hotkey()
+        self._unregister_gui_hotkey()
+        self.tray_icon.hide()
+        if self._history_detail_dialog is not None:self._history_detail_dialog.close()
         save_app_config(self.app_config, self.config_path)
         self.overlay_manager.close_all()
+        self._stop_independent_services()
         self.service_controller.stop()
         self.service_controller.join(timeout=5.0)
         super().closeEvent(event)
@@ -256,6 +282,7 @@ def run_gui(
     config_path: Path | None = None,
     debug_enabled: bool = False,
     debug_dir: Path | None = None,
+    on_ready: Callable[[], None] | None = None,
 ) -> int:
     target_path = config_path or default_config_path()
     app_config = load_app_config(target_path)
@@ -266,6 +293,7 @@ def run_gui(
 
     app = QApplication.instance() or QApplication([])
     app.setApplicationName(APP_NAME)
+    app.setApplicationDisplayName(APP_NAME)
     app.setApplicationVersion(__version__)
     icon_path = _app_icon_path()
     if icon_path is not None:
@@ -280,4 +308,12 @@ def run_gui(
 
     window = MainWindow(app_config, target_path)
     window.show()
+    if on_ready is not None:
+        def notify_when_visible():
+            handle = window.windowHandle()
+            if window.isVisible() and handle is not None and handle.isExposed():
+                on_ready()
+            else:
+                QTimer.singleShot(50, window, notify_when_visible)
+        QTimer.singleShot(0, window, notify_when_visible)
     return app.exec()

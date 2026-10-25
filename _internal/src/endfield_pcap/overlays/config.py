@@ -69,6 +69,8 @@ def _builtin_overlay_index(source_value: str) -> Path:
         return package_asset_dir / "damage/index.html"
     if builtin_key == "combo_skill":
         return package_asset_dir / "combo/index.html"
+    if builtin_key == "input":
+        return package_asset_dir / "input/index.html"
     builtin_paths = {
         "damage": repo_root / "overlay" / "dist" / "index.html",
         "combo_skill": repo_root / "overlay_comboskill" / "dist" / "index.html",

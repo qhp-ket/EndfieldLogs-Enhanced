@@ -2,7 +2,7 @@
 from __future__ import annotations
 import json
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtWidgets import QWidget, QFormLayout, QGridLayout, QHBoxLayout, QSplitter
+from PySide6.QtWidgets import QWidget, QFormLayout, QGridLayout, QHBoxLayout, QSplitter, QAbstractItemView
 from qfluentwidgets import (
     CaptionLabel,
     CheckBox,
@@ -17,7 +17,6 @@ from qfluentwidgets import (
 from endfield_pcap.gui.shared.widgets import (
     InterfacePage,
     OverlayNumberEdit,
-    IntegerStepEdit,
     FluentSwitchButton as SwitchButton,
 )
 from endfield_pcap.models import OverlayEntry, OverlaySourceType
@@ -38,6 +37,7 @@ def _overlay_source_type_label(source_type: OverlaySourceType) -> str:
 
 class OverlayPage(InterfacePage):
     setting_changed = Signal(str, object)
+    order_changed = Signal(object)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__("overlayInterface", "悬浮窗", "管理内置、本地与在线悬浮窗。", parent)
@@ -58,6 +58,8 @@ class OverlayPage(InterfacePage):
         self.enable_all_btn = self.status_card.enable_all_btn
         self.disable_all_btn = self.status_card.disable_all_btn
         self.content_layout.addWidget(self.status_card)
+        self.vision_settings_btn = PushButton('连携识别设置（图像识别，无需 Npcap）',self)
+        self.content_layout.addWidget(self.vision_settings_btn)
 
         card = HeaderCardWidget("悬浮窗配置", self)
         self.reset_layout_btn = PushButton("重置布局", card)
@@ -69,6 +71,12 @@ class OverlayPage(InterfacePage):
         card.viewLayout.addWidget(splitter,1)
 
         self.overlay_list = ListWidget(splitter)
+        self.overlay_list.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
+        self.overlay_list.setDefaultDropAction(Qt.DropAction.MoveAction)
+        self.overlay_list.setDragEnabled(True)
+        self.overlay_list.setDropIndicatorShown(True)
+        self.overlay_list.setToolTip('拖动条目调整顺序，自动保存')
+        self.overlay_list.model().rowsMoved.connect(self._emit_order)
         self.overlay_list.setMinimumWidth(120)
         splitter.addWidget(self.overlay_list)
 
@@ -139,16 +147,18 @@ class OverlayPage(InterfacePage):
         opacity_layout.setContentsMargins(0, 0, 0, 0)
         opacity_layout.addWidget(self.opacity_slider, 1)
         opacity_layout.addWidget(self.opacity_value)
-        self.font_size_edit = IntegerStepEdit(50, 300, 100, details)
-        self.font_size_edit.setToolTip("统一调整浮窗全部文字，100% 为模板原始字号；不改变窗口尺寸")
-        self.font_size_value = CaptionLabel("%", details)
-        self.font_size_value.setFixedWidth(42)
+        self.font_size_slider = Slider(Qt.Orientation.Horizontal, details)
+        self.font_size_slider.setRange(50, 300)
+        self.font_size_slider.setValue(100)
+        self.font_size_slider.setToolTip("窗口尺寸自动缩放文字和头像；此比例单独调整文字，不改变头像比例。100% 为自动适配大小")
+        self.font_size_value = CaptionLabel("100%", details)
+        self.font_size_value.setMinimumWidth(50)
+        self.font_size_slider.valueChanged.connect(lambda value: self.font_size_value.setText(f"{value}%"))
         font_row = QWidget(details)
         font_layout = QHBoxLayout(font_row)
         font_layout.setContentsMargins(0, 0, 0, 0)
-        font_layout.addWidget(self.font_size_edit)
+        font_layout.addWidget(self.font_size_slider, 1)
         font_layout.addWidget(self.font_size_value)
-        font_layout.addStretch()
         self.width_edit = OverlayNumberEdit(details)
         self.height_edit = OverlayNumberEdit(details)
         dimensions_row = QWidget(details)
@@ -195,6 +205,10 @@ class OverlayPage(InterfacePage):
             self.overlay_list.setMaximumHeight(120 if narrow else 16777215)
             self.splitter.setSizes([110, 800] if narrow else [180, 600])
 
+    def _emit_order(self, *_) -> None:
+        self.order_changed.emit([str(self.overlay_list.item(i).data(Qt.ItemDataRole.UserRole))
+                                 for i in range(self.overlay_list.count())])
+
     def selected_entry_id(self) -> str | None:
         item = self.overlay_list.currentItem()
         return None if item is None else str(item.data(Qt.ItemDataRole.UserRole))
@@ -225,7 +239,7 @@ class OverlayPage(InterfacePage):
                 self.click_switch.setChecked(False)
                 self.opacity_slider.setValue(100)
                 self.opacity_value.setText("100%")
-                self.font_size_edit.setValue(100)
+                self.font_size_slider.setValue(100)
                 self.geometry_label.setText("-")
                 self.remove_btn.setEnabled(False)
                 self.source_value_edit.setReadOnly(True)
@@ -234,7 +248,7 @@ class OverlayPage(InterfacePage):
                         child.setEnabled(False)
                 self.width_edit.setEnabled(False)
                 self.height_edit.setEnabled(False)
-                self.font_size_edit.setEnabled(False)
+                self.font_size_slider.setEnabled(False)
                 self.reset_layout_btn.setEnabled(False)
                 return
             self.name_edit.setText(entry.name)
@@ -244,7 +258,7 @@ class OverlayPage(InterfacePage):
             self._show_template(entry)
             self.width_edit.setEnabled(True)
             self.height_edit.setEnabled(True)
-            self.font_size_edit.setEnabled(True)
+            self.font_size_slider.setEnabled(True)
             self.reset_layout_btn.setEnabled(True)
             self.enabled_switch.setChecked(entry.enabled)
             self.visible_switch.setEnabled(entry.enabled)
@@ -253,7 +267,7 @@ class OverlayPage(InterfacePage):
             self.click_switch.setChecked(entry.click_through)
             self.opacity_slider.setValue(int(round(entry.opacity * 100)))
             self.opacity_value.setText(f"{int(round(entry.opacity * 100))}%")
-            self.font_size_edit.setValue(int(round(entry.font_scale * 100)))
+            self.font_size_slider.setValue(int(round(entry.font_scale * 100)))
             geometry = entry.geometry
             defaults = _window_defaults(entry)
             self.width_edit.setMinimum(defaults["min_width"])
@@ -268,7 +282,7 @@ class OverlayPage(InterfacePage):
     def _show_template(self, entry: OverlayEntry) -> None:
         template = template_for(entry)
         self.template_label.setText(template.error or template.name)
-        labels = {"buff_snapshot": "BUFF 观测与时长（实时估算）", "analysis_summary": "战斗统计（跟随实时 / 历史选择）", "analysis_snapshot": "战斗统计（跟随实时 / 历史选择）", "combo_snapshot": "连携 CD（已停用）"}
+        labels = {"buff_snapshot": "BUFF 观测与时长（实时估算）", "analysis_summary": "战斗统计（跟随实时 / 历史选择）", "analysis_snapshot": "战斗统计（跟随实时 / 历史选择）", "combo_snapshot": "连携 CD：图像识别，无需 Npcap；抓包可识别角色", "input_snapshot": "最近输入队列：需在首页开启输入记录，无需 Npcap"}
         self.subscription_label.setText(" / ".join(labels[key] for key in template.subscriptions) or "网页自行获取（保持实时）")
         if entry.source_type == OverlaySourceType.BUILTIN and entry.source_value == "uid_mask":
             self.subscription_label.setText("无需战斗数据（本地遮挡）")
@@ -287,6 +301,19 @@ class OverlayPage(InterfacePage):
                         widget.addItem(option.get("label", option["value"]), userData=option["value"])
                     widget.currentIndexChanged.connect(lambda _, k=key: self._emit_setting(k))
                     self.setting_widgets[key] = widget
+                elif item["type"] == "slider":
+                    widget = QWidget(self.name_edit.parentWidget())
+                    layout = QHBoxLayout(widget)
+                    layout.setContentsMargins(0, 0, 0, 0)
+                    slider = Slider(Qt.Orientation.Horizontal, widget)
+                    slider.setRange(item["min"], item["max"])
+                    caption = CaptionLabel(f"{slider.value()}%", widget)
+                    caption.setMinimumWidth(50)
+                    slider.valueChanged.connect(lambda value, label=caption: label.setText(f"{value}%"))
+                    slider.valueChanged.connect(lambda _, k=key: self._emit_setting(k))
+                    layout.addWidget(slider, 1)
+                    layout.addWidget(caption)
+                    self.setting_widgets[key] = slider
                 else:
                     widget = QWidget(self.name_edit.parentWidget())
                     layout = QGridLayout(widget)
@@ -306,6 +333,9 @@ class OverlayPage(InterfacePage):
                 for option, check in widget.items():
                     check.setEnabled(True)
                     check.setChecked(option in value)
+            elif isinstance(widget, Slider):
+                widget.setEnabled(True)
+                widget.setValue(value)
             else:
                 widget.setEnabled(True)
                 widget.setCurrentIndex(widget.findData(value))
@@ -314,5 +344,8 @@ class OverlayPage(InterfacePage):
         if self._updating:
             return
         widget = self.setting_widgets[key]
-        value = [k for k, check in widget.items() if check.isChecked()] if isinstance(widget, dict) else widget.currentData()
+        if isinstance(widget, dict):
+            value = [k for k, check in widget.items() if check.isChecked()]
+        else:
+            value = widget.value() if isinstance(widget, Slider) else widget.currentData()
         self.setting_changed.emit(key, value)

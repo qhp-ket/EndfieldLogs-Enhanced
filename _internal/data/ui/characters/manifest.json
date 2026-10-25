@@ -1,0 +1,293 @@
+{
+  "schema_version": 1,
+  "version": "2026-10-23T17:25:24.371024+00:00",
+  "source_index": "https://data.akedata.wiki/asset-sync-index.json",
+  "portraits": {
+    "chr_0002_endminm": {
+      "path": "chr_0002_endminm.png",
+      "source": "https://data.akedata.wiki/public/images/assets/beyond/dynamicassets/gameplay/ui/sprites/charroundicon/icon_round_chr_0002_endminm.png",
+      "original_md5": "88f600c2a35755a91f1b680320f16ecc",
+      "original_sha256": "2a6b6e29e51526893b2a74d05d2369f9213e9f9fab34b452bf89a82d5fd8ce0f",
+      "sha256": "c9411d723cd4a6a168ae9af713e0280a8d940c96972af6ed0b136f4a6c968187",
+      "bytes": 30899
+    },
+    "chr_0003_endminf": {
+      "path": "chr_0003_endminf.png",
+      "source": "https://data.akedata.wiki/public/images/assets/beyond/dynamicassets/gameplay/ui/sprites/charroundicon/icon_round_chr_0003_endminf.png",
+      "original_md5": "4f70551d5a95bc715fdf0fca398be7e4",
+      "original_sha256": "6667bf69290e57d274130c7a1b35aa82fe351122004f1c13fbdc44a77d240389",
+      "sha256": "2e8f6c6254bf8aa205a4fba7620fbaed63f1491e08d151ddef162e41175c9e10",
+      "bytes": 32312
+    },
+    "chr_0004_pelica": {
+      "path": "chr_0004_pelica.png",
+      "source": "https://data.akedata.wiki/public/images/assets/beyond/dynamicassets/gameplay/ui/sprites/charroundicon/icon_round_chr_0004_pelica.png",
+      "original_md5": "678c009444b649e46c8b82a88cad3d9a",
+      "original_sha256": "4d58931f15bda60d45fde353c74fb7c7b94b5450ef5290d9fd778c92d5163124",
+      "sha256": "ed907681737fad503beef6566c071d3ea49ffdd09a5bf61cc26089883c3cba64",
+      "bytes": 34049
+    },
+    "chr_0005_chen": {
+      "path": "chr_0005_chen.png",
+      "source": "https://data.akedata.wiki/public/images/assets/beyond/dynamicassets/gameplay/ui/sprites/charroundicon/icon_round_chr_0005_chen.png",
+      "original_md5": "4f80459342341ce95a90f05365e078a5",
+      "original_sha256": "b657b99ceccc2225debfb17c8fd3fd798c5eb4282fc0a783832551c560714bf8",
+      "sha256": "a42c02b57e9da801166959f657187465f1e59d66bbc00e130e0da6719f1f8d6d",
+      "bytes": 33144
+    },
+    "chr_0006_wolfgd": {
+      "path": "chr_0006_wolfgd.png",
+      "source": "https://data.akedata.wiki/public/images/assets/beyond/dynamicassets/gameplay/ui/sprites/charroundicon/icon_round_chr_0006_wolfgd.png",
+      "original_md5": "5f6073364df1236e631dcb48942df58f",
+      "original_sha256": "d669bdc0fcc92b1c35e913930712d1a5915f80d9c6cb9bd585b245b6bdb233ae",
+      "sha256": "4d8a16d10265073d897e4c752d63863d559bd91059f775ff1fb2866776403d89",
+      "bytes": 29613
+    },
+    "chr_0007_ikut": {
+      "path": "chr_0007_ikut.png",
+      "source": "https://data.akedata.wiki/public/images/assets/beyond/dynamicassets/gameplay/ui/sprites/charroundicon/icon_round_chr_0007_ikut.png",
+      "original_md5": "4f4eae2a7418bd35b27fa74b1e5392dc",
+      "original_sha256": "6686617653467c46f3c30e6b1a5b1fba5c276cb1ece480b9b559e7811f1c698d",
+      "sha256": "0c7e457ba278f939464fa4511b2865686167d43f71b1a8879a71f0006bf6ebac",
+      "bytes": 32827
+    },
+    "chr_0009_azrila": {
+      "path": "chr_0009_azrila.png",
+      "source": "https://data.akedata.wiki/public/images/assets/beyond/dynamicassets/gameplay/ui/sprites/charroundicon/icon_round_chr_0009_azrila.png",
+      "original_md5": "0aee1459a12ec0703a38421eae03c916",
+      "original_sha256": "fece70f33193eae73ed8d1c02c500122520753bfeba1254c8606cd59c347624c",
+      "sha256": "6e19541065d50f1524f76ca978bd8504432de26ba230090e30a385fc249ea4cd",
+      "bytes": 33861
+    },
+    "chr_0011_seraph": {
+      "path": "chr_0011_seraph.png",
+      "source": "https://data.akedata.wiki/public/images/assets/beyond/dynamicassets/gameplay/ui/sprites/charroundicon/icon_round_chr_0011_seraph.png",
+      "original_md5": "0f7167d1a490fa86946bdfeeba97cb9b",
+      "original_sha256": "8c1576bf7b7afa4bd3696cf88dd601b0bdecbf1ca5e41725115fbb51c11c9877",
+      "sha256": "1554087dcfbd981615a56eba449529e6fefd0eff433b08aafc8a6fb0d4bbdcfc",
+      "bytes": 32628
+    },
+    "chr_0012_avywen": {
+      "path": "chr_0012_avywen.png",
+      "source": "https://data.akedata.wiki/public/images/assets/beyond/dynamicassets/gameplay/ui/sprites/charroundicon/icon_round_chr_0012_avywen.png",
+      "original_md5": "9642a98b2fab95cf02477f3aba4a98da",
+      "original_sha256": "dc0f01013a7da40c1d473b971a7f303c2787f417395c420c2d2e8c87bc6c8166",
+      "sha256": "adf9def18b669d80831767e7c28e6e85de8f1dd8f2187cb3f92eff5565ab07ba",
+      "bytes": 31379
+    },
+    "chr_0013_aglina": {
+      "path": "chr_0013_aglina.png",
+      "source": "https://data.akedata.wiki/public/images/assets/beyond/dynamicassets/gameplay/ui/sprites/charroundicon/icon_round_chr_0013_aglina.png",
+      "original_md5": "e599337097f9bb678332adcb2b633483",
+      "original_sha256": "0b8bf453418fc118aa689d799dbbb5d9f9c9c726e2d4439e5c700c6c9b6ca0eb",
+      "sha256": "50cc9fa25f4dc5b82df064a4e5f7fe79e9d6cdac50a6b730abe55a0f2627695b",
+      "bytes": 35184
+    },
+    "chr_0014_aurora": {
+      "path": "chr_0014_aurora.png",
+      "source": "https://data.akedata.wiki/public/images/assets/beyond/dynamicassets/gameplay/ui/sprites/charroundicon/icon_round_chr_0014_aurora.png",
+      "original_md5": "5dfe364af8ea22c6ed7fd0db68d39ae1",
+      "original_sha256": "157a651d633c8aed76b992d58dde1c6bca3ead5be49e703d66f6ac82eac144ba",
+      "sha256": "eb93c35d490bb89dbce11d99f12af9af2e0dfbd72620cd8600c584b765bcaf50",
+      "bytes": 36833
+    },
+    "chr_0015_lifeng": {
+      "path": "chr_0015_lifeng.png",
+      "source": "https://data.akedata.wiki/public/images/assets/beyond/dynamicassets/gameplay/ui/sprites/charroundicon/icon_round_chr_0015_lifeng.png",
+      "original_md5": "7d64b0430f3842975d1e781d7d6f4e3e",
+      "original_sha256": "58636cdef66f96a1805da5e4943c0c843997539655224826f32a6530af84759c",
+      "sha256": "a75ec639c72e58f260dec964944aa91e1d59fc634b3cbe402d09dc80e1d5dda3",
+      "bytes": 30009
+    },
+    "chr_0016_laevat": {
+      "path": "chr_0016_laevat.png",
+      "source": "https://data.akedata.wiki/public/images/assets/beyond/dynamicassets/gameplay/ui/sprites/charroundicon/icon_round_chr_0016_laevat.png",
+      "original_md5": "4cebf2c3ad8820029c92ff848a6a2962",
+      "original_sha256": "eec11964efb5f142ecbadbdee9ef1c984b6f3014a8274d9c4e1e5ca9f6704231",
+      "sha256": "d14a6c7a76a532c22577a6f07ba5700f33a08c06786db3013202e445b8bb18ae",
+      "bytes": 31632
+    },
+    "chr_0017_yvonne": {
+      "path": "chr_0017_yvonne.png",
+      "source": "https://data.akedata.wiki/public/images/assets/beyond/dynamicassets/gameplay/ui/sprites/charroundicon/icon_round_chr_0017_yvonne.png",
+      "original_md5": "708b06a94cfe05c1e0ce6c4135c83eac",
+      "original_sha256": "b2729e4acc3171c3b3e1cee38bc7003f7dd923091dd4be5ee0b0895d1e8797c7",
+      "sha256": "12d0a73fe648411d00ceee7d873c22a5552e1551315b6dafac84c9dbf340b718",
+      "bytes": 37547
+    },
+    "chr_0018_dapan": {
+      "path": "chr_0018_dapan.png",
+      "source": "https://data.akedata.wiki/public/images/assets/beyond/dynamicassets/gameplay/ui/sprites/charroundicon/icon_round_chr_0018_dapan.png",
+      "original_md5": "e427dd50b122633690e4ef7a0b347c69",
+      "original_sha256": "09d61edca88bd29572e5395f1c2acd2baf8be9fa9af8bebc12f3bd57858643a4",
+      "sha256": "a5104f8336ce6d6b915d7c4bd14583865a2a24851a90dd620cf4b35d121f80f6",
+      "bytes": 26401
+    },
+    "chr_0019_karin": {
+      "path": "chr_0019_karin.png",
+      "source": "https://data.akedata.wiki/public/images/assets/beyond/dynamicassets/gameplay/ui/sprites/charroundicon/icon_round_chr_0019_karin.png",
+      "original_md5": "4e99a3e0e187999e969afe2e9b8afa72",
+      "original_sha256": "e820a1198b9818a5b1fd99b973f77aaca22f29465f15d5cc60a7c6c9b87af234",
+      "sha256": "2a6758ce7b18398e421f83636765105ce8975fcd1b98ad2123436618350596aa",
+      "bytes": 33146
+    },
+    "chr_0020_meurs": {
+      "path": "chr_0020_meurs.png",
+      "source": "https://data.akedata.wiki/public/images/assets/beyond/dynamicassets/gameplay/ui/sprites/charroundicon/icon_round_chr_0020_meurs.png",
+      "original_md5": "9ed3f2fc7211b0cd9c73585670627274",
+      "original_sha256": "a362315e3d7692aaaf29aed1f81761986ceaa6cd7cda89b39feae61033e5b5ec",
+      "sha256": "bc32cbe0c2bc5dc6f5cb3d3dae87b99f2acfb66b48100fbd0f207621670ccd01",
+      "bytes": 27932
+    },
+    "chr_0021_whiten": {
+      "path": "chr_0021_whiten.png",
+      "source": "https://data.akedata.wiki/public/images/assets/beyond/dynamicassets/gameplay/ui/sprites/charroundicon/icon_round_chr_0021_whiten.png",
+      "original_md5": "fab88e1ce66eede5f4ef27f8af40185e",
+      "original_sha256": "5e0bf12cb556f8f0a9ed3c1deb1965278b9074015394f82381f6b5214eb537f7",
+      "sha256": "a10d2377ca207412afde25e4d7570170e2ed52f9e920e2b83e09acf4a9938f29",
+      "bytes": 25273
+    },
+    "chr_0022_bounda": {
+      "path": "chr_0022_bounda.png",
+      "source": "https://data.akedata.wiki/public/images/assets/beyond/dynamicassets/gameplay/ui/sprites/charroundicon/icon_round_chr_0022_bounda.png",
+      "original_md5": "19b5d39dd8f20c29de43c3cad72ad1bd",
+      "original_sha256": "ac230d9c458f2c19a496a6f38dc24fc8de88ea445d1faccf2a71b2bd2b0e1cd9",
+      "sha256": "caf8b1ddf61a6375ad320a826bd07ed2e9a44dbeda2855cf5895b0b62b79097a",
+      "bytes": 33539
+    },
+    "chr_0023_antal": {
+      "path": "chr_0023_antal.png",
+      "source": "https://data.akedata.wiki/public/images/assets/beyond/dynamicassets/gameplay/ui/sprites/charroundicon/icon_round_chr_0023_antal.png",
+      "original_md5": "9efa7267f16bf7f934ae303ca0208a8a",
+      "original_sha256": "8d4ba6148ae3bd27d8626b8bcd9c393e4d73df9035bae829ebafb613b96404e5",
+      "sha256": "ce019977e780ccd1f82d6d23eb168f57dca403d2e12959faba49837f993d2179",
+      "bytes": 27761
+    },
+    "chr_0024_deepfin": {
+      "path": "chr_0024_deepfin.png",
+      "source": "https://data.akedata.wiki/public/images/assets/beyond/dynamicassets/gameplay/ui/sprites/charroundicon/icon_round_chr_0024_deepfin.png",
+      "original_md5": "05cb3ca96c0aa2ac13e76b1a8be7e0c3",
+      "original_sha256": "8a33f0c687ecff4d5e919ba436dc09ce23ab42b1d9b231a32406443f5fccf129",
+      "sha256": "028065bd6e0e2367c10980d8cd621ae45ac55a85d72c95e9c28d406488616d98",
+      "bytes": 33933
+    },
+    "chr_0025_ardelia": {
+      "path": "chr_0025_ardelia.png",
+      "source": "https://data.akedata.wiki/public/images/assets/beyond/dynamicassets/gameplay/ui/sprites/charroundicon/icon_round_chr_0025_ardelia.png",
+      "original_md5": "22f33a4e0cac936fca1628a7eb065bfd",
+      "original_sha256": "3b906b4a7b0ddaeff4cf4c6f23306fc4364bca710224de4341b84f4e5b8c273b",
+      "sha256": "d5566f62fbe43663b53dc53e97cf6ab5898d75cd61c87a372d92a695a6cf12e6",
+      "bytes": 37050
+    },
+    "chr_0026_lastrite": {
+      "path": "chr_0026_lastrite.png",
+      "source": "https://data.akedata.wiki/public/images/assets/beyond/dynamicassets/gameplay/ui/sprites/charroundicon/icon_round_chr_0026_lastrite.png",
+      "original_md5": "bb5ddd7dd19c25bf0938093149e5151f",
+      "original_sha256": "8211a02b1bd6045d4139fee20db216331f60d8aeef308d0318d8bd3b5f1fdb05",
+      "sha256": "db352611a14090ca8404735b0b0e6bbe81b2bf84b30c9bb50a67febb8c8b8f8d",
+      "bytes": 36732
+    },
+    "chr_0027_tangtang": {
+      "path": "chr_0027_tangtang.png",
+      "source": "https://data.akedata.wiki/public/images/assets/beyond/dynamicassets/gameplay/ui/sprites/charroundicon/icon_round_chr_0027_tangtang.png",
+      "original_md5": "af0f5971abdcb79fdee5a321ac43cede",
+      "original_sha256": "8d9f6953da14829b0313c66a4274ccfdad6f1e2dc93ab85ce62834efceaf8040",
+      "sha256": "d766e40d7a25a430f0f1420065e5a938ba65d798ae53e3d63c0369b65fc587d8",
+      "bytes": 36488
+    },
+    "chr_0028_wulfa": {
+      "path": "chr_0028_wulfa.png",
+      "source": "https://data.akedata.wiki/public/images/assets/beyond/dynamicassets/gameplay/ui/sprites/charroundicon/icon_round_chr_0028_wulfa.png",
+      "original_md5": "582fb6f62488d86d6f927092636e5d71",
+      "original_sha256": "742f3b236b5440f0eaf2f5b0712961ff34a168ee3c0a42f027b8094e308416c4",
+      "sha256": "20dfaf816ef814a7409680e9d81e3cd12341ccd0d78e42bd5ce6b4588f707707",
+      "bytes": 35504
+    },
+    "chr_0029_pograni": {
+      "path": "chr_0029_pograni.png",
+      "source": "https://data.akedata.wiki/public/images/assets/beyond/dynamicassets/gameplay/ui/sprites/charroundicon/icon_round_chr_0029_pograni.png",
+      "original_md5": "b8bc9f48140bfabd467de49c672481d9",
+      "original_sha256": "779fe92ae0b59c69ddd8de1c44646d66220cb223cd481d44ecbf49ff99837505",
+      "sha256": "c4a05c4a40ed862be261ed8b86fd8d615b15f375177394a66bd328564eaa69a6",
+      "bytes": 31425
+    },
+    "chr_0030_zhuangfy": {
+      "path": "chr_0030_zhuangfy.png",
+      "source": "https://data.akedata.wiki/public/images/assets/beyond/dynamicassets/gameplay/ui/sprites/charroundicon/icon_round_chr_0030_zhuangfy.png",
+      "original_md5": "77dcd2dc71bc8a5dd05b5b131cc9c6a1",
+      "original_sha256": "f8bafdfead35277144c811db1eb0b5e467a0fcf508f4866c6131124dcc56feb8",
+      "sha256": "d870fb034d3add505688e6c2b5921c940f92b1609cd2cb8309dd69626231c2c6",
+      "bytes": 32122
+    },
+    "chr_0031_mifu": {
+      "path": "chr_0031_mifu.png",
+      "source": "https://data.akedata.wiki/public/images/assets/beyond/dynamicassets/gameplay/ui/sprites/charroundicon/icon_round_chr_0031_mifu.png",
+      "original_md5": "d60174bed09a2f68613091b020e0e0c8",
+      "original_sha256": "bdd06ed7cf76d9994e220c83367248f831230eccb4be01fffa031af39192e802",
+      "sha256": "2e177a1293581901af708d10e9f76eb2bf78bc71d5195852f941097edf2b9c60",
+      "bytes": 36949
+    },
+    "chr_0032_lizhiyan": {
+      "path": "chr_0032_lizhiyan.png",
+      "source": "https://data.akedata.wiki/public/images/assets/beyond/dynamicassets/gameplay/ui/sprites/charroundicon/icon_round_chr_0032_lizhiyan.png",
+      "original_md5": "01f34d9f63d6c05153a0407cb770d113",
+      "original_sha256": "a89a7dcad0288b7167034312a0c4f6eadc1d0f0800326f178a2554d8173fdbe9",
+      "sha256": "4e65643c080e7b2a9472bc6db6cfbdaf4d15c6def7a69e206b4fa5605e469929",
+      "bytes": 36915
+    },
+    "chr_0033_camille": {
+      "path": "chr_0033_camille.png",
+      "source": "https://data.akedata.wiki/public/images/assets/beyond/dynamicassets/gameplay/ui/sprites/charroundicon/icon_round_chr_0033_camille.png",
+      "original_md5": "e2a1f7190cfa71ac5bdd437de94e7814",
+      "original_sha256": "5b28fc63a05d55e478d23e64a2ed2260fc224699f8b0f3e94ed2d4766d0bc8ce",
+      "sha256": "67e8f8c40d5a2cf68dc9c9db7083cf02284e379aa3600bc527f6ee66756f4f6d",
+      "bytes": 28768
+    },
+    "chr_0034_typhoea": {
+      "path": "chr_0034_typhoea.png",
+      "source": "https://data.akedata.wiki/public/images/assets/beyond/dynamicassets/gameplay/ui/sprites/charroundicon/icon_round_chr_0034_typhoea.png",
+      "original_md5": "466d9422bea7cde7edf2d052241da318",
+      "original_sha256": "1d5b348897144840729441375f42fbd728df8ba5426ec3e01539379ea40cb27f",
+      "sha256": "5c492c122136e707d27ea95caeda5dc8ed2ae306d9816c91b15034d7c7e0fab4",
+      "bytes": 35561
+    },
+    "chr_0035_liino": {
+      "path": "chr_0035_liino.png",
+      "source": "https://data.akedata.wiki/public/images/assets/beyond/dynamicassets/gameplay/ui/sprites/charroundicon/icon_round_chr_0035_liino.png",
+      "original_md5": "0f1e89fe059e190841e6fbc24aa1de7c",
+      "original_sha256": "43f9f003ad1c4873455fbe47415148a4908bf6dec8f941e6f506bcffccd9950f",
+      "sha256": "b8522b03131293047829b61201c6ca8e832bfbb5a20308901407adaf655b141a",
+      "bytes": 37267
+    },
+    "chr_0036_jsspsi": {
+      "path": "chr_0036_jsspsi.png",
+      "source": "https://data.akedata.wiki/public/images/assets/beyond/dynamicassets/gameplay/ui/sprites/charroundicon/icon_round_chr_0036_jsspsi.png",
+      "original_md5": "54a8167f71cfeb64965cddbf1e7bda8d",
+      "original_sha256": "b073fe33bda5f787f5a7665f2870630f9f04e6114bd90b1b1379813773628a12",
+      "sha256": "ddd8082d5d44d81168c898c8ad4dba8663400352501a823f29b3bd7ba03091f0",
+      "bytes": 35070
+    },
+    "chr_0037_minghe": {
+      "path": "chr_0037_minghe.png",
+      "source": "https://data.akedata.wiki/public/images/assets/beyond/dynamicassets/gameplay/ui/sprites/charroundicon/icon_round_chr_0037_minghe.png",
+      "original_md5": "91169d79fbb8279e140b2e0678e3c5d3",
+      "original_sha256": "51aade363dc3f2ee6810fb8e5526cb56947c74065aa153809a68e4d33c4dfbce",
+      "sha256": "42eb19f66422fed1565e50b68b70525f2dadf700b5186bb4257a828c15397213",
+      "bytes": 37487
+    },
+    "chr_0038_purrche": {
+      "path": "chr_0038_purrche.png",
+      "source": "https://data.akedata.wiki/public/images/assets/beyond/dynamicassets/gameplay/ui/sprites/charroundicon/icon_round_chr_0038_purrche.png",
+      "original_md5": "b39f9cb41221dfb978e40ff95620fa88",
+      "original_sha256": "62a8d3c79cad24b1ef7a87e9085ff7ceb8e7cf630dba22b36ae564b5a98e2b27",
+      "sha256": "4e885e8ced47c249f4bfd7595d701fef4753574a399f186baa483753ab4f57db",
+      "bytes": 26871
+    }
+  },
+  "aliases": {},
+  "placeholder": {
+    "path": "placeholder.png",
+    "sha256": "6f0fe663faeb90a6cd5d4b3e72dc4be8807f6136a5b5ce365a9541a25905a8e4",
+    "bytes": 4891
+  }
+}

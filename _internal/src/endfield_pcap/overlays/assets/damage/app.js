@@ -19,6 +19,9 @@
   ].map((id) => [id, document.getElementById(id)]));
   let ws = null;
   let reconnectTimer = null;
+  let avatars = {portraits: {}, aliases: {}};
+  let showAvatars = true;
+  const rowCache = new Map();
 
   function acceptSnapshot(message) {
     if (!message || !["analysis_snapshot", "analysis_summary"].includes(message.type) || message.schema_version !== 1 ||
@@ -68,7 +71,6 @@
   }
 
   function renderRows(participants, totalDamage) {
-    refs.rows.replaceChildren();
     refs.emptyState.classList.toggle("hidden", participants.length > 0);
     const metric = barMode === "rdps" ? "total_rd" : "total_damage";
     const players = [...participants].sort((a, b) => (b[metric] || 0) - (a[metric] || 0));
@@ -77,23 +79,40 @@
       typeof totalDamage === "number" && totalDamage > 0
       ? `${formatNumber(value / totalDamage * 100, 1)}%` : "—";
     for (const [index, player] of players.entries()) {
-      const row = element("row");
-      const progress = element("row-progress");
+      const key = String(player.character_key || `@missing:${index}`);
+      let record = rowCache.get(key);
+      if (!record) {
+        const row = element('row'), progress = element('row-progress');
+        const identity = element('row-name'), image = document.createElement('img');
+        image.className = 'character-avatar'; image.alt = ''; image.draggable = false;
+        image.addEventListener('error', () => {
+          if (avatars.placeholder && image.getAttribute('src') !== avatars.placeholder) image.src = avatars.placeholder;
+        });
+        const text = element('player-text'), nameNode = element('player-name'), meta = element('player-meta');
+        text.append(nameNode, meta); identity.append(image, text); row.append(progress, identity);
+        record = {row, progress, image, nameNode, meta, cells: new Map()}; rowCache.set(key, record);
+      }
+      const {row, progress, image, nameNode, meta, cells} = record;
       // Chart geometry only; all battle numbers come directly from the snapshot.
       progress.style.width = `${maximum > 0 ? Math.max(0, Math.min(100, (player[metric] || 0) / maximum * 100)) : 0}%`;
       progress.className = `row-progress ${barMode}`;
       const name = String(player.character_name || player.character_key || "?");
-      const identity = element("row-name");
       const crit = typeof player.crit_rate === "number" ? `${formatNumber(player.crit_rate * 100, 1)}%` : "—";
-      identity.append(element("player-name", name), element("player-meta", `CRIT ${crit}`));
-      row.append(progress, identity);
-      for (const column of columns.filter((column) => visibleColumns.includes(column.key))) {
-        const cell = element(`row-stat ${column.className}`, column.value(player, share));
+      nameNode.textContent = name; nameNode.title = name; row.children[1].title = name; meta.textContent = `CRIT ${crit}`;
+      const src = avatars.portraits[avatars.aliases[key] || key] || (key.startsWith('chr_') ? avatars.placeholder : null);
+      image.hidden = !showAvatars || !src; image.title = name;
+      if (src && image.dataset.source !== src) { image.dataset.source = src; image.src = src; }
+      for (const column of columns) {
+        let cell = cells.get(column.key);
+        if (!cell) { cell = element(`row-stat ${column.className}`); cells.set(column.key, cell); row.appendChild(cell); }
+        cell.hidden = !visibleColumns.includes(column.key);
+        cell.textContent = column.value(player, share);
         cell.title = formatNumber(column.key.startsWith("rdamage") ? player.total_rd : player.total_damage, 2);
-        row.appendChild(cell);
       }
-      refs.rows.appendChild(row);
+      if (refs.rows.children[index] !== row) refs.rows.insertBefore(row, refs.rows.children[index] || null);
     }
+    const activeKeys = new Set(players.map((p,index) => String(p.character_key || `@missing:${index}`)));
+    for (const [key, record] of rowCache) if (!activeKeys.has(key)) { record.row.remove(); rowCache.delete(key); }
   }
 
   function render() {
@@ -103,7 +122,6 @@
     const selectedColumns = columns.filter((column) => visibleColumns.includes(column.key));
     refs.columnsHead.replaceChildren(element("table-label table-label-name", `角色 · ${barMode === "rdps" ? "rDMG" : "DMG"}条`),
       ...selectedColumns.map((column) => element("table-label", column.label)));
-    document.documentElement.style.setProperty("--table-columns", `minmax(6rem, 1.2fr)${selectedColumns.length ? ` repeat(${selectedColumns.length}, minmax(0, 1fr))` : ""}`);
     const active = !!((battle.timer_start_seen || battle.official_timer_start_seen) &&
       !(battle.timer_end_seen || battle.official_timer_end_seen));
     refs.totalDamage.textContent = snapshot ? formatNumber(battle.total_damage) : "0";
@@ -121,6 +139,8 @@
       return `${dimension}: ${item.status || "unknown"} ${(item.reasons || []).join(", ")}`;
     }).join("\n");
     renderRows(snapshot && Array.isArray(snapshot.participants) ? snapshot.participants : [], battle.total_damage);
+    if (window.fitDamageTable) window.fitDamageTable(selectedColumns, [...rowCache.values()], barMode, state.streamId !== null);
+    else document.documentElement.style.setProperty("--table-columns", `minmax(0, 1fr)${selectedColumns.length ? ` repeat(${selectedColumns.length}, minmax(0, 1fr))` : ""}`);
   }
 
   function connect() {
@@ -147,6 +167,12 @@
     connect();
   }
   window.addEventListener("endfield-overlay-config", (event) => {
+    if (event.detail && event.detail.characterAvatars) avatars = event.detail.characterAvatars;
+    if (event.detail && event.detail.settings) {
+      showAvatars = event.detail.settings.show_character_avatars !== 'off';
+      const percent = event.detail.settings.avatar_size_percent;
+      document.documentElement.style.setProperty('--avatar-scale', String(Number.isFinite(percent) ? Math.max(50, Math.min(300, percent))/100 : 1));
+    }
     if (event.detail && ["dps", "rdps"].includes(event.detail.barMode)) {
       barMode = event.detail.barMode;
     }

@@ -30,7 +30,7 @@
     if (api.config) api.config.closeHovered = !!hovered;
     applyClose();
   };
-  for (const type of ["analysis", "combo", "buff"]) {
+  for (const type of ["analysis", "combo", "buff", "input"]) {
     window.addEventListener(`endfield-${type}-snapshot`, event => {
       api.snapshots[event.detail && event.detail.type || `${type}_snapshot`] = event.detail;
     });
@@ -41,7 +41,14 @@
   function applyFonts() {
     scheduled = false;
     if (!api.config || !document.documentElement) return;
-    const scale = Math.max(.5, Math.min(3, Number(api.config.fontScale) || 1));
+    const fontScale = Math.max(.5, Math.min(3, Number(api.config.fontScale) || 1));
+    const reference = api.contentReference || api.config.referenceSize || {};
+    const heightScale = window.innerHeight/(reference.height || window.innerHeight);
+    const windowScale = reference.scaleAxis === 'height' ? heightScale :
+      Math.min(window.innerWidth/(reference.width || window.innerWidth), heightScale);
+    const scale = fontScale * windowScale;
+    document.documentElement.style.setProperty("--overlay-window-scale", windowScale);
+    document.documentElement.style.setProperty("--overlay-user-font-scale", fontScale);
     document.documentElement.style.setProperty("--overlay-font-scale", scale);
     if (api.config.fontMode === "css") return;
     // Legacy HTML may use px fonts. Restore every base before measuring, so
@@ -62,10 +69,22 @@
       node.style.setProperty("font-size", `${parseFloat(size) * scale}px`, "important");
     }
   }
+  api.setContentReference = reference => {
+    if (!reference || !Number.isFinite(reference.width) || !Number.isFinite(reference.height)
+        || reference.width <= 0 || reference.height <= 0) return;
+    api.contentReference = reference;
+    applyFonts();
+  };
   window.addEventListener("endfield-overlay-config", event => {
     api.config = event.detail;
     applyClose();
     applyFonts();
+  });
+  window.addEventListener("resize", () => {
+    if (!scheduled) {
+      scheduled = true;
+      requestAnimationFrame(applyFonts);
+    }
   });
   window.addEventListener("DOMContentLoaded", () => {
     new MutationObserver(() => {

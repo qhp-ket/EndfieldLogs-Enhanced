@@ -61,10 +61,10 @@ def test_restore_refuses_corrupt_archive_and_changed_development_override(tmp_pa
 def test_version_update_and_artifact_identity_share_one_source(tmp_path, monkeypatch):
     release = tool('release')
     source = tmp_path / '_version.py'
-    source.write_text("APP_NAME = 'EndfieldLogs'\n__version__ = '0.1.0-dev.1'\n", encoding='utf8')
+    source.write_text("APP_NAME = 'Endfield Logs - Enhanced'\nAPP_PACKAGE_NAME = 'Endfield-Logs-Enhanced'\n__version__ = '0.1.0-dev.1'\n", encoding='utf8')
     monkeypatch.setattr(release, 'VERSION_FILE', source)
     release.set_version('0.1.0-dev.2')
-    assert release.identity() == ('EndfieldLogs', '0.1.0-dev.2')
+    assert release.identity() == ('Endfield-Logs-Enhanced', '0.1.0-dev.2')
     for invalid in ('v1.0.0', '1.0', '../1.0.0', '01.0.0', '1.0.0-dev.01'):
         with pytest.raises(ValueError):
             release.set_version(invalid)

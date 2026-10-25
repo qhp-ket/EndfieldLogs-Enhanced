@@ -19,6 +19,10 @@ def test_qt_closure_keeps_runtime_dependencies_and_excludes_development_assets()
                      'plugins/platforms/qwindows.dll', 'opengl32sw.dll',
                      'translations/qtwebengine_locales/zh-CN.pak'):
         assert required in selected
+    assert 'QtMultimedia.pyd' in selected
+    assert 'plugins/multimedia/ffmpegmediaplugin.dll' in selected
+    assert 'QtMultimediaWidgets.pyd' not in selected
+    assert 'plugins/multimedia/windowsmediaplugin.dll' not in selected
     assert not any('.debug.' in name or name.startswith(('qml/', 'include/', 'metatypes/')) for name in selected)
     assert 'QtDesigner.pyd' not in selected
     assert 'QtTest.pyd' not in selected

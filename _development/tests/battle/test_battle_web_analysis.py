@@ -16,6 +16,7 @@ from endfield_pcap.gui.config import save_app_config
 from app_test_support.scenarios.compact import sample
 from app_test_support.scenarios.energy import resource_snapshot
 from app_test_support.ui.qt import EVIDENCE
+from app_test_support.ui.window import main_window
 
 
 def evidence_snapshot():
@@ -59,6 +60,57 @@ def paint_frame(app, view):
     js(app, view, 'window.__testPainted=false;requestAnimationFrame(()=>requestAnimationFrame(()=>window.__testPainted=true))')
     wait(app, lambda: js(app, view, 'window.__testPainted') is True)
     QTest.qWait(100)
+
+
+@pytest.mark.parametrize('theme', [Theme.LIGHT, Theme.DARK])
+def test_shared_portraits_are_offline_scaled_and_persist_across_styles(main_window, app, theme):
+    setTheme(theme)
+    main_window.settings_page.gui_font_slider.setValue(150)
+    snapshot = evidence_snapshot()
+    snapshot['role_skill_stats'] = [dict(character_key='chr_0004_pelica', skill_key='chr_0004_pelica_normal_skill',
+        total_damage=200, cast_count=1, avg_damage=100, max_damage=100)]
+    dialog = BattleDetailDialog(snapshot, '角色头像验证', main_window)
+    dialog.show()
+    before = deepcopy(dialog.snapshot)
+    try:
+        assert dialog.avatar_check.isChecked() and dialog.timeline.show_character_avatars
+        assert not dialog.skill_table.item(0, 0).icon().isNull()
+        assert dialog.skill_table.iconSize().width() == 48
+        dialog.avatar_size_slider.setValue(150)
+        assert dialog.avatar_size_value.text() == '150%'
+        assert dialog.timeline.avatar_scale == 1.5
+        assert dialog.skill_table.iconSize().width() == 72
+        assert load_app_config(main_window.config_path).character_avatar_percent == 150
+        QTest.qWait(200)
+        dialog.grab().save(str(EVIDENCE/f'avatars-native-{theme.value}.png'))
+        dialog.view_mode_combo.setCurrentIndex(1)
+        view = dialog.web_analysis
+        wait(app, lambda: view.bridge.ready)
+        wait(app, lambda: js(app, view, '''(()=>{const images=[...document.querySelectorAll('.character-avatar')];
+            return images.length>0 && images.every(i=>i.complete && i.naturalWidth===128);})()'''))
+        assert not view.page.console_errors
+        assert js(app, view, "document.querySelector('.roster-card').title") == '佩丽卡'
+        assert js(app, view, "document.querySelectorAll('.role-cell .character-avatar').length") == len({
+            b.character_key for b in dialog.timeline._blocks if b.character_key.startswith('chr_')})
+        assert js(app, view, "getComputedStyle(document.querySelector('#roster .character-avatar')).width") == '72px'
+        dialog.avatar_size_slider.setValue(200)
+        wait(app, lambda: js(app, view, "getComputedStyle(document.querySelector('#roster .character-avatar')).width") == '96px')
+        paint_frame(app, view)
+        dialog.grab().save(str(EVIDENCE/f'avatars-web-{theme.value}.png'))
+        dialog.avatar_check.setChecked(False)
+        assert not dialog.timeline.show_character_avatars
+        assert load_app_config(main_window.config_path).show_character_avatars is False
+        wait(app, lambda: js(app, view, "getComputedStyle(document.querySelector('.character-avatar')).display") == 'none')
+        dialog.view_mode_combo.setCurrentIndex(0)
+        assert dialog.skill_table.item(0, 0).icon().isNull()
+        assert dialog.avatar_size_slider.value() == 200 and dialog.timeline.avatar_scale == 2
+        dialog.avatar_size_slider.setValue(100)
+        assert dialog.skill_table.iconSize().width() == 48
+        dialog.avatar_check.setChecked(True)
+        assert load_app_config(main_window.config_path).show_character_avatars
+        assert dialog.snapshot == before
+    finally:
+        dialog.close(); app.processEvents()
 
 
 @pytest.mark.parametrize('snapshot', [evidence_snapshot(), {}])
@@ -109,7 +161,8 @@ def test_web_interactions_units_evidence_hover_and_native_roundtrip(app):
         assert '90' in js(app, view, 'document.getElementById("tooltip").textContent')
         stamp = js(app, view, 'document.getElementById("hover-time").textContent')
         assert stamp.startswith('时间 ') and stamp.endswith('s')
-        assert abs(float(stamp[3:-1])-.525) < .01  # MouseEvent rounds to screen pixels.
+        pixel_seconds = js(app,view,'Analysis.duration / Analysis.plotWidth / 1000')
+        assert abs(float(stamp[3:-1])-.525) <= pixel_seconds+.001  # MouseEvent rounds to screen pixels.
         js(app, view, 'document.getElementById("maximize-details").click()')
         assert js(app, view, 'document.getElementById("inspector").classList.contains("maximized")')
         paint_frame(app, view)

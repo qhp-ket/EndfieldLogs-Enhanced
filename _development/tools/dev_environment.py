@@ -46,9 +46,16 @@ def probe(root, *, isolated=False):
                     missing.append(distribution)
                     errors[distribution] = f'{type(exc).__name__}: {exc}'
     manifest = root / '_internal/data/resource-manifest.json'
+    capabilities = {'sdl3': (root / '_internal/native/SDL3.dll').is_file()}
+    try:
+        multimedia = import_module('PySide6.QtMultimedia')
+        capabilities['window_capture'] = hasattr(multimedia,'QWindowCapture')
+    except ImportError:
+        capabilities['window_capture'] = False
     return dict(ready=compatible and not missing,
                 compatible=compatible, executable=sys.executable, python=platform.python_version(),
                 isolated=isolated, missing=missing, import_errors=errors,
+                optional_services=capabilities,
                 resource_manifest_present=manifest.exists(),
                 capture_key_present=(root / '_internal/secrets/client_privkey.pem').is_file(),
                 npcap_present=(Path(__import__('os').environ.get('SystemRoot', 'C:/Windows')) / 'System32/Npcap/wpcap.dll').is_file(),

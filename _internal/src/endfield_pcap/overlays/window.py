@@ -77,6 +77,7 @@ class OverlayWindow(QWidget):
         self._analysis_snapshot: dict[str, object] | None = None
         self._combo_snapshot: dict[str, object] | None = None
         self._buff_snapshot: dict[str, object] | None = None
+        self._input_snapshot = None
         self._close_hovered = False
         self._close_pressed = False
 
@@ -96,6 +97,8 @@ class OverlayWindow(QWidget):
         self.webview.setMouseTracking(True)
         self.webview.loadStarted.connect(self._handle_load_started)
         self.webview.loadFinished.connect(self._handle_load_finished)
+
+        self.content_size = None
 
         script = QWebEngineScript()
         script.setName("endfield-host-bridge")
@@ -120,7 +123,14 @@ class OverlayWindow(QWidget):
         previous = self.entry
         self.entry = entry
         self.setWindowTitle(entry.name)
-        if entry.geometry is not None or previous.geometry is not None:
+        if self.content_size is not None and entry.geometry is None and previous.geometry is not None:
+            self.content_size.scale = 1.
+            self.content_size.bar_width = None
+            self.content_size.reset_position = True
+            self.content_size.default_anchor = True
+            self.content_size.pending = None
+            self.content_size.timer.stop()
+        if entry.geometry != previous.geometry:
             self._suppress_geometry_callback = True
             try:
                 self._apply_initial_geometry()
@@ -144,6 +154,8 @@ class OverlayWindow(QWidget):
 
     def resizeEvent(self, event) -> None:  # noqa: N802
         self.webview.resize(self.size())
+        if self.content_size is not None:
+            self.content_size.window_resized()
         self.close_button.move(
             max(0, self.width() - self.close_button.width() - 8),
             min(8, max(0, self.height() - self.close_button.height())),
@@ -158,6 +170,8 @@ class OverlayWindow(QWidget):
         super().resizeEvent(event)
 
     def moveEvent(self, event) -> None:  # noqa: N802
+        if self.content_size is not None:
+            self.content_size.window_moved()
         self._emit_geometry_changed()
         super().moveEvent(event)
 
@@ -276,6 +290,10 @@ class OverlayWindow(QWidget):
         self._apply_window_flags()
 
     def _load_overlay(self) -> None:
+        if (self.content_size is None and self.entry.source_type == OverlaySourceType.BUILTIN
+                and self.entry.source_value in ('damage', 'combo_skill')):
+            from endfield_pcap.overlays.content_size import ContentSizeBridge
+            self.content_size = ContentSizeBridge(self)
         template = template_for(self.entry)
         if template.entry is not None:
             url = QUrl.fromLocalFile(str(template.entry))
@@ -316,6 +334,7 @@ class OverlayWindow(QWidget):
             self._push_analysis_snapshot()
             self._push_combo_snapshot()
             self._push_buff_snapshot()
+            self._push_snapshot('endfield-input-snapshot',self._input_snapshot)
 
     def apply_analysis_snapshot(self, message: dict[str, object]) -> None:
         if not {'analysis_snapshot', 'analysis_summary'}.intersection(template_for(self.entry).subscriptions):
@@ -351,6 +370,12 @@ class OverlayWindow(QWidget):
     def _push_buff_snapshot(self) -> None:
         self._push_snapshot("endfield-buff-snapshot", self._buff_snapshot)
 
+    def apply_input_snapshot(self,message):
+        if 'input_snapshot' not in template_for(self.entry).subscriptions:
+            return
+        self._input_snapshot = copy.deepcopy(message)
+        self._push_snapshot('endfield-input-snapshot',self._input_snapshot)
+
     def _push_snapshot(self, event_name: str, message: dict[str, object] | None) -> None:
         if (
             not self.config.use_in_process_snapshots
@@ -367,6 +392,18 @@ class OverlayWindow(QWidget):
 
     def _push_overlay_state(self) -> None:
         config = overlay_config(self.entry)
+        defaults = template_for(self.entry).window
+        config['referenceSize'] = dict(width=defaults.get('default_width', self.config.default_width),
+                                       height=defaults.get('default_height', self.config.default_height))
+        if self.entry.source_type == OverlaySourceType.BUILTIN and self.entry.source_value == 'combo_skill':
+            from endfield_pcap.data.avatars import avatar_catalog
+            config['characterAvatars'] = avatar_catalog()
+            config['fitReset'] = self.content_size.reset_position
+        if self.entry.source_type == OverlaySourceType.BUILTIN and self.entry.source_value == 'damage':
+            from endfield_pcap.data.avatars import avatar_catalog
+            config['characterAvatars'] = avatar_catalog()
+            config['waitForSnapshot'] = self._analysis_snapshot is not None
+            config['fitReset'] = self.content_size.reset_position
         config['closeHovered'] = self._close_hovered and not self.entry.click_through
         payload = json.dumps(
             config,
@@ -391,6 +428,9 @@ class OverlayWindow(QWidget):
                 height=geometry.height(),
             )
         self.entry = replace(self.entry, geometry=geometry_value)
+        if self.content_size is not None and self.content_size.scale is not None:
+            self.entry = replace(self.entry, template_settings={
+                **self.entry.template_settings, self.content_size.scale_setting: self.content_size.scale})
         self.config.on_geometry_changed(self.entry.id, geometry_value)
 
     def _handle_mouse_press(self, local_pos: QPoint, global_pos: QPoint) -> None:

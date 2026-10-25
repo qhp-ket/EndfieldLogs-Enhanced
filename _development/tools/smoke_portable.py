@@ -26,7 +26,7 @@ def main():
     launcher.PROFILE = output / 'profile'
     assert launcher.main(['--check']) == 0
 
-    from PySide6.QtCore import QCoreApplication, QEvent, QTimer, Qt
+    from PySide6.QtCore import QCoreApplication, QEvent, QTimer, Qt, QUrl
     from PySide6.QtGui import QFont, QKeyEvent
     from PySide6.QtWidgets import QApplication, QLabel, QMessageBox
     from qfluentwidgets import Slider, Theme, setTheme
@@ -59,6 +59,7 @@ def main():
     setTheme(Theme.DARK)
     gui_main.MainWindow._ensure_game_directory_ready = lambda self: True
     gui_main.MainWindow._update_overlay_shortcut = lambda self: None
+    gui_main.MainWindow._schedule_update_check = lambda self: None
     auto_start = gui_main.MainWindow._auto_start_service
     gui_main.MainWindow._auto_start_service = lambda self: None
     config_path = launcher.PROFILE / 'settings.json'
@@ -94,11 +95,14 @@ def main():
         prompts.append(box.windowTitle())
         next(button for button in box.buttons() if button.text() == '暂不设置').click()
     QTimer.singleShot(0, defer_game_setup)
+    assert not window.app_config.start_capture_on_launch
+    window.app_config.start_capture_on_launch = True
     auto_start(window)
     auto_start(window)
     assert len(prompts) == 1 and not window.service_controller.is_running()
     assert window.isVisible() and window.home_page.start_service_btn.isEnabled()
     window.app_config.service.dll_dir = expected_game_exe.parent
+    window.app_config.start_capture_on_launch = False
     window._refresh_settings_page()
     window.switchTo(window.overlay_page)
     wait_until = time.monotonic()+0.5
@@ -112,6 +116,15 @@ def main():
                   web_console_errors=[], parsed_battle=None,
                   default_game_exe=str(expected_game_exe), font_slider_verified=True,
                   missing_game_prompt_verified=True)
+    from endfield_pcap.data.avatars import ROOT as portraits_root, avatar_catalog
+    from PySide6.QtGui import QImage
+    assert portraits_root.is_relative_to(root)
+    portraits = avatar_catalog()
+    assert len(portraits['portraits']) >= 35
+    assert all(QImage(QUrl(url).toLocalFile()).width() == 128 for url in portraits['portraits'].values())
+    result['offline_portrait_count'] = len(portraits['portraits'])
+    assert not window.app_config.start_capture_on_launch
+    assert window.settings_page.update_status.text() == '未检测到新版'
     assert result['isolated'] and result['executable_inside_package']
     if app.platformName() == 'windows':
         window.screen().grabWindow(int(window.winId())).save(str(output / 'main-gui.png'))
@@ -167,6 +180,36 @@ def main():
         worker.close()
     result['capture_started'] = window.service_controller.is_running()
     assert not result['capture_started']
+    # Exercise the packaged native receivers in their own process; the real
+    # game is not selected, so no foreground user input is collected here.
+    from endfield_pcap.inputlog.controller import InputController
+    inputs=InputController()
+    inputs.start(output/'missing-game/Endfield.exe',output/'input-smoke')
+    try:
+        wait(lambda:inputs.snapshot()['status'] not in ('starting','stopped'))
+        input_status=inputs.snapshot()
+        assert input_status['status']=='waiting_game',input_status
+        assert not input_status.get('errors'),input_status
+    finally:
+        inputs.stop(wait=True)
+    sidecars=list((output/'input-smoke').rglob('*.input.jsonl'))
+    assert len(sidecars)==1
+    events=[json.loads(line) for line in sidecars[0].read_text(encoding='utf8').splitlines()]
+    assert any(row['type']=='end' for row in events)
+    assert not any(row['type']=='input' for row in events)
+    result['input_native_process_verified']=not inputs.running
+    from PySide6.QtMultimedia import QWindowCapture,QMediaCaptureSession,QVideoSink
+    from endfield_pcap.vision.controller import VisionController
+    visual=VisionController(output/'missing-game/Endfield.exe',parent=window)
+    try:
+        visual.set_enabled(True)
+        wait(lambda:visual._latest is not None)
+        visual_state=visual.take_snapshot()
+        assert visual_state is not None
+        assert '不可用' not in visual_state['snapshot']['status'],visual_state
+        result['multimedia_worker_verified']=True
+    finally:
+        visual.stop()
     (output / 'result.json').write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding='utf8')
     dialog.close()
     window.close()

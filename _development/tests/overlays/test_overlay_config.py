@@ -3,7 +3,7 @@ from PySide6.QtCore import QPoint, QPointF, QEvent, Qt
 from PySide6.QtGui import QWheelEvent
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QFormLayout
-from endfield_pcap.gui.shared.widgets import IntegerStepEdit
+from qfluentwidgets import Slider
 import endfield_pcap.overlays.manager as overlay_host
 from endfield_pcap.models import OverlayGeometry
 from endfield_pcap.overlays.templates import template_for
@@ -42,15 +42,15 @@ def test_one_form_alignment_and_font_size_for_every_builtin(main_window, app):
             fields.append(form.itemAt(row, QFormLayout.ItemRole.FieldRole).widget().x())
         assert len(set(labels)) == len(set(fields)) == 1, (builtin, labels, fields)
         assert form.rowCount() == 11 + len(template_for(current).settings)
-        assert isinstance(page.font_size_edit, IntegerStepEdit)
+        assert isinstance(page.font_size_slider, Slider)
         assert window.grab().save(str(EVIDENCE / f"gui-config-{builtin}.png"))
-    # Integer input persists font size while geometry remains fixed.
+    # The font multiplier persists without changing the saved geometry.
     page.show_entry(window._selected_overlay())
     before = window._selected_overlay().geometry
-    page.font_size_edit.setValue(175)
+    page.font_size_slider.setValue(175)
     assert window._selected_overlay().font_scale == 1.75
     assert window._selected_overlay().geometry == before
-    assert page.font_size_value.text() == "%"
+    assert page.font_size_value.text() == "175%"
 
 
 def test_buff_templates_replacement_filters_scroll_and_reopen(app):

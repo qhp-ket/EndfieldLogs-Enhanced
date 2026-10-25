@@ -21,6 +21,7 @@
 | --- | --- |
 | 精简运行数据 `runtime-data.zip` 及清单 | [ZMDLogs](https://zmdlogs.com/) 3.0.12（2026-10-16）完整发行包；固定下载地址及 SHA-256 见 `_internal/data/resource-manifest.json` |
 | 中文名称、技力与技能帧规则 | [AKEData 数据站](https://data.akedata.wiki/)、[网站](https://www.akedata.wiki/)及 [AKEDatabase 仓库](https://github.com/NagiYume/AKEDatabase)；版本、提交和原表哈希保留在数据的 `source` / `_source` 中 |
+| 圆形角色头像 | AKEData 数据站的 `charroundicon` 图片，缩放并圆形裁切为透明 PNG；角色 ID、原始链接和校验值见 `_internal/data/ui/characters/manifest.json`，维护方式见同目录 README |
 | 解析测试中的文案、公式与审核证据 | 固定 ZMDLogs 资源基线及 AKEData 文案快照；版本、表名与哈希见测试 JSON 和 fixtures 说明 |
 | 官网风格分析界面参考 | [Endfield Logs Suite](https://github.com/medps16000/endfield-suite-open)，参考提交 `4e65587b36feb4081eadf669391db64fd7469807`；MIT 原文保留在 `_internal/src/endfield_pcap/gui/battle/assets/THIRD_PARTY_NOTICE.txt` |
 
@@ -34,3 +35,13 @@
 游戏名称、角色及商标属于各自权利人。本项目代码许可不重新授权这些数据或名称。
 
 源码依赖及 GPLv3 的选择见 `_development/docs/licensing.md`。
+
+## 输入与视觉功能
+
+SDL3 来自 [libsdl-org/SDL](https://github.com/libsdl-org/SDL)，采用 zlib 许可；
+版本、官方二进制来源和校验值见 `_internal/native/manifest.json`，许可原文为同目录 `SDL3-LICENSE.txt`。
+开发环境按清单恢复，便携包附带已校验运行库。窗口捕获复用 Qt Multimedia 的 FFmpeg / WGC 后端。
+
+技术参考致谢：[EndfieldComboHUD](https://github.com/naokotg/EndfieldComboHUD)、
+[EndfieldHUD](https://github.com/YuumiSama/EndfieldHUD)，以及 EndfieldRotPilot、EndfieldCDHUD 的输入状态机和 HUD 思路。
+输入与视觉模块自行实现，未复制上述参考软件的代码、二进制或图片。

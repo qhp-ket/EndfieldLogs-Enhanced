@@ -152,6 +152,7 @@ def test_startup_failure_does_not_become_stopped_until_cleanup_finishes(monkeypa
 
 def test_one_automatic_attempt_and_waiting_game_is_stoppable(main_window, monkeypatch, tmp_path, app):
     window = main_window
+    window.app_config.start_capture_on_launch = True
     controller = window.service_controller
     starts = []
     key = tmp_path / 'synthetic-presence-only.pem'
@@ -182,6 +183,7 @@ def test_one_automatic_attempt_and_waiting_game_is_stoppable(main_window, monkey
 @pytest.mark.parametrize('missing', ['npcap', 'key', 'directory'])
 def test_missing_prerequisite_retains_history(main_window, missing, monkeypatch, app, tmp_path):
     window = main_window
+    window.app_config.start_capture_on_launch = True
     monkeypatch.setattr(capture_actions, 'has_npcap', lambda: missing != 'npcap')
     monkeypatch.setattr(capture_actions, '_is_valid_game_dir', lambda path: missing != 'directory')
     monkeypatch.setattr(capture_actions, '_run_game_directory_wizard', lambda *args: False)
@@ -213,7 +215,8 @@ def test_logs_collect_off_page_copy_clear_only_display_and_open_folder(main_wind
     window.switchTo(window.home_page)
     logging.getLogger(__name__).warning('background runtime log')
     window._drain_queue()
-    assert 'background runtime log' in page.log_view.toPlainText()
+    assert 'background runtime log' in '\n'.join(page._lines)
+    assert page.log_view.toPlainText() == ''  # Off-page logs don't relayout Qt text.
     page.copy_btn.click()
     assert 'background runtime log' in QApplication.clipboard().text()
     opened = []
@@ -225,8 +228,10 @@ def test_logs_collect_off_page_copy_clear_only_display_and_open_folder(main_wind
     assert disk.read_text(encoding='utf8') == 'keep this file'
     logging.getLogger(__name__).warning('after clear')
     window._drain_queue()
-    assert 'after clear' in page.log_view.toPlainText()
+    assert 'after clear' in '\n'.join(page._lines)
     for i in range(900): page.append_log(f'line {i}')
+    assert len(page._lines) == 800
+    page.flush_display()
     assert page.log_view.document().blockCount() == 800
     window.switchTo(page); QTest.qWait(120)
     assert window.grab().save(str(EVIDENCE / 'gui-runtime-logs.png'))
@@ -246,7 +251,10 @@ def launcher(tmp_path):
 def test_detached_launcher_passes_arguments_and_logs_native_output(tmp_path, monkeypatch):
     launch = launcher(tmp_path)
     calls = []
-    monkeypatch.setattr(launch.subprocess, 'Popen', lambda args, **kwargs: calls.append((args, kwargs)))
+    def spawn(args, **kwargs):
+        calls.append((args, kwargs))
+        Path(kwargs['env']['ENDFIELD_GUI_READY_FILE']).touch()
+    monkeypatch.setattr(launch.subprocess, 'Popen', spawn)
     monkeypatch.setattr(launch, 'bootstrap', lambda: pytest.fail('parent must not initialize GUI'))
     assert launch.main(['--detach', '--ws-port', '31234']) == 0
     args, options = calls[0]
@@ -276,32 +284,83 @@ def test_detached_launcher_keeps_isolated_environment_flag(tmp_path, monkeypatch
         executable=launch.sys.executable, platform=launch.sys.platform,
         flags=SimpleNamespace(isolated=True)))
     calls = []
-    monkeypatch.setattr(launch.subprocess, 'Popen', lambda command, **kwargs: calls.append(command))
+    def spawn(command, **kwargs):
+        calls.append(command)
+        Path(kwargs['env']['ENDFIELD_GUI_READY_FILE']).touch()
+    monkeypatch.setattr(launch.subprocess, 'Popen', spawn)
     assert launch.launch_detached([]) == 0
     assert calls[0][1:3] == ['-I', '-B']
 
 
-def test_actual_windowless_child_returns_without_waiting_and_has_no_console(tmp_path, monkeypatch):
+def test_actual_windowless_child_waits_for_ready_but_not_shutdown_and_has_no_console(tmp_path, monkeypatch):
     launch = launcher(tmp_path)
     child = tmp_path / 'windowless_probe.py'
-    child.write_text('''import ctypes, json, pathlib, time
+    child.write_text('''import ctypes, json, os, pathlib, time
 root = pathlib.Path(__file__).parent
+time.sleep(.3)
+(root / "result.json").write_text(json.dumps({"console": bool(ctypes.windll.kernel32.GetConsoleWindow())}), encoding="utf8")
+pathlib.Path(os.environ['ENDFIELD_GUI_READY_FILE']).touch()
 deadline = time.monotonic() + 8
 while not (root / "release").exists() and time.monotonic() < deadline:
     time.sleep(.01)
-(root / "result.json").write_text(json.dumps({"console": bool(ctypes.windll.kernel32.GetConsoleWindow())}), encoding="utf8")
+(root / "stopped").touch()
 ''', encoding='utf8')
     monkeypatch.setattr(launch, '__file__', str(child))
     monkeypatch.setattr(launch, 'ROOT', tmp_path)
     try:
+        started = time.monotonic()
         assert launch.launch_detached([]) == 0
-        assert not (tmp_path / 'result.json').exists()
+        assert time.monotonic()-started >= .3
+        assert json.loads((tmp_path / 'result.json').read_text(encoding='utf8')) == {'console': False}
+        assert not (tmp_path / 'stopped').exists()
     finally:
         (tmp_path / 'release').touch()
     deadline = time.monotonic() + 5
-    while not (tmp_path / 'result.json').exists() and time.monotonic() < deadline:
+    while not (tmp_path / 'stopped').exists() and time.monotonic() < deadline:
         time.sleep(.01)
-    assert json.loads((tmp_path / 'result.json').read_text(encoding='utf8')) == {'console': False}
+    assert (tmp_path / 'stopped').exists()
+
+
+@pytest.mark.parametrize('exit_code', [0, 2])
+def test_child_exit_before_window_is_startup_failure(tmp_path, monkeypatch, capsys, exit_code):
+    from types import SimpleNamespace
+    launch = launcher(tmp_path)
+    monkeypatch.setattr(launch.subprocess, 'Popen', lambda *args, **kwargs: SimpleNamespace(poll=lambda: exit_code))
+    assert launch.launch_detached([]) == (exit_code or 1)
+    output = capsys.readouterr().out
+    assert '正在打开 GUI' in output and 'launcher.log' in output
+    assert not list((launch.PROFILE/'logs').glob('startup-*'))
+
+
+def test_gui_reports_ready_after_window_is_exposed(app, tmp_path, monkeypatch):
+    from PySide6.QtCore import QTimer
+    from PySide6.QtWidgets import QWidget
+    import endfield_pcap.gui.main as gui_main
+    from endfield_pcap.gui.config import AppConfig, save_app_config
+    config = tmp_path/'settings.json'
+    save_app_config(AppConfig(service=default_service_config()), config)
+    windows, states = [], []
+    class ProbeWindow(QWidget):
+        def __init__(self, *args):
+            super().__init__()
+            windows.append(self)
+    monkeypatch.setattr(gui_main, 'MainWindow', ProbeWindow)
+    def ready():
+        window = windows[0]
+        states.append((window.isVisible(), window.windowHandle().isExposed()))
+        window.close()
+        app.quit()
+    timer = QTimer()
+    timer.setSingleShot(True)
+    timer.timeout.connect(app.quit)
+    timer.start(5000)
+    try:
+        assert gui_main.run_gui(config_path=config, on_ready=ready) == 0
+        assert states == [(True, True)]
+    finally:
+        timer.stop()
+        for window in windows:
+            window.close()
 
 
 def test_native_startup_dialog_includes_log_location(tmp_path, monkeypatch):

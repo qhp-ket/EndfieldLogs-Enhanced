@@ -1,7 +1,7 @@
 'use strict';
 const A = window.Analysis = {
   data: null, bridge: null,
-  state: {character:'', buffs:false, fallback:false, zoom:100, graphics:100, unit:'seconds', details:false, detailsMaximized:false, expanded:[], roleWidth:120, trackWidth:200, tab:'timeline', curve:'damage'},
+  state: {character:'', avatars:true, avatarPercent:100, buffs:false, fallback:false, zoom:100, graphics:100, unit:'seconds', details:false, detailsMaximized:false, expanded:[], roleWidth:120, trackWidth:200, tab:'timeline', curve:'damage'},
   colors: ['#61c4df','#8ccc4b','#f0c971','#b291ed','#ff8b72'],
   categoryColors: {'重击':'#567594','战技':'#168c7b','连携':'#8060b4','大招':'#ae761d','其他':'#69798b','BUFF':'#ad526a'},
   $: id => document.getElementById(id),
@@ -27,7 +27,16 @@ const A = window.Analysis = {
   changed() { A.hideTip(); A.bridge.saveState(JSON.stringify(A.state)); },
   fail(message) { A.$('record-name').textContent='战斗分析加载失败'; A.$('failure').hidden=false; A.$('failure').textContent=String(message); }
 };
+A.avatar=function(key,name,size=32) {
+  if(!String(key).startsWith('chr_'))return '';
+  const catalog=A.data.avatars||{},src=(catalog.portraits||{})[(catalog.aliases||{})[key]||key]||catalog.placeholder;
+  return src?`<img class="character-avatar" src="${A.esc(src)}" alt="" title="${A.esc(name)}" draggable="false" style="--avatar-size:${size}">`:'';
+};
 window.addEventListener('error',event=>A.fail(event.message));
 window.addEventListener('unhandledrejection',event=>A.fail(event.reason));
 document.addEventListener('mouseleave',()=>A.hideTip());
 document.addEventListener('scroll',()=>A.hideTip(),true);
+document.addEventListener('error',event=>{
+  const image=event.target,placeholder=A.data?.avatars?.placeholder;
+  if(image instanceof HTMLImageElement && image.classList.contains('character-avatar') && placeholder && image.getAttribute('src')!==placeholder) image.src=placeholder;
+},true);

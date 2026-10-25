@@ -7051,7 +7051,7 @@ def _duration_ms_from_seconds(value: str | None) -> int | None:
 def _build_iso_datetime(reference_date: date, timestamp_ms: int, rollover_days: int = 0) -> str:
     midnight = datetime.combine(reference_date, time.min)
     result = midnight + timedelta(days=rollover_days, milliseconds=timestamp_ms)
-    return result.astimezone().isoformat(timespec="seconds")
+    return result.astimezone().isoformat(timespec="milliseconds")
 
 
 def _normalize_buff_id(buff_id: str | None) -> str:

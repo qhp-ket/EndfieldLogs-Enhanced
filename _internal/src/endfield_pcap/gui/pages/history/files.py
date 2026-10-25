@@ -63,6 +63,8 @@ class HistoryFileActions:
             self._trace_signatures[new] = self._trace_signatures.pop(path)
         self.app_config.imported_trace_files = [new if p == path else p for p in self.app_config.imported_trace_files]
         self.app_config.hidden_history_records = [relocate_key(k, path, new) for k in self.app_config.hidden_history_records]
+        from endfield_pcap.inputlog.bindings import relocate_bindings
+        self.app_config.input_log_bindings = relocate_bindings(self.app_config.input_log_bindings, path, new)
         for attribute in ('_history_displayed_key', '_history_detail_key'):
             setattr(self, attribute, relocate_key(getattr(self, attribute), path, new))
         self._history_selection_order = [(str(new) if p == str(path) else p, i) for p, i in self._history_selection_order]

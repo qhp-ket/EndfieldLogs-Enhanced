@@ -38,7 +38,12 @@ class HistoryActions(HistoryFileActions):
         record = records[-1]
         if (self._history_detail_snapshot is not None and self._history_detail_key == record_key(record)
                 and self._history_detail_signature == self._record_signature(record)):
-            self._show_history_detail(self._history_detail_snapshot, record_label(record))
+            if self._history_detail_dialog is not None:
+                self._history_detail_dialog.showNormal()
+                self._history_detail_dialog.raise_()
+                self._history_detail_dialog.activateWindow()
+            else:
+                self._show_history_detail(self._history_detail_snapshot, record_label(record))
         else:
             self._start_history_analysis([record], open_details=True)
 
@@ -47,6 +52,9 @@ class HistoryActions(HistoryFileActions):
         if self._history_detail_dialog is not None:
             self._history_detail_dialog.close()
         dialog = BattleDetailDialog(snapshot, label, self)
+        records = self._selected_history_records()
+        if records:
+            dialog.input_history.set_record(records[-1])
         self._history_detail_dialog = dialog
         dialog.finished.connect(lambda: self._forget_history_dialog(dialog))
         dialog.show()
@@ -54,6 +62,7 @@ class HistoryActions(HistoryFileActions):
     def _forget_history_dialog(self, dialog) -> None:
         if self._history_detail_dialog is dialog:
             self._history_detail_dialog = None
+            self._release_history_caches()
 
     def _start_history_analysis(self, records, *, open_details=False) -> None:
         if not records:
@@ -95,6 +104,7 @@ class HistoryActions(HistoryFileActions):
                 errors.append(f'{record.label}: {error}')
             else:
                 apply_snapshot_summary(record, snapshot)
+                if hasattr(record,'snapshot'):record.snapshot={}
         self._refresh_record_list()
         record, snapshot, error = results[-1]
         self._history_record = record
