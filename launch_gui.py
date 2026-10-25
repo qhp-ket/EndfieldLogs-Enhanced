@@ -117,7 +117,8 @@ def prepare_config(game_dir: Path | None = None, ws_port: int | None = None) -> 
     from endfield_pcap.gui.config import save_app_config
 
     path = PROFILE / "settings.json"
-    if path.exists():
+    backup = path.with_suffix(path.suffix + '.bak')
+    if path.exists() or backup.exists():
         config = load_app_config(path)
     else:
         # Write an explicit first config so the GUI never falls back to an

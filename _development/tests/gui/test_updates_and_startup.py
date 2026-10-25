@@ -37,6 +37,15 @@ def test_versions_ignore_and_trusted_download_destination():
     assert releases.release_update(payload, '0.1.0', '0.2.0')
 
 
+def test_patch_release_updates_old_installation_but_not_same_or_newer_version():
+    payload = release()
+    payload['tag_name'] = 'v0.1.1'
+    assert releases.release_update(payload, '0.1.0')['version'] == '0.1.1'
+    assert releases.release_update(payload, '0.1.1') is None
+    payload['tag_name'] = 'v0.1.0'
+    assert releases.release_update(payload, '0.1.1') is None
+
+
 def test_no_stable_release_is_normal_and_requests_are_bounded(monkeypatch):
     def missing(request, timeout):
         assert request.full_url == releases.API and timeout == 8

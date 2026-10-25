@@ -248,6 +248,43 @@ def launcher(tmp_path):
     return module
 
 
+@pytest.mark.parametrize('override', [False, True])
+def test_launcher_restores_backup_only_profile_and_applies_explicit_overrides(tmp_path, override):
+    from endfield_pcap.gui.config import AppConfig, load_app_config, save_app_config
+    launch = launcher(tmp_path)
+    path = launch.PROFILE / 'settings.json'
+    backup = path.with_suffix(path.suffix + '.bak')
+    settings = AppConfig(service=default_service_config())
+    settings.gui_font_percent = 143
+    settings.theme_mode = 'light'
+    settings.service.ws_port = 31235
+    settings.service.dll_dir = tmp_path / 'saved-game'
+    save_app_config(settings, path)
+    path.rename(backup)
+    saved_backup = backup.read_bytes()
+    game = tmp_path / 'selected-game'
+    assert launch.prepare_config(game if override else None, 31236 if override else None) == path
+    restored = load_app_config(path)
+    assert restored.gui_font_percent == 143 and restored.theme_mode == 'light'
+    assert restored.service.ws_port == (31236 if override else 31235)
+    assert restored.service.dll_dir == (game if override else settings.service.dll_dir)
+    assert backup.read_bytes() == saved_backup
+
+
+def test_launcher_first_profile_uses_defaults_with_existing_legacy_settings(tmp_path, monkeypatch):
+    from endfield_pcap.gui import config
+    launch = launcher(tmp_path)
+    legacy = tmp_path / 'old-installation.json'
+    settings = config.AppConfig(service=default_service_config())
+    settings.gui_font_percent = 143
+    config.save_app_config(settings, legacy)
+    monkeypatch.setattr(config, '_legacy_config_paths', lambda: [legacy])
+    fresh = config.load_app_config(launch.prepare_config())
+    assert fresh.gui_font_percent == config.AppConfig(service=default_service_config()).gui_font_percent
+    assert fresh.service.log_dir == launch.PROFILE / 'logs/battles'
+    assert [entry.source_value for entry in fresh.overlays if entry.enabled] == ['damage']
+
+
 def test_detached_launcher_passes_arguments_and_logs_native_output(tmp_path, monkeypatch):
     launch = launcher(tmp_path)
     calls = []
