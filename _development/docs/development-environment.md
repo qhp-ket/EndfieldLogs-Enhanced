@@ -1,40 +1,34 @@
 # 开发环境初始化
 
-在 Windows x64 项目根目录执行 `Setup-Dev.cmd`，完成后仍用 `Start-GUI.cmd` 启动。
+Windows x64 项目根目录执行 `Setup-Dev.cmd`，完成后用 `Start-GUI.cmd` 启动。
 
-- 已有完整环境：依赖能够实际导入就直接复用，不比较版本，不执行 pip。
-- 项目环境缺少依赖：只安装无法导入的包，不主动升级已有依赖。
-- 没有可用 Python：下载官方 Python 到项目缓存，建立 `.venv` 并安装缺少的依赖。
+| 当前环境 | 初始化行为 |
+| --- | --- |
+| Python 与依赖可导入 | 直接复用 |
+| 项目环境缺少依赖 | 安装缺项 |
+| 系统环境部分可用 | 建立项目 `.venv` 并补齐 |
+| 缺少 Python | 下载并校验官方 CPython 3.14.2 NuGet 包，再建立 `.venv` |
 
-系统只有部分依赖且没有完整项目环境时，会建立独立 `.venv`，不更改全局或用户级包。
-PySide6 发行物自带 Qt 和 WebEngine，无需另装 Qt SDK 或 Node 服务。
-脚本从源码附带的精简数据包恢复缺少的运行数据，校验恢复包及逐文件 SHA-256；
-数据准备无需网络，也不恢复原始配置或覆盖开发版规则。脚本不安装 Npcap，不改系统 PATH、注册表、
-游戏目录或本地敏感文件。完整原始数据不提交 Git。
+依赖按实际导入检查，已有版本可继续使用。PySide6 自带 Qt/WebEngine。
+运行数据由源码附带的精简包离线恢复，恢复包和文件逐项核对 SHA-256，开发规则取当前源码。
 
 ```powershell
-.\Setup-Dev.cmd -Check                 # 只读检查；缺项返回退出码 2
-.\Setup-Dev.cmd                        # 自动复用或补齐
-.\Setup-Dev.cmd -Isolated              # 建立独立项目环境
+.\Setup-Dev.cmd -Check                 # 只读检查；缺项返回 2
+.\Setup-Dev.cmd                        # 复用或补齐
+.\Setup-Dev.cmd -Isolated              # 独立项目环境
 .\Setup-Dev.cmd -PythonPath C:/Python314/python.exe -Isolated
 ```
 
-只保留 Windows x64 平台检查；已有 Python 和依赖通过实际导入判断，不比较版本。
-没有解释器时默认下载已验证的 CPython 3.14.2 NuGet 包，
-其 SHA-256 用于校验下载文件，不限制已有解释器。
+环境路径限定在项目内。已有环境不兼容时，用 `-EnvironmentPath .venv-other -Isolated` 另建。
+失败后保留环境和缓存，可重跑续用。
 
-已有 `.venv` 不兼容时不会被覆盖，可指定 `-EnvironmentPath .venv-other -Isolated`。
-环境路径须在项目内；`.venv*`、下载缓存和环境选择记录均由 Git 忽略。
-失败时保留环境和缓存，重跑同一命令即可继续。
+## 依赖与离线安装
 
-## 依赖清单与离线安装
+- `environment/requirements-runtime.txt`：运行依赖。
+- `environment/requirements-dev.txt`：另加 pytest、packaging。
+- `portable/runtime-requirements.txt`：便携包实际依赖版本记录。
 
-`_development/environment/requirements-runtime.txt` 列出运行依赖，
-`requirements-dev.txt` 另加 pytest、packaging。两份清单均不锁版本。
-`_development/portable/runtime-requirements.txt` 是已有便携包的构建记录，不作为开发安装限制。
-初始化根据实际导入结果安装缺项；包的传递依赖由 pip 处理，不额外执行版本匹配检查。
-
-默认从官方 PyPI 安装。离线时可提供适合目标 Python/Windows 的 wheels：
+安装源为官方 PyPI，传递依赖交给 pip。离线首次安装需准备适配 Python/Windows 的完整 wheels 和解释器归档：
 
 ```powershell
 .\Setup-Dev.cmd -Isolated -PythonSource Download -Offline `
@@ -42,33 +36,19 @@ PySide6 发行物自带 Qt 和 WebEngine，无需另装 Qt SDK 或 Node 服务�
   -Wheelhouse "D:/Resources/dev-env-wheelhouse"
 ```
 
-已有完整环境不需要 wheel 目录或网络。离线首次安装需要备齐包及传递依赖，
-缺文件时明确报错，不把未安装报告成成功。缓存位于 `_development/cache/`。
+缓存位于 `_development/cache/`；缺文件时报错。
 
-## 启动与资源
+## 启动与验证
 
-`Start-GUI.cmd` 优先级：显式 `ENDFIELD_GUI_PYTHON`、便携包内 Python、
-初始化记录的项目环境、默认 `.venv`、系统 Python。
-环境选择只写入 `.dev-gui/dev-python.txt`，不改已有 GUI 设置。
-虚拟环境不混入 `_internal/python_deps`；便携包使用随包依赖。
+解释器优先级：`ENDFIELD_GUI_PYTHON` → 便携 Python → 初始化记录 → `.venv` → 系统 Python。
+环境选择写入 `.dev-gui/dev-python.txt`；虚拟环境使用自己的依赖，便携包使用随包依赖。
 
-离线分析可直接使用本地日志；实时抓包需要 Npcap 和自己的游戏安装。
-详见 [运行资源说明](runtime-resources.md)。环境检查只报告资源清单是否存在，
-运行数据默认离线恢复，无需 `-ResourceArchive`；该参数保留用于官网外部组件。
-单独准备数据用 `python -B _development/tools/prepare_resources.py`。
-完整资源验证另执行：
+本地日志可直接离线分析，实时抓包另需 Npcap 和游戏安装。资源检查 `--check` 核对清单是否存在；完整验证使用：
 
 ```powershell
+python -B _development/tools/prepare_resources.py
 python -B _development/tools/audit_runtime_data.py
 python -B _development/tools/audit_runtime_data.py --exercise
 ```
 
-## 回归
-
-```powershell
-.venv/Scripts/python.exe -B _development/run_tests.py live
-.venv/Scripts/python.exe -B _development/run_tests.py parser_core
-.venv/Scripts/python.exe -B _development/run_tests.py uploader_core
-```
-
-复用现有环境时改用对应解释器。普通回归使用公开合成样本；官网基准对照和实际游戏采集单独验证。
+`-ResourceArchive` 用于官网外部组件。资源维护见 [运行资源](runtime-resources.md)，回归命令见 [测试分类](../tests/README.md)。

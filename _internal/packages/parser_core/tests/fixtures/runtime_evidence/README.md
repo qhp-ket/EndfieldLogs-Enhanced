@@ -1,8 +1,4 @@
-# Static regression evidence
+# 静态回归证据
 
-These three projections retain upstream formula and approval review evidence
-used only by tests. They are not battle recordings, private keys or runtime
-parser inputs. They came from the pinned ZMDLogs 3.0.12 resource baseline.
-
-Keep them with the tests rather than in the portable runtime data. Their source
-and resource proof hashes remain unchanged; JSON whitespace is compacted.
+三份投影来自固定 ZMDLogs 3.0.12 资源基线，保留公式与批准审查证据，仅用于测试。
+来源及资源证明哈希保持原值，JSON 空白已压缩；文件随测试保存，便携运行数据单独收集。

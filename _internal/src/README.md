@@ -30,8 +30,7 @@
 - `settings/`：设置表单、保存动作和游戏路径选择。
 
 页面通常由 `view.py` 构造界面、`actions.py` 实现操作并绑定控件。
-`*Actions` 是主窗口使用的 mixin，共用主窗口配置和服务状态，没有独立生命周期；
-它们不反向导入 `gui/main.py`，不自行创建抓包线程。
+`*Actions` mixin 复用主窗口配置和生命周期；抓包线程由服务层创建。
 快捷键与主题各有独立模块。
 `gui/lifecycle.py` 管理托盘显隐、后台刷新频率和可释放的历史缓存；GUI 显隐快捷键与浮窗快捷键分别注册。
 更新检查的后台任务与提示在 `gui/updates.py`，版本比较与 GitHub 请求在 `runtime/releases.py`。
@@ -61,19 +60,19 @@ canonical 解析与分配位于 `_internal/packages/parser_core/`。
 
 `overlays/templates.py` 解析模板，`config.py` 提供默认几何与内置入口，
 `window.py` 负责单窗绘制/拖动/缩放，`manager.py` 管理多窗及历史/实时状态切换。
-新增模板使用自己的目录和稳定配置 ID，不写死工作区路径。
+新增模板使用独立目录、稳定配置 ID 和相对资源路径。
 
 `gui/services.py` 组装输入与视觉服务，`gui/independent/` 是绑定配置、预览校准界面。
 `gui/battle/input_history.py` 为两种分析风格共享输入证据；原生绘制在 `timeline/inputs.py`，网页绘制在 `assets/inputs.js`。
 `inputlog/backends/windows.py` 隔离 Windows 消息线程，`windows_state.py` 提供带精度标记的状态采样兜底；`inputlog/bindings.py` 保存每场战斗的输入文件绑定。
 `inputlog/elevation.py` 仅为输入记录器申请管理员权限，通过认证的本机命名管道转发控制和状态，不提升主 GUI 权限。
-这些展示证据不写入 canonical snapshot 或 trace。
+输入与视觉状态使用独立展示数据。
 
 ## 维护约定
 
 一个目录开始混入多类职责、文件数量接近七个时，考虑分组；
 单个 Python 文件超过约 500 行时，检查是否有可独立维护的职责。
-这些是审查提示，不要求把紧密相关的短代码也拆成目录；生成文件按生成工具约定维护。
+紧密相关的短代码可保留在同一文件；生成文件按生成工具约定维护。
 
 内部使用完整包导入；页面资源相对所属模块定位，运行数据通过 `runtime.paths` 定位。
 开发与便携构建使用同一目录树，构建器递归收集源码和资源。

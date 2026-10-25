@@ -1,44 +1,36 @@
-# 源码开发需要的运行资源
+# 运行资源
 
-源码附带提取后的 `runtime-data.zip`，约 5.8 MB，运行数据共约 16.9 MB。
-`Setup-Dev.cmd` 或 `python -B _development/tools/prepare_resources.py` 会离线恢复并校验。
-普通开发环境仅使用精简运行数据。开发版规则保留在源码中；
-已有资源不匹配会报错，不直接覆盖。便携版包含已解压的同一份运行数据。
+## 精简数据
 
-完整输入仅供维护提取规则，保存在 Git 忽略的 `_development/raw-resources/_internal/`，
-程序不会从这里回退读取。显式添加 `--raw` 才准备完整输入；
-`--archive PATH --offline` 可指定固定官网 ZIP。
-提取规则、重建与等价验证见 [data 说明](../../_internal/data/README.md)。
+源码附带 `runtime-data.zip`（约 5.8 MB），恢复后约 16.9 MB。
+`Setup-Dev.cmd` 或 `prepare_resources.py` 离线恢复并校验，开发规则取当前源码；已有资源不匹配时人工核对。
+便携版直接携带恢复后的数据。
 
-实时抓包需要系统 Npcap，以及用户自己的游戏安装目录和 `GameAssembly.dll`。
-本仓库不分发游戏 DLL；离线 trace 解析无需加载游戏 DLL。
+完整输入用于维护提取规则，位于本地 `_development/raw-resources/_internal/`。
+资源工具加 `--raw` 准备完整输入，`--archive PATH --offline` 指定固定官网 ZIP。
+提取与升级见 [数据维护](../../_internal/data/README.md)。
 
-## 独立官网 uploader
+实时抓包另需系统 Npcap 和用户游戏目录中的 `GameAssembly.dll`。
 
-`Uploader/` 是完整的独立官网程序，Git 整体忽略。它不是 GUI 启动或本地日志分析的前提。
-其中程序保持官网原版，不统一改名或修改其内部实现。也可显式运行
-`python -B _development/tools/prepare_resources.py --with-uploader` 获取固定版本。
-需要上传时，从可信的完整官网发行包取得整个 uploader 目录及其 `_internal` 依赖，按下列布局放置：
+## 官网 uploader
 
-```text
-Uploader/
-└─ EndfieldLogsUploader/
-   ├─ EndfieldLogsUploader.exe
-   └─ _internal/
+上传器是独立可选组件，保持官网原版。资源工具支持：
+
+```powershell
+python -B _development/tools/prepare_resources.py --with-uploader
 ```
 
-不要仅复制单个 EXE。也可在别处运行官网 uploader，无需复制到开发目录。
-主程序便携包不收集 `Uploader/`，构建主程序无需准备该目录。
-独立 uploader 构建直接从通过哈希校验的官网 ZIP 提取，无需先准备本地 `Uploader/`；
-它按官网版本单独发行，不随主程序版本重复打包。
+也可从校验过的官网包复制完整目录及依赖：
 
-上传选择 `.dev-gui/logs/battles/` 日期子目录中的 `trace_*.log`，并保留配套的
-`.log.status.json`。`launcher.log` 和 `session_*.ndjson` 不能代替 trace。
+```text
+Uploader/EndfieldLogsUploader/
+  EndfieldLogsUploader.exe
+  _internal/
+```
 
-**本程序新采集的 trace/status 可直接由官网版 uploader 识别，无需转换或导出 upload 版。**
-这不绕过官网登录、日志完整性门禁及后端校验；上传解析/排行仍以官网实现为准。
+可在任意目录独立运行。Uploader 使用上游版本号单独打包，构建时从官方 ZIP 原样提取。
 
-## 测试边界
+上传选择 `.dev-gui/logs/battles/YYYYMMDD/trace_*.log`，保留 `.log.status.json` 和完整性文件。
+本程序采集的 trace/status 直接兼容官网自动归档入口，登录、解析和排行按官网规则处理。
 
-普通回归使用合成数据，验证解析结果、资源完整性和打包边界，不执行真实抓包或上传。
-便携 ZIP 包含所需运行资源；构建与解压验证见 [打包说明](portable-packaging.md)。
+普通回归使用合成数据；资源完整性与便携验证见 [打包流程](portable-packaging.md)。

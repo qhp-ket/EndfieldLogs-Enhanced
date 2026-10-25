@@ -21,5 +21,4 @@ python -B _development/run_tests.py parser_core
 python -B _development/run_tests.py uploader_core
 ```
 
-普通回归使用合成数据；缺少官网源码副本的可选兼容检查明确跳过。
-测试不会登录、上传或抓包。
+普通回归使用合成数据，可选官网兼容检查需准备源码副本。

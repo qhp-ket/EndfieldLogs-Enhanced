@@ -5,7 +5,7 @@
 `Uploader/EndfieldLogsUploader/EndfieldLogsUploader.exe`
 
 本包自带官网程序的运行依赖，无需安装 Python，也无需先安装 EndfieldLogs 主程序。
-不要只复制一个 EXE。程序、依赖和数据均从校验过的官网包原样提取，保持原始字节。
+程序、依赖和数据从校验过的官网包原样提取，复制时保留完整目录。
 
 主程序与 uploader 分别发行，版本独立。只使用本地分析或 Overlay 时无需下载本包。
 需要上传时，可在任意目录运行此程序，选择主程序日志目录中的 `trace_*.log`，

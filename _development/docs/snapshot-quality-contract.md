@@ -1,12 +1,12 @@
 # Snapshot Quality Contract v1
 
-`snapshot_quality` 是 canonical parser 结果的证据质量投影，覆盖 rDPS 归因和计时两个维度；它独立于伤害、贡献分配和时长计算。
+`snapshot_quality` 投影 canonical 报告中的 rDPS 归因和计时证据。
+实现：`parser_core.snapshot_quality.build_snapshot_quality(report)`。
 
-## 接口与兼容性
+## 入口与结构
 
-直接 `parse_raw_battle_log_text` 的两类成功返回（正常战斗、有上下文但无伤害）均包含顶层 `snapshot_quality`。`parse_upload_battle_log_text` 继承该字段；hit viewer、overlay 透传相同对象，`LiveOverlayBattleParser` 通过 overlay 接口继承。
-
-Overlay 和 viewer 提供 `rdps_preflight`、`unresolved_hits`、`unresolved_buff_actions`、`rdps_damage_basis` 及质量投影。四入口指 raw / hit viewer / overlay snapshot / live snapshot；上传 wrapper 另行检查与直接 raw 等价。
+raw、upload、hit viewer、overlay 和 live 接口共享质量字段。
+正常战斗及有上下文的无伤害报告均包含质量对象：
 
 ```json
 {
@@ -26,65 +26,64 @@ Overlay 和 viewer 提供 `rdps_preflight`、`unresolved_hits`、`unresolved_buf
     "timing": {
       "status": "provisional",
       "reasons": ["timer_integrity_unknown"],
-      "evidence": {
-        "duration_ms": 2000,
-        "timer_integrity_ok": null
-      }
+      "evidence": {"duration_ms": 2000, "timer_integrity_ok": null}
     }
   }
 }
 ```
 
-示例为结构节选，实际 `reasons` 包含全部适用的投影理由，timing evidence 固定包含模块 `_TIMING_FIELDS` 声明的全部键。实现为 `parser_core.snapshot_quality.build_snapshot_quality(report)`；它只读取已有结果，不解析日志、不重新求和、不验证或推断游戏证据。
+示例节选了 timing evidence；完整键集见 `_TIMING_FIELDS`。
+`reasons` 为稳定的质量代码，原始理由、来源和 UID 保留在 `evidence`。
 
-## 三态的适用范围
+## 状态
 
 | 状态 | 含义 |
 | --- | --- |
-| `verified` | 该维度的必要证据显式通过，且没有投影识别的负面证据。 |
-| `provisional` | 数值结果仍存在，但存在未通过、缺失或未完成的必要验证。 |
-| `unavailable` | 该维度缺少可用基础：rDPS basis 缺失或显式无 hit；计时无正数 duration 或窗口显式无效。 |
+| `verified` | 必要验证显式通过，投影识别的负面证据为空 |
+| `provisional` | 数值可用，但验证失败、缺失或尚未完成 |
+| `unavailable` | rDPS basis 缺失或显式无 hit；计时 duration 无正数或窗口显式无效 |
 
-聚合 `status` 优先级为 `unavailable` > `provisional` > `verified`。例如 rDPS verified、timing provisional，则聚合 provisional；这不撤销 rDPS 子状态。聚合 unavailable 也不会删除任何已算出的数值。
+聚合优先级为 `unavailable` > `provisional` > `verified`，各维度状态和已计算数值独立保留。
+适用范围为归因和计时质量；上传资格由官网校验。
 
-这是 rDPS 归因和计时证据的契约，不是整场战斗的真实性、账号身份、上传资格或所有显示元数据的通用认证。未完成官方计时验证只表示 provisional，不代表计时错误或篡改。
+### rDPS verified 条件
 
-### rDPS
+全部满足：
 
-verified 必须同时满足：
+- `rdps_preflight.ok` 和 basis 的 `rdps_preflight_ok`、`rdps_strict_ok`、`rdps_conservation_ok` 严格为布尔 `true`。
+- preflight 的 `blocker_count` 为整数 0，`blockers` 为显式空列表。
+- basis 的 `hit_count` 为正整数。
+- 如有未解析伤害角色、缺失 packet hit、单 hit 守恒差异计数，均须为零。
 
-- `rdps_preflight.ok`、basis 的 `rdps_preflight_ok`、`rdps_strict_ok`、`rdps_conservation_ok` 均严格为布尔 `true`。
-- preflight `blocker_count` 为整数 0，`blockers` 为显式空列表。
-- basis `hit_count` 为正整数。
-- 如 basis 报告未解析伤害角色、缺失 packet hit 或单 hit 守恒差异，则必须没有这些负面计数。
+`unresolved_hits` / `unresolved_buff_actions` 保留完整范围，当前战斗的阻断判断沿用 canonical preflight/basis。
 
-缺少必要字段不会默认通过。数值守恒本身不等于来源已验证。原始 blocker 的 reason、missing、UID、来源等保留在 evidence；投影 `reasons` 只给稳定的质量理由代码，不替换原始解释。
+### Timing verified 条件
 
-`unresolved_hits` 和 `unresolved_buff_actions` 保留原始完整列表，其范围可能比当前战斗窗口大。是否阻断当前战斗沿用 canonical preflight / basis 已有的窗口判定，quality 不另做跨窗口筛选或把历史未解析行自动当成本场错误。
+| 字段 | 要求 |
+| --- | --- |
+| `duration_ms` | 正数且有限 |
+| `time_source` | 非空 |
+| `timer_integrity_ok` | 显式 `true` |
+| `timer_integrity_reasons` | 显式空列表 |
+| `timer_window_valid` | 显式 `true` |
+| `timer_start_inferred` | 显式 `false` |
 
-### Timing
+推断起点、校验缺失或 `timer_integrity_ok=false` 为 provisional。
+无效窗口或不可用 duration 为 unavailable。原始官方/packet 计时、零点、起止观测和失败理由透传到 evidence。
 
-verified 必须有正数且有限的 `duration_ms`、非空 `time_source`、显式 `timer_integrity_ok=true`、显式空 `timer_integrity_reasons` 列表、显式 `timer_window_valid=true` 和显式 `timer_start_inferred=false`。推断起点或未完成官方校验保持 provisional。原始官方/packet 计时、零点来源、起止观察、timer evidence、完整原始失败理由均透传到 evidence。
+## 数据类型与隔离
 
-`timer_integrity_ok=false` 保持 provisional，并保留原始理由；只有原核心同时给出无效窗口或不可用 duration 时计时才 unavailable。quality 不纠正时间、不用墙钟覆盖游戏时间，也不比较不同时钟域来推断篡改。
+- 缺失字段为 `null`，已知零和空列表分别保留 `0`、`[]`。
+- 无伤害报告保留零数值及 roster，质量为 unavailable；空文本由 raw/viewer/overlay 抛出 `ValueError`，live 初始及 reset 后可为 `None`。
+- evidence 递归复制；绝对值超过 `2^53-1` 的整数转十进制字符串，UID 字符串保留，非有限浮点转 `null`。
+- 原报告字段保持原类型和值，质量对象须通过 `json.dumps(..., allow_nan=False)`。
+- `battle.rdps_available` 控制显示回退，`snapshot_quality` 提供证据质量，消费者分别读取。
 
-## Null、零与 JSON
+完整接口携带证据明细，轻量接口使用 `quality_summary`。
 
-缺失证据投影为 `null`，已知的 0 保持 0；缺失列表为 `null`，已知空列表为 `[]`。无伤害 report 的既有 0 数值和 roster 展示仍保留；rDPS/timing quality 为 unavailable。完全空输入仍由 raw/viewer/overlay 抛出原 `ValueError`，live 初始/重置后仍可能返回 `None`，没有伪造一个 report。
+## 回归入口
 
-quality evidence 是递归复制的数据，修改 quality evidence 不会修改原始 preflight、basis 或未解析列表。复制时，绝对值超过 `2^53-1` 的整数转成十进制字符串以防 JavaScript 舍入；UID 字符串原样保留；非有限浮点投影为 `null`，对应不可用计时带理由。原始报告字段保持其数据类型和值。quality 必须能通过 `json.dumps(..., allow_nan=False)`。
+`tests/reporting/test_snapshot_quality.py` 验证 raw / viewer / overlay / live 四入口及 upload wrapper 等价。
+合成 `rdps_snapshot_contract.log` 的断言为：伤害 760、DPS 380、时长 2000ms、rDPS 归属 640/120、参与者 rDPS 320/60，质量 provisional。
 
-`snapshot_quality` 与 `battle.rdps_available` 独立。后者控制 rDPS/DPS 显示回退；消费者应按各字段的语义分别读取。
-
-## 回归门禁
-
-`_internal/packages/parser_core/tests/reporting/test_snapshot_quality.py` 使用 `fixtures/rdps_snapshot_contract.log` 断言四入口的总伤害 760、总 DPS 380、时长 2000 ms、rDPS 总归属 640/120、参与者 rDPS 320/60，且质量与原始证据一致。fixture 数值守恒，但缺少严格 action-unit 证据和官方计时验证，结果应为 provisional。
-
-门禁还覆盖官方计时成功与冲突、每个必要验证字段缺失、负面 rDPS 与计时证据、null/0、上下文无伤害、空文本原异常、uint64 与证据副本隔离、live 无新输入缓存、reset、连续官方战斗的质量隔离。单纯投影的正控用显式合成证据验证 verified 路径，不声称该合成对象是真实完整战斗。
-
-测试使用准备好的开发环境和合成数据，无需私人日志。
-
-## 边界与后续
-
-质量契约不改抓包、解密、协议、原伤害或 rDPS 数学，也不代表官网后端的上传审核结果。
-GUI/Overlay 可显示质量摘要；完整接口保留证据明细，不能将缩减摘要冒充完整质量对象。
+其他覆盖：verified 合成正控、必要字段缺失、计时冲突、负面证据、null/0、uint64、证据副本隔离、live 缓存/reset 和连续战斗。

@@ -1,33 +1,22 @@
-# Public regression fixtures
+# 公开回归样本
 
-All six `.log` files in this directory are synthetic. They are parser inputs
-constructed for tests, not captured battles and not evidence of game mechanics
-or upload eligibility. Game template/action IDs are used to select real parser
-branches; actor IDs, session IDs, stats, HP and timestamps are invented.
+本目录六份 `.log` 均为合成解析输入。模板/action ID 用于选择真实解析分支，actor、会话、属性、HP 和时间戳使用构造值。
+样本验证解析契约，实战机制与上传资格需另行验证。
 
-| File | Construction and purpose |
+| 文件 | 构造与断言 |
 | --- | --- |
-| `rdps_snapshot_contract.log` | Upstream synthetic accounting example: 760 damage, 640 attacker / 120 support |
-| `ink_recording_contract.log` | Synthetic 120-point hit, 10% recording, 12-point release and independent log weighting |
-| `synthetic_combo_skill.log` | Constructed attack/skill categories, explicit three-Buff origin chain and per-hit source allocation |
-| `synthetic_combo_ultimate.log` | Constructed ultimate/burning categories, explicit three-Buff origin chain and per-hit source allocation |
-| `synthetic_corrosion_packet.log` | Constructed legacy refresh identity, observed resistance, own ignore and conflicting updates |
-| `synthetic_fire_corrosion.log` | Constructed strict refresh identity, growth, inheritance and lower-count creation without refresh |
+| `rdps_snapshot_contract.log` | 上游合成记账例：伤害 760，攻击者/辅助归属 640/120 |
+| `ink_recording_contract.log` | 命中 120、10% 记录、释放 12 及独立日志权重 |
+| `synthetic_combo_skill.log` | 攻击/战技分类、三层 Buff 来源链、逐击归属 |
+| `synthetic_combo_ultimate.log` | 终结技/燃烧分类、三层 Buff 来源链、逐击归属 |
+| `synthetic_corrosion_packet.log` | 刷新身份、抗性观测、自身无视及冲突更新 |
+| `synthetic_fire_corrosion.log` | 严格刷新身份、增长、继承及低层数创建 |
 
-The four `synthetic_*` files and their manifests are reproducible with:
+四份 `synthetic_*` 日志及清单由常量生成：
 
 ```powershell
 python -B _development/tools/generate_test_fixtures.py
 ```
 
-That generator reads constants only. It does not open a capture or replace IDs
-in a real log. The first two fixtures remain their existing synthetic inputs.
-Recorded excerpts, parsed metadata and player-loadout snapshots were moved to an
-ignored private archive. The former Antal keyword, metadata and weapon audit JSON
-inputs are now constructed constants in their respective test modules. Remaining
-JSON inputs are an explicitly synthetic approval matrix and official item-text
-reference tables, not captured battle excerpts. Real-world validation must explicitly obtain private
-recordings or the official baseline; public tests do not silently read them.
-
-Only these six logs are allowlisted by `.gitignore`. New cases should include
-their construction, expected invariant and evidence limits before being added.
+其他 JSON 输入为合成批准矩阵与官方条目文案参考表；身份、元数据和武器审计场景由对应测试模块的常量构造。
+`.gitignore` 只放行上述六份日志。新增样本需说明构造方法、预期不变量及证据范围。
