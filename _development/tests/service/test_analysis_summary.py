@@ -5,6 +5,7 @@ import threading
 from endfield_pcap.models import ServiceObserver
 from endfield_pcap.analysis.live.delivery import ClientSender
 from endfield_pcap.analysis.live.delivery import GuiDeliveryQueue
+from endfield_pcap.analysis.live.delivery import MAX_PENDING_MESSAGES
 from endfield_pcap.analysis.live.publisher import SnapshotPublisher
 from endfield_pcap.analysis.live.publisher import _transport_copy
 from parser_core.live_summary import summary_from_report
@@ -24,6 +25,15 @@ def test_existing_observer_positional_arguments_keep_their_meaning():
     assert observer.on_analysis_snapshot is full
     assert observer.on_combo_snapshot is combo and observer.on_buff_snapshot is buff
     assert observer.on_analysis_summary is None
+
+
+def test_hello_reports_application_version_from_shared_source(service_factory,monkeypatch):
+    import endfield_pcap.service.runtime.websocket as module
+    from endfield_pcap._version import __version__
+    service=service_factory()
+    assert service._hello_payload()['service_version']==__version__
+    monkeypatch.setattr(module,'__version__','0.2.3')
+    assert service._hello_payload()['service_version']=='0.2.3'
 
 
 def test_gui_keeps_latest_state_across_metrics_but_never_across_reset_or_error():
@@ -110,6 +120,45 @@ def test_slow_sender_never_blocks_another_consumer_and_preserves_reset():
         finally:
             a.task.cancel(); b.task.cancel()
             await asyncio.gather(a.task,b.task,return_exceptions=True)
+    asyncio.run(run())
+
+
+def test_burst_queue_is_bounded_at_enqueue_and_disconnects_without_affecting_others():
+    async def run():
+        entered,release=asyncio.Event(),asyncio.Event()
+        failed=[]
+        class Socket:
+            def __init__(self,slow=False): self.slow=slow; self.sent=[]; self.closed=False
+            async def send(self,message):
+                if self.slow: entered.set(); await release.wait()
+                self.sent.append(json.loads(message))
+            async def close(self): self.closed=True
+        slow,fast=Socket(True),Socket()
+        sender=ClientSender(slow,json.dumps,failed.append)
+        other=ClientSender(fast,json.dumps,failed.append)
+        try:
+            sender.put(frame(0)); await entered.wait()
+            for revision in range(MAX_PENDING_MESSAGES-1):
+                sender.put(dict(type='event_batch',sequence=revision))
+            sender.put(frame(1))
+            sender.put(frame(2))
+            assert len(sender.pending)==MAX_PENDING_MESSAGES
+            assert sender.pending[-1]['source_revision']==2 and not sender.closed
+            for revision in range(10000):
+                sender.put(dict(type='event_batch',sequence=revision))
+            assert len(sender.pending)==MAX_PENDING_MESSAGES and sender.closed
+            other.put(frame(3))
+            await asyncio.sleep(.02)
+            assert fast.sent[-1]['source_revision']==3
+            release.set()
+            await asyncio.wait_for(sender.task,2)
+            assert failed==[slow] and slow.closed and not sender.pending
+            # The in-flight message completes; queued control messages aren't
+            # silently skipped to resume an invalid stream after overflow.
+            assert slow.sent==[frame(0)]
+        finally:
+            sender.task.cancel(); other.task.cancel()
+            await asyncio.gather(sender.task,other.task,return_exceptions=True)
     asyncio.run(run())
 
 

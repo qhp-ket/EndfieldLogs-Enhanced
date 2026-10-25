@@ -5,6 +5,7 @@ import json
 from dataclasses import asdict
 from datetime import datetime
 from http import HTTPStatus
+from endfield_pcap._version import __version__
 from endfield_pcap.service.runtime.access import browser_request_allowed
 
 
@@ -90,7 +91,7 @@ class WebSocketDelivery:
         return {
             "type": "hello",
             "schema_version": 2,
-            "service_version": "0.1.0",
+            "service_version": __version__,
             "state": self.state.value,
             "session_id": self.active_session.session_id if self.active_session else None,
             "metrics": asdict(self.metrics),

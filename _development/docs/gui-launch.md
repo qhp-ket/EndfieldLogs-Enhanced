@@ -10,6 +10,7 @@
 ```
 
 `--check` 同步检查依赖及启动条件。初始化失败时弹窗、写日志并在 CMD 保留错误。
+GUI 启动握手最多等待 60 秒；超时提示进程 PID 和日志路径，保留子进程供继续初始化或排查。
 调试入口 `python launch_gui.py` 保留控制台。
 解释器依次选择 `ENDFIELD_GUI_PYTHON` → 包内 Python → 初始化记录 → `.venv` → `py -3` → PATH。
 

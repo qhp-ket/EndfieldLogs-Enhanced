@@ -22,7 +22,7 @@ def ordinary_test_launch(executable,arguments):
     process=subprocess.Popen([executable,*args],stdin=subprocess.DEVNULL,
         stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,
         creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
-    return SimpleNamespace(poll=process.poll,close=lambda:None,terminate=process.terminate)
+    return SimpleNamespace(poll=process.poll,wait=process.wait,close=lambda:None,terminate=process.terminate)
 
 
 @pytest.mark.parametrize('already_admin',[False,True])
@@ -132,3 +132,45 @@ def test_disconnected_control_pipe_ends_recorder_and_closes_jsonl(tmp_path):
         if connection:connection.close()
         listener.close()
         if child.poll() is None:child.terminate()
+
+
+@pytest.mark.parametrize('mode',['no_connect','ignore_stop','closed_pipe','invalid_status'])
+def test_broker_reaps_its_own_stuck_child_on_every_failure_path(tmp_path,monkeypatch,mode):
+    import ctypes
+    from ctypes import wintypes as w
+    children=[]
+    handles=[]
+    def launch(executable,arguments):
+        code='import sys,time; from multiprocessing.connection import Client; '
+        if mode!='no_connect':
+            code+="c=Client(sys.argv[1],family='AF_PIPE',authkey=bytes.fromhex(sys.argv[2])); c.recv_bytes(); "
+        if mode=='closed_pipe': code+='c.close(); '
+        if mode=='invalid_status': code+="c.send_bytes(b'{\"stream\":\"invalid\",\"text\":\"test\"}'); "
+        code+='time.sleep(30)'
+        child=subprocess.Popen([executable,'-B','-c',code,*arguments[-2:]],
+            creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
+        children.append(child)
+        kernel=ctypes.WinDLL('kernel32',use_last_error=True)
+        kernel.OpenProcess.argtypes=[w.DWORD,w.BOOL,w.DWORD]
+        kernel.OpenProcess.restype=w.HANDLE
+        handle=kernel.OpenProcess(0x100000|0x1000|0x1,False,child.pid)
+        assert handle
+        process=elevation.AdminProcess(handle)
+        handles.append(process)
+        return process
+    monkeypatch.setattr(elevation,'launch_admin',launch)
+    monkeypatch.setattr(elevation,'CONNECT_TIMEOUT',.3)
+    monkeypatch.setattr(elevation,'STOP_TIMEOUT',.3)
+    monkeypatch.setattr(elevation,'TERMINATE_TIMEOUT',2)
+    monkeypatch.setattr(sys,'stdin',io.StringIO('{"command":"stop"}\n'))
+    started=time.monotonic()
+    try:
+        with pytest.raises((TimeoutError,subprocess.TimeoutExpired,ValueError)):
+            elevation.relay(dict(game_exe='missing.exe',log_dir=str(tmp_path),trace=None))
+        assert time.monotonic()-started<5
+        assert all(child.wait(1) is not None for child in children)
+        assert all(process.handle is None for process in handles)
+    finally:
+        for child in children:
+            if child.poll() is None: child.terminate()
+            child.wait(3)

@@ -8,7 +8,7 @@ from urllib.error import HTTPError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 
-REPOSITORY = 'qhp-ket/EndfieldLogs'
+REPOSITORY = 'qhp-ket/EndfieldLogs-Enhanced'
 API = f'https://api.github.com/repos/{REPOSITORY}/releases/latest'
 VERSION = re.compile(r'^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$')
 

@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parent
 PROFILE = ROOT / ".dev-gui"
 _DLL_DIRECTORIES = []
 _STDIO_HANDLES = []
+STARTUP_TIMEOUT_SECONDS = 60.0
 
 
 def show_startup_error(message: str) -> None:
@@ -54,11 +55,19 @@ def launch_detached(arguments: list[str]) -> int:
                 creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == 'win32' else 0,
                 close_fds=True, env=environment,
             )
+        deadline = time.monotonic() + STARTUP_TIMEOUT_SECONDS
         while not ready.is_file():
             result = process.poll()
             if result is not None:
                 print('GUI 尚未打开便已退出，请查看 .dev-gui\\logs\\launcher.log。', flush=True)
                 return result or 1
+            if time.monotonic() >= deadline:
+                message = f'GUI 启动等待超时，进程 PID：{process.pid}。进程仍在运行，请查看日志。'
+                with (log_dir / 'launcher.log').open('a', encoding='utf8') as output:
+                    output.write(f'{time.strftime("%Y-%m-%d %H:%M:%S")} {message}\n')
+                print(message, flush=True)
+                show_startup_error(message)
+                return 1
             time.sleep(.05)
     return 0
 

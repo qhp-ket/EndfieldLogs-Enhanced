@@ -332,6 +332,43 @@ def test_child_exit_before_window_is_startup_failure(tmp_path, monkeypatch, caps
     assert not list((launch.PROFILE/'logs').glob('startup-*'))
 
 
+def test_stuck_windowless_child_times_out_with_pid_and_can_still_show_later(tmp_path,monkeypatch):
+    launch=launcher(tmp_path)
+    child=tmp_path/'slow_gui.py'
+    child.write_text('''import os,pathlib,time
+root=pathlib.Path(__file__).parent
+time.sleep(.5)
+try: pathlib.Path(os.environ['ENDFIELD_GUI_READY_FILE']).touch()
+except OSError: pass
+(root/'shown').touch()
+''',encoding='utf8')
+    monkeypatch.setattr(launch,'__file__',str(child))
+    monkeypatch.setattr(launch,'ROOT',tmp_path)
+    monkeypatch.setattr(launch,'STARTUP_TIMEOUT_SECONDS',.1)
+    shown=[]
+    monkeypatch.setattr(launch,'show_startup_error',shown.append)
+    processes=[]
+    original=launch.subprocess.Popen
+    def spawn(*args,**kwargs):
+        process=original(*args,**kwargs)
+        processes.append(process)
+        return process
+    monkeypatch.setattr(launch.subprocess,'Popen',spawn)
+    try:
+        assert launch.launch_detached([])==1
+        process=processes[0]
+        assert process.poll() is None
+        assert len(shown)==1 and str(process.pid) in shown[0] and '超时' in shown[0]
+        assert shown[0] in (launch.PROFILE/'logs/launcher.log').read_text(encoding='utf8')
+        assert not list((launch.PROFILE/'logs').glob('startup-*'))
+        assert process.wait(5)==0
+        assert (tmp_path/'shown').exists()
+    finally:
+        for process in processes:
+            if process.poll() is None: process.terminate()
+            process.wait(3)
+
+
 def test_gui_reports_ready_after_window_is_exposed(app, tmp_path, monkeypatch):
     from PySide6.QtCore import QTimer
     from PySide6.QtWidgets import QWidget

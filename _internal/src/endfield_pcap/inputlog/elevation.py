@@ -21,6 +21,9 @@ import uuid
 
 LIMIT=1024*1024
 ENTRY='from endfield_pcap.inputlog.elevation import elevated_main; elevated_main()'
+CONNECT_TIMEOUT=30
+STOP_TIMEOUT=5
+TERMINATE_TIMEOUT=2
 
 
 def is_admin():
@@ -32,13 +35,30 @@ class AdminProcess:
         self.handle=handle
         self.kernel=ctypes.WinDLL('kernel32',use_last_error=True)
         self.kernel.GetExitCodeProcess.argtypes=[w.HANDLE,ctypes.POINTER(w.DWORD)]
+        self.kernel.GetExitCodeProcess.restype=w.BOOL
+        self.kernel.WaitForSingleObject.argtypes=[w.HANDLE,w.DWORD]
+        self.kernel.WaitForSingleObject.restype=w.DWORD
+        self.kernel.TerminateProcess.argtypes=[w.HANDLE,w.UINT]
+        self.kernel.TerminateProcess.restype=w.BOOL
         self.kernel.CloseHandle.argtypes=[w.HANDLE]
+        self.kernel.CloseHandle.restype=w.BOOL
 
     def poll(self):
         code=w.DWORD()
         if not self.kernel.GetExitCodeProcess(self.handle,ctypes.byref(code)):
             raise ctypes.WinError(ctypes.get_last_error())
         return None if code.value==259 else code.value
+
+    def wait(self,timeout):
+        result=self.kernel.WaitForSingleObject(self.handle,int(timeout*1000))
+        if result==258: raise subprocess.TimeoutExpired('input recorder',timeout)
+        if result!=0: raise ctypes.WinError(ctypes.get_last_error())
+        return self.poll()
+
+    def terminate(self):
+        # Use only the process handle returned by our own ShellExecuteExW.
+        if not self.kernel.TerminateProcess(self.handle,1) and self.poll() is None:
+            raise ctypes.WinError(ctypes.get_last_error())
 
     def close(self):
         if self.handle:
@@ -126,6 +146,11 @@ def relay(config):
     process=None
     connection=None
     accepted=queue.Queue()
+    accept_lock=threading.Lock()
+    closing=threading.Event()
+    send_lock=threading.Lock()
+    stop_requested=threading.Event()
+    stop_deadline=None
     def prepare_directory(trace):
         # Create log folders with the ordinary user's inherited permissions,
         # including when UAC uses a different administrator account.
@@ -137,10 +162,14 @@ def relay(config):
                               privilege='等待输入记录管理员授权')),flush=True)
         process=launch_admin(sys.executable,['-u','-B','-c',worker_bootstrap(ENTRY),address,key.hex()])
         def accept():
-            try: accepted.put(listener.accept())
-            except Exception as exc: accepted.put(exc)
+            try: result=listener.accept()
+            except Exception as exc: result=exc
+            with accept_lock:
+                if closing.is_set():
+                    if not isinstance(result,Exception): result.close()
+                else: accepted.put(result)
         threading.Thread(target=accept,name='input-pipe-connect',daemon=True).start()
-        deadline=time.monotonic()+30
+        deadline=time.monotonic()+CONNECT_TIMEOUT
         while connection is None:
             try: connection=accepted.get(timeout=.1)
             except queue.Empty:
@@ -154,27 +183,57 @@ def relay(config):
                     payload=json.loads(line)
                     if payload.get('command') not in ('stop','trace'): continue
                     if payload['command']=='trace': prepare_directory(payload.get('path'))
-                    send(connection,payload)
+                    if payload['command']=='stop': stop_requested.set()
+                    send(connection,payload,send_lock)
             except (EOFError,OSError,ValueError): pass
             finally:
-                try: send(connection,dict(command='stop'))
+                stop_requested.set()
+                try: send(connection,dict(command='stop'),send_lock)
                 except OSError: pass
         threading.Thread(target=commands,name='input-pipe-control',daemon=True).start()
         try:
             while True:
+                if stop_requested.is_set():
+                    if stop_deadline is None: stop_deadline=time.monotonic()+STOP_TIMEOUT
+                    if time.monotonic()>=stop_deadline:
+                        raise TimeoutError('输入记录进程未响应停止请求')
+                if not connection.poll(.1):
+                    if process.poll() is not None: break
+                    continue
                 payload=receive(connection)
                 text=payload.get('text')
                 if payload.get('stream') not in ('stdout','stderr') or not isinstance(text,str):
                     raise ValueError('输入服务状态格式无效')
                 stream=sys.stdout if payload['stream']=='stdout' else sys.stderr
                 stream.write(text);stream.flush()
-        except EOFError: pass
-        deadline=time.monotonic()+5
-        while process.poll() is None and time.monotonic()<deadline: time.sleep(.02)
-        code=process.poll()
+        except (EOFError,BrokenPipeError): pass
+        if stop_deadline is None: stop_deadline=time.monotonic()+STOP_TIMEOUT
+        code=process.wait(max(0,stop_deadline-time.monotonic()))
         if code: raise RuntimeError(f'输入记录进程异常退出（{code}）')
-        if code is None: raise RuntimeError('输入记录进程未能结束')
     finally:
-        if connection is not None and not isinstance(connection,Exception): connection.close()
-        listener.close()
-        if process is not None: process.close()
+        with accept_lock:
+            closing.set()
+            while not accepted.empty():
+                pending=accepted.get_nowait()
+                if not isinstance(pending,Exception): pending.close()
+        try:
+            if connection is not None and not isinstance(connection,Exception):
+                if process is not None and process.poll() is None:
+                    def request_stop():
+                        try: send(connection,dict(command='stop'),send_lock)
+                        except (OSError,ValueError): pass
+                    stopper=threading.Thread(target=request_stop,name='input-pipe-stop',daemon=True)
+                    stopper.start()
+                    stopper.join(.2)
+                connection.close()
+        finally:
+            try:
+                listener.close()
+                if process is not None and process.poll() is None:
+                    grace=STOP_TIMEOUT if stop_deadline is None else max(0,stop_deadline-time.monotonic())
+                    try: process.wait(grace)
+                    except subprocess.TimeoutExpired:
+                        process.terminate()
+                        process.wait(TERMINATE_TIMEOUT)
+            finally:
+                if process is not None: process.close()

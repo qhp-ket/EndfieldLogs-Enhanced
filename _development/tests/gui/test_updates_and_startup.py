@@ -29,7 +29,7 @@ def test_versions_ignore_and_trusted_download_destination():
     payload['html_url'] = 'https://untrusted.invalid/'
     result = releases.release_update(payload, '0.1.0-dev.7')
     assert result == dict(version='0.2.0', published_at='2026-10-25T01:00:00+00:00',
-        url='https://github.com/qhp-ket/EndfieldLogs/releases/tag/v0.2.0')
+        url='https://github.com/qhp-ket/EndfieldLogs-Enhanced/releases/tag/v0.2.0')
     assert releases.release_update(payload, '0.2.0') is None
     assert releases.release_update(payload, '0.2.0-dev.7')
     assert releases.release_update(payload, '0.1.0', 'v0.2.0') is None

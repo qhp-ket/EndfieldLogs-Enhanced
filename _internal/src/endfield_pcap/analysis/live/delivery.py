@@ -5,6 +5,7 @@ from collections import deque
 
 
 STATE_TYPES = {'analysis_summary', 'analysis_snapshot', 'combo_snapshot', 'buff_snapshot'}
+MAX_PENDING_MESSAGES = 1024
 
 
 def replaceable(item):
@@ -16,10 +17,14 @@ class ClientSender:
     def __init__(self, socket, serialize, failed):
         self.socket, self.serialize, self.failed = socket, serialize, failed
         self.pending = deque()
+        self.closed = False
+        self.overflow = False
         self.ready = asyncio.Event()
         self.task = asyncio.create_task(self.run())
 
     def put(self, payload):
+        if self.closed:
+            return
         if replaceable(payload):
             # Stop at any control/reset; never move state across that boundary.
             for index in range(len(self.pending)-1, -1, -1):
@@ -30,6 +35,12 @@ class ClientSender:
                     self.pending[index] = payload
                     self.ready.set()
                     return
+        if len(self.pending) >= MAX_PENDING_MESSAGES:
+            # Disconnect instead of dropping a control/reset and continuing
+            # with a state stream whose ordering is no longer trustworthy.
+            self.closed = self.overflow = True
+            self.ready.set()
+            return
         self.pending.append(payload)
         self.ready.set()
 
@@ -37,12 +48,12 @@ class ClientSender:
         try:
             while True:
                 await self.ready.wait()
-                while self.pending:
+                while self.pending or self.overflow:
+                    if self.overflow:
+                        raise RuntimeError('diagnostic consumer cannot keep up; reconnect required')
                     payload = self.pending.popleft()
                     encoded = await asyncio.to_thread(self.serialize, payload) if payload.get('type') == 'analysis_snapshot' else self.serialize(payload)
                     await asyncio.wait_for(self.socket.send(encoded), 1.0)
-                    if len(self.pending) > 1024:
-                        raise RuntimeError('diagnostic consumer cannot keep up; reconnect required')
                 self.ready.clear()
         except asyncio.CancelledError:
             raise
@@ -52,6 +63,9 @@ class ClientSender:
                 await asyncio.wait_for(self.socket.close(), .1)
             except Exception:
                 pass
+        finally:
+            self.closed = True
+            self.pending.clear()
 
 
 class GuiDeliveryQueue(queue.Queue):
