@@ -1,6 +1,7 @@
 """Runtime pruning must preserve native imports, JSON values and proof bytes."""
 from app_test_support.paths import ROOT
 import ast
+from importlib.metadata import distribution
 from pathlib import Path
 import sys
 import pytest
@@ -11,9 +12,10 @@ from portable_uploader import extract_uploader, PREFIX
 
 
 def test_qt_closure_keeps_runtime_dependencies_and_excludes_development_assets():
-    root = ROOT / '_internal/python_deps/gui/PySide6'
-    if not root.is_dir():
-        pytest.skip('Qt wheel is required for the Windows packaging integration check')
+    if sys.platform != 'win32':
+        pytest.skip('Windows Qt PE dependency check')
+    root = Path(distribution('PySide6-Essentials').locate_file('PySide6'))
+    assert root.is_dir(), f'Installed Qt runtime is missing: {root}'
     selected = qt_runtime_files(root)
     for required in ('Qt6WebEngineCore.dll', 'Qt6Quick.dll', 'Qt6Core.dll',
                      'plugins/platforms/qwindows.dll', 'opengl32sw.dll',

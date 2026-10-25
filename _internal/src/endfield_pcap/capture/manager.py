@@ -32,29 +32,64 @@ class CaptureHandle:
     ) -> None:
         self._api = api
         self._device = device
-        self._handle = api.open_live(device.name, bpf_filter)
         self._on_packet = on_packet
         self._stop = threading.Event()
+        self._lifecycle_lock = threading.Lock()
+        self._started = False
+        self._closed = False
         self._thread = threading.Thread(target=self._run, name=f"pcap:{device.name}", daemon=True)
+        self._handle = api.open_live(device.name, bpf_filter)
 
     def start(self) -> None:
-        self._thread.start()
+        with self._lifecycle_lock:
+            if self._stop.is_set() or self._closed:
+                raise RuntimeError("capture handle has been stopped")
+            if not self._started:
+                self._thread.start()
+                self._started = True
 
     def stop(self) -> None:
-        self._stop.set()
+        with self._lifecycle_lock:
+            self._stop.set()
+            started = self._started
+        if not started:
+            self._close_once()
+            return
+        if threading.current_thread() is self._thread:
+            return  # The worker's finally block owns the native handle.
         self._thread.join(timeout=2)
-        self._api.close(self._handle)
+        if self._thread.is_alive():
+            LOGGER.warning("capture thread %s is still stopping; native close deferred", self._device.name)
+            return
+        self._close_once()
 
     def stats(self) -> pcap_stat | None:
-        return self._api.stats(self._handle)
+        with self._lifecycle_lock:
+            if self._closed or self._stop.is_set():
+                return None
+            return self._api.stats(self._handle)
+
+    def _close_once(self) -> None:
+        with self._lifecycle_lock:
+            if not self._closed:
+                self._closed = True
+                self._api.close(self._handle)
 
     @property
     def device(self) -> DeviceInfo:
         return self._device
 
     def _run(self) -> None:
+        try:
+            self._receive_packets()
+        finally:
+            self._close_once()
+
+    def _receive_packets(self) -> None:
         while not self._stop.is_set():
             packet = self._api.next_packet(self._handle)
+            if self._stop.is_set():
+                break
             if packet is None:
                 continue
             timestamp_ms, raw = packet
@@ -100,8 +135,24 @@ class CaptureManager:
         return cls(api, selected, on_packet)
 
     def start(self) -> None:
-        for handle in self._snapshot_handles():
-            handle.start()
+        self._start_handles(self._snapshot_handles())
+
+    @classmethod
+    def _start_handles(cls, handles: list[CaptureHandle]) -> None:
+        try:
+            for handle in handles:
+                handle.start()
+        except BaseException:
+            cls._stop_handles(handles)
+            raise
+
+    @staticmethod
+    def _stop_handles(handles: list[CaptureHandle]) -> None:
+        for handle in handles:
+            try:
+                handle.stop()
+            except Exception:
+                LOGGER.exception("failed to stop capture device %s", handle.device.name)
 
     def stop(self) -> None:
         with self._lock:
@@ -109,8 +160,7 @@ class CaptureManager:
             self._handles = []
             self._locked_flow = None
             self._locked_device_name = None
-        for handle in handles:
-            handle.stop()
+        self._stop_handles(handles)
 
     def lock_to_flow(self, flow: FlowKey, observed_device_names: set[str]) -> None:
         with self._lock:
@@ -133,10 +183,10 @@ class CaptureManager:
             self._locked_flow = flow
             self._locked_device_name = device.name
         LOGGER.info("locking capture to device %s with exact flow BPF", device.name)
-        for handle in new_handles:
-            handle.start()
-        for handle in old_handles:
-            handle.stop()
+        try:
+            self._start_handles(new_handles)
+        finally:
+            self._stop_handles(old_handles)
 
     def restore_default_filters(self) -> None:
         with self._lock:
@@ -148,10 +198,10 @@ class CaptureManager:
             self._locked_flow = None
             self._locked_device_name = None
         LOGGER.info("restoring discovery capture across %d device(s)", len(new_handles))
-        for handle in new_handles:
-            handle.start()
-        for handle in old_handles:
-            handle.stop()
+        try:
+            self._start_handles(new_handles)
+        finally:
+            self._stop_handles(old_handles)
 
     def stats_snapshot(self) -> dict[str, int]:
         recv = 0

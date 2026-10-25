@@ -71,7 +71,6 @@ class DamageLogService(WebSocketDelivery, AnalysisStreams, FlowCapture, DebugOut
         self.multi_phase_dungeon_map = _load_multi_phase_dungeon_map(bundle_root() / "jsondata" / "Dungeon.json")
         self.private_key = load_private_key_from_txt(config.rsa_key_txt)
         self.srsa_bridge = SRSABridge(config.dll_dir)
-        self.capture_manager = CaptureManager.create(config.npcap_device, self._on_packet_from_thread)
         self.pending_packets: dict[FlowKey, deque[CapturedPacket]] = defaultdict(lambda: deque(maxlen=8192))
         self.active_flow: FlowKey | None = None
         self.active_session: SessionPipeline | None = None
@@ -96,6 +95,9 @@ class DamageLogService(WebSocketDelivery, AnalysisStreams, FlowCapture, DebugOut
         self.status_file = config.status_file
         if self.status_file is not None:
             self.status_file.parent.mkdir(parents=True, exist_ok=True)
+        # Open native handles after fallible trace/directory initialization.
+        self.capture_manager = CaptureManager.create(config.npcap_device, self._on_packet_from_thread)
+        if self.status_file is not None:
             self._write_status()
 
     async def run(self) -> None:
