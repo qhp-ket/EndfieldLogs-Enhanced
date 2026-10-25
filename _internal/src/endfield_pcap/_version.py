@@ -2,4 +2,4 @@
 
 APP_NAME = 'Endfield Logs - Enhanced'
 APP_PACKAGE_NAME = 'Endfield-Logs-Enhanced'
-__version__ = '0.1.0-dev.12'
+__version__ = '0.1.0'

@@ -2,7 +2,7 @@
 
 《明日方舟：终末地》的第三方战斗日志客户端，基于 ZMDLogs / Endfield Logs 源码开发。
 提供 Python + PySide6（Qt）GUI、实时伤害浮窗、图像识别连携 CD、输入记录及本地战斗分析。
-此项目是独立开发版，项目中的“官网版”指 ZMDLogs 的发行版。
+此项目是独立增强版，项目中的“官网版”指 ZMDLogs 的发行版。
 相关项目：[ZMDLogs 官网](https://zmdlogs.com/)、[AKEData 网站](https://www.akedata.wiki/)、
 [AKEData Git 仓库](https://github.com/NagiYume/AKEDatabase)。
 
