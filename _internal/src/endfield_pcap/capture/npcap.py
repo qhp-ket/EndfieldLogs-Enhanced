@@ -346,8 +346,12 @@ class Wpcap:
         header_ptr = POINTER(pcap_pkthdr)()
         data_ptr = POINTER(ctypes.c_ubyte)()
         result = self._dll.pcap_next_ex(handle, ctypes.byref(header_ptr), ctypes.byref(data_ptr))
-        if result <= 0:
+        if result == 0:
             return None
+        if result < 0:
+            message = self._dll.pcap_geterr(handle)
+            detail = message.decode("utf-8", errors="replace") if message else "capture ended unexpectedly"
+            raise RuntimeError(f"pcap_next_ex failed with code {result}: {detail}")
         header = header_ptr.contents
         packet_data = ctypes.string_at(data_ptr, header.caplen)
         timestamp_ms = int(header.ts.tv_sec * 1000 + header.ts.tv_usec / 1000)

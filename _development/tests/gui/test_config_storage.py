@@ -114,6 +114,28 @@ def test_corrupt_configuration_uses_backup_and_preserves_bad_file(tmp_path, brok
     assert config.load_app_config(path).gui_font_percent == 140
 
 
+def test_corrupt_configuration_still_recovers_backup_when_preservation_is_locked(tmp_path, monkeypatch, caplog):
+    path = tmp_path/'settings.json'
+    backup = path.with_suffix('.json.bak')
+    backup.write_text('{"gui_font_percent": 140}', encoding='utf8')
+    path.write_text('{broken', encoding='utf8')
+    rename = Path.rename
+
+    def locked(source, destination):
+        if source == path:
+            raise PermissionError('synthetic sharing violation')
+        return rename(source, destination)
+
+    monkeypatch.setattr(Path, 'rename', locked)
+    recovered = config.load_app_config(path)
+    assert recovered.gui_font_percent == 140
+    assert path.read_text(encoding='utf8') == '{broken'
+    assert '无法保留损坏配置原文件' in caplog.text
+    config.save_app_config(recovered, path)
+    assert config.load_app_config(path).gui_font_percent == 140
+    assert json.loads(backup.read_text(encoding='utf8')) == {'gui_font_percent': 140}
+
+
 @pytest.mark.parametrize('service,overlays', [(None, {}), ([], None),
     ({'ws_port':'invalid', 'log_dir':[], 'dll_dir':None},
      [None, {'source_type':'invalid'}, {'source_value':'damage','opacity':'invalid',

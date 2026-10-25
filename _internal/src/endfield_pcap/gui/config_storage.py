@@ -48,8 +48,12 @@ def read_settings(target):
             LOGGER.warning('配置损坏：%s', candidate)
             if candidate == target:
                 preserved = target.with_name(target.name + '.corrupt-' + uuid.uuid4().hex[:10])
-                target.rename(preserved)
-                LOGGER.warning('损坏配置保留于：%s', preserved)
+                try:
+                    target.rename(preserved)
+                except OSError:
+                    LOGGER.warning('无法保留损坏配置原文件：%s', target, exc_info=True)
+                else:
+                    LOGGER.warning('损坏配置保留于：%s', preserved)
             continue
         if candidate != target:
             LOGGER.warning('已从备份恢复配置：%s', candidate)

@@ -37,6 +37,7 @@ class CaptureHandle:
         self._lifecycle_lock = threading.Lock()
         self._started = False
         self._closed = False
+        self._error: Exception | None = None
         self._thread = threading.Thread(target=self._run, name=f"pcap:{device.name}", daemon=True)
         self._handle = api.open_live(device.name, bpf_filter)
 
@@ -65,7 +66,13 @@ class CaptureHandle:
 
     def stats(self) -> pcap_stat | None:
         with self._lifecycle_lock:
-            if self._closed or self._stop.is_set():
+            if self._stop.is_set():
+                return None
+            if self._error is not None:
+                raise RuntimeError(f"capture failed on {self._device.name}: {self._error}") from self._error
+            if self._started and not self._thread.is_alive():
+                raise RuntimeError(f"capture worker exited unexpectedly on {self._device.name}")
+            if self._closed:
                 return None
             return self._api.stats(self._handle)
 
@@ -82,6 +89,12 @@ class CaptureHandle:
     def _run(self) -> None:
         try:
             self._receive_packets()
+        except Exception as exc:
+            with self._lifecycle_lock:
+                if self._stop.is_set():
+                    return
+                self._error = exc
+            LOGGER.exception("capture worker failed on %s", self._device.name)
         finally:
             self._close_once()
 

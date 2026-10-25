@@ -1,13 +1,16 @@
 """Native capture ownership across startup failure and bounded shutdown."""
 import asyncio
+import ctypes
+import json
 import threading
+from types import SimpleNamespace
 
 import dpkt
 import pytest
 
 from app_test_support.runtime.service import service_factory
 from endfield_pcap.capture.manager import CaptureHandle, CaptureManager
-from endfield_pcap.capture.npcap import DEFAULT_BPF_FILTER, DeviceInfo
+from endfield_pcap.capture.npcap import DEFAULT_BPF_FILTER, DeviceInfo, Wpcap, pcap_pkthdr
 from endfield_pcap.models import Endpoint, FlowKey
 import endfield_pcap.service.runtime.server as service_module
 
@@ -51,6 +54,33 @@ class FakePcap:
 
 def make_handle(api, callback=lambda packet: None):
     return CaptureHandle(api, DEVICES[0], DEFAULT_BPF_FILTER, callback)
+
+
+@pytest.mark.parametrize("code,detail", [(-1, b"adapter disconnected"), (-2, None), (-1, b"invalid \xff")])
+def test_native_read_errors_are_not_treated_as_timeouts(code, detail):
+    api = Wpcap.__new__(Wpcap)
+    api._dll = SimpleNamespace(pcap_next_ex=lambda *args: code, pcap_geterr=lambda handle: detail)
+    with pytest.raises(RuntimeError, match=f"pcap_next_ex failed with code {code}") as caught:
+        api.next_packet(1)
+    if detail:
+        assert detail.decode('utf-8', errors='replace') in str(caught.value)
+
+
+def test_native_timeout_and_success_keep_existing_packet_format():
+    api = Wpcap.__new__(Wpcap)
+    api._dll = SimpleNamespace(pcap_next_ex=lambda *args: 0)
+    assert api.next_packet(1) is None
+    header = pcap_pkthdr()
+    header.ts.tv_sec, header.ts.tv_usec, header.caplen = 123, 456789, 7
+    data = ctypes.create_string_buffer(b"payload")
+
+    def receive(handle, header_out, data_out):
+        ctypes.cast(header_out, ctypes.POINTER(ctypes.POINTER(pcap_pkthdr)))[0] = ctypes.pointer(header)
+        ctypes.cast(data_out, ctypes.POINTER(ctypes.POINTER(ctypes.c_ubyte)))[0] = ctypes.cast(data, ctypes.POINTER(ctypes.c_ubyte))
+        return 1
+
+    api._dll.pcap_next_ex = receive
+    assert api.next_packet(1) == (123456, b"payload")
 
 
 def test_stop_before_start_is_idempotent_and_stats_do_not_use_closed_handle():
@@ -120,13 +150,28 @@ def test_worker_error_releases_native_handle(monkeypatch):
         raise error
 
     monkeypatch.setattr(api, "next_packet", fail)
-    # Call synchronously to assert the actual exception without an unhandled
-    # thread warning obscuring ownership verification.
-    with pytest.raises(OSError) as caught:
-        handle._run()
-    assert caught.value is error
+    # Worker failures are retained for the service's statistics heartbeat.
+    handle._run()
+    with pytest.raises(RuntimeError, match="device-1.*native read failed") as caught:
+        handle.stats()
+    assert caught.value.__cause__ is error
     assert api.closed == [1]
     handle.stop()
+    assert handle.stats() is None
+
+
+def test_unexpected_worker_exit_is_detected_by_statistics(monkeypatch):
+    api = FakePcap()
+    handle = make_handle(api)
+    monkeypatch.setattr(handle, "_receive_packets", lambda: None)
+    handle.start()
+    handle._thread.join(2)
+    try:
+        with pytest.raises(RuntimeError, match="worker exited unexpectedly on device-1"):
+            handle.stats()
+    finally:
+        handle.stop()
+    assert api.closed == [1]
 
 
 def test_packet_delivery_can_stop_its_own_worker():
@@ -252,5 +297,37 @@ def test_ws_bind_failure_preserves_original_error_and_closes_unstarted_capture(s
         assert service.server is None and service.loop is None
         assert service._stop_event is None
         assert not service.wait_started(0)
+
+    asyncio.run(scenario())
+
+
+def test_capture_worker_failure_stops_service_and_persists_original_reason(service_factory, monkeypatch, tmp_path):
+    async def scenario():
+        status = tmp_path / "capture-status.json"
+        service = service_factory(status_file=status)
+        api = FakePcap()
+        error = OSError("adapter disconnected")
+        reads = []
+
+        def fail(native):
+            reads.append(native)
+            raise error
+
+        async def idle():
+            await asyncio.Future()
+
+        api.next_packet = fail
+        service.capture_manager = CaptureManager(api, DEVICES, service._on_packet_from_thread)
+        monkeypatch.setattr(service, "_game_running", lambda: False)
+        for name in ("_process_monitor_loop", "_packet_loop"):
+            monkeypatch.setattr(service, name, idle)
+        with pytest.raises(RuntimeError, match="device-1.*adapter disconnected") as caught:
+            await asyncio.wait_for(service.run(), 8)
+        assert caught.value.__cause__ is error
+        assert sorted(reads) == api.opened == sorted(api.closed) == [1, 2]
+        fatal = json.loads(status.read_text(encoding="utf-8"))["fatal_error"]
+        assert fatal["task"] == "stats-loop" and "adapter disconnected" in fatal["message"]
+        assert "device-1" in fatal["message"]
+        assert service.loop is None and service.server is None and not service.wait_started(0)
 
     asyncio.run(scenario())
