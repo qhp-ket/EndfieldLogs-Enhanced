@@ -39,6 +39,14 @@ def run(script, *args):
     subprocess.run(command, cwd=ROOT, check=True)
 
 
+def require_clean_tree(allow_dirty=False):
+    result = subprocess.run(['git', 'status', '--porcelain'], cwd=ROOT,
+                            capture_output=True, text=True, check=True)
+    if result.stdout.strip() and not allow_dirty:
+        raise ValueError('Working tree is dirty; commit changes before building. '
+                         'Development staging requires --stage-only --allow-dirty')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest='command', required=True)
@@ -48,9 +56,11 @@ def main():
     build.add_argument('--component', choices=('application', 'uploader'), default='application')
     build.add_argument('--skip-tests', action='store_true', help='Only when the same sources already passed all regressions')
     build.add_argument('--stage-only', action='store_true', help='Stop before ZIP/relocation verification')
+    build.add_argument('--allow-dirty', action='store_true', help='Development staging only; requires --stage-only')
     uploader = commands.add_parser('build-uploader', help='Build the optional official uploader as a separate ZIP')
     uploader.add_argument('--skip-tests', action='store_true')
     uploader.add_argument('--stage-only', action='store_true')
+    uploader.add_argument('--allow-dirty', action='store_true')
     verify = commands.add_parser('verify')
     verify.add_argument('archive', type=Path)
     args = parser.parse_args()
@@ -63,6 +73,9 @@ def main():
         elif args.command == 'verify':
             run('tools/verify_portable_zip.py', args.archive.resolve())
         else:
+            if args.allow_dirty and not args.stage_only:
+                raise ValueError('--allow-dirty requires --stage-only')
+            require_clean_tree(args.allow_dirty)
             is_uploader = args.command == 'build-uploader' or args.component == 'uploader'
             if is_uploader:
                 from build_portable import UPLOADER_RELEASE_NAME

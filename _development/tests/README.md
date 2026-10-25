@@ -9,12 +9,12 @@
 | 目录 | 通过数 | 主要覆盖 |
 | --- | ---: | --- |
 | `battle/` | 69 | Qt/Web 分析、时间轴与技能、BUFF/技力/失衡、详情、头像及列宽 |
-| `gui/` | 62 | 启动选项、路径、字号滑条、浮窗排序、日志、凭据与正式版更新 |
+| `gui/` | 73 | 启动选项、路径/配置迁移与恢复、字号滑条、浮窗排序、日志、凭据与正式版更新 |
 | `history/` | 30 | 索引、缓存、选择竞态、重命名回滚、文件引用和上传证明 |
 | `overlays/` | 78 | 启停/显隐、几何/DPI、Qt/JS、头像、伤害适配、连携样式、模板与 WS 凭据 |
 | `service/` | 103 | 摘要/完整发布、asyncio/legacy WS 认证、慢消费者、reset/退出隔离、订阅及 trace |
-| `resources/` | 67 | 数据投影、缺角色回退、头像访问边界、依赖闭包、打包、版本及 ignore |
-| `independent/` | 91 | 输入后端/去重/前台/溢出、JSONL、绑定与对齐、视觉像素/状态机、独立服务生命周期 |
+| `resources/` | 72 | 数据投影、缺角色回退、头像访问边界、依赖闭包、打包、版本及 ignore |
+| `independent/` | 93 | 输入后端/去重/前台/溢出、管道压力、JSONL、绑定与对齐、视觉像素/状态机、独立服务生命周期 |
 | `integration/` | 单独执行 | 可选外部资源的发行约束，默认跳过 |
 
 `app_test_support/` 提供共享支持：`ui/` 为 Qt/DOM/主窗夹具，`scenarios/` 构造日志和战斗状态，`runtime/` 模拟服务并加载维护工具。
@@ -56,5 +56,6 @@ python -B _development/run_tests.py legacy
 `legacy --runxfail --tb=short` 用于调查实际断言，该模式关闭 xfail，预期返回非零。
 
 三个可选桌面用例分别依赖 Windows HWND、混合 DPI 双屏、WGC DLL/桌面会话。
+真实更新查询用例设置 `ENDFIELD_LIVE_UPDATE_TEST=1` 后运行 `app-integration -k live_updates`，验证正式 Release API 与 GUI 后台提示。
 外部资源检查按前提单独执行，跳过记录为未验证；实体手柄和实战画面另行实机验收。
 输出位于 `_development/verification/`，按改动选择测试见 [打包验证表](../docs/portable-packaging.md)。

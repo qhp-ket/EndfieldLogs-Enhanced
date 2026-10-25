@@ -22,6 +22,7 @@ python -B _development/tools/release.py build --component uploader   # 官网上
 
 `build` 执行对应回归、资源校验、干净 staging、ZIP/CRC/SHA-256 和新路径解压验证。
 已测试的同一份源码使用 `build --skip-tests`。同版本目录或 ZIP 已存在时，先核对并归档产物。
+正式构建要求干净工作区；开发暂存使用 `build --stage-only --allow-dirty`，带未提交改动的 staging 仅供本地检查。
 
 | 产物 | 内容 |
 | --- | --- |
@@ -54,6 +55,7 @@ python -B _development/tools/release.py verify "_releases/Endfield-Logs-Enhanced
 
 本体验证使用包内 Python，清除外部 Python 配置和系统 Python PATH。
 中文空格新目录中检查 CMD、GUI、浮窗、合成 trace、两种战斗分析及独立工作进程，输出写入 `_development/verification/`。
+GUI 首次运行后整体移动目录，再检查启动、已保存设置和包内资源路径。验包完整性检查在 `python -O` 下同样执行。
 Uploader 验证将 3261 个原始文件与官方 ZIP 逐字节比较。
 
 维护者有本地官网源码时，可额外对六份合成日志比较完整上传 payload：

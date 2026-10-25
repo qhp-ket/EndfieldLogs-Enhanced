@@ -59,6 +59,9 @@ def test_wgc_receives_fresh_frames_while_desktop_overlay_is_invisible(app):
             probe.style.cssText='position:fixed;left:8px;top:150px;width:80px;height:80px;z-index:2147483647;background:rgb(240,10,10)';
             document.body.appendChild(probe);return true;})()''')
         QTest.qWait(300)
+        # The damage page measures its content after loading. Visibility
+        # edits must reuse that saved geometry, as the GUI does.
+        current = manager._entries[current.id]
         hwnd, geometry = int(native.winId()), native.geometry()
         assert capture('visible-red') == (240, 10, 10)
         manager.apply_entry(replace(current, hidden=True))

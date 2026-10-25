@@ -85,8 +85,72 @@ def test_release_builds_components_separately_by_default(tmp_path, monkeypatch, 
     release = tool('release')
     calls = []
     monkeypatch.setattr(release, 'ROOT', tmp_path)
+    monkeypatch.setattr(release, 'require_clean_tree', lambda allow_dirty=False: None)
     monkeypatch.setattr(release, 'identity', lambda: ('EndfieldLogs', '0.1.0-dev.999'))
     monkeypatch.setattr(release, 'run', lambda *args: calls.append(args))
     monkeypatch.setattr(sys, 'argv', ['release.py', command, '--skip-tests', '--stage-only', *options])
     assert release.main() == 0
     assert calls == [('tools/build_portable.py', '--stage-only', '--component', component)]
+
+
+def test_release_clean_tree_gate_checks_real_git_changes_and_allows_explicit_staging(tmp_path, monkeypatch):
+    import subprocess
+    release = tool('release')
+    subprocess.run(['git','init','-q',str(tmp_path)],check=True)
+    monkeypatch.setattr(release, 'ROOT', tmp_path)
+    release.require_clean_tree()
+    (tmp_path/'changed.py').write_text('pending change',encoding='utf8')
+    with pytest.raises(ValueError,match='dirty'):
+        release.require_clean_tree()
+    release.require_clean_tree(allow_dirty=True)
+
+
+def test_dirty_build_fails_before_tests_or_output_creation(tmp_path, monkeypatch):
+    import sys
+    release = tool('release')
+    monkeypatch.setattr(release, 'ROOT', tmp_path)
+    def dirty(allow_dirty=False):
+        raise ValueError('Working tree is dirty')
+    monkeypatch.setattr(release, 'require_clean_tree', dirty)
+    monkeypatch.setattr(release, 'run', lambda *args: pytest.fail('must fail before work'))
+    monkeypatch.setattr(sys, 'argv', ['release.py','build','--skip-tests'])
+    with pytest.raises(SystemExit) as error:
+        release.main()
+    assert error.value.code == 1 and not list(tmp_path.iterdir())
+
+
+def test_allow_dirty_requires_staging_and_dirty_stage_cannot_be_zipped(tmp_path, monkeypatch):
+    import sys
+    release = tool('release')
+    monkeypatch.setattr(sys, 'argv', ['release.py','build','--allow-dirty'])
+    with pytest.raises(SystemExit) as error:
+        release.main()
+    assert error.value.code == 1
+    from app_test_support.runtime.packaging import builder
+    monkeypatch.setattr(builder, 'RELEASES', tmp_path)
+    stage = tmp_path/'development-stage'
+    stage.mkdir()
+    (stage/'BUILD-MANIFEST.json').write_text(json.dumps({'source_dirty':True}),encoding='utf8')
+    with pytest.raises(ValueError,match='Dirty development'):
+        builder.zip_stage(stage)
+    assert not list(tmp_path.glob('*.zip'))
+
+
+@pytest.mark.parametrize('failure', ['archive', 'member'])
+def test_optimized_python_still_checks_zip_and_member_hashes(tmp_path, failure):
+    import subprocess, sys
+    from app_test_support.paths import ROOT
+    name='EndfieldLogsUploader-3.0.12-windows-x64'
+    archive=tmp_path/(name+'.zip')
+    data=b'fixture'
+    manifest=dict(component='official_uploader',application=dict(name='EndfieldLogsUploader',
+        artifact=name,version='3.0.12'),files={'Uploader/sample.txt':dict(size=len(data),sha256='0'*64)})
+    with zipfile.ZipFile(archive,'w') as output:
+        output.writestr(name+'/BUILD-MANIFEST.json',json.dumps(manifest))
+        output.writestr(name+'/Uploader/sample.txt',data)
+    digest=hashlib.sha256(archive.read_bytes()).hexdigest() if failure=='member' else '0'*64
+    archive.with_suffix('.zip.sha256').write_text(digest,encoding='ascii')
+    result=subprocess.run([sys.executable,'-O','-B',str(ROOT/'_development/tools/verify_portable_zip.py'),
+        str(archive),'--output',str(tmp_path/'extracted')],capture_output=True,text=True,timeout=15)
+    assert result.returncode!=0
+    assert ('ZIP SHA-256 mismatch' if failure=='archive' else 'Manifest hash mismatch') in result.stderr

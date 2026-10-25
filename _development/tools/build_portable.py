@@ -283,6 +283,8 @@ def zip_stage(stage):
     if stage.parent != RELEASES.resolve() or not (stage / 'BUILD-MANIFEST.json').is_file():
         raise ValueError('Only an existing build directly under _releases can be archived')
     manifest = json.loads((stage / 'BUILD-MANIFEST.json').read_text(encoding='utf8'))
+    if manifest.get('source_dirty'):
+        raise ValueError('Dirty development staging cannot be archived as a release ZIP')
     component = manifest.get('component', 'application')
     files = validate_tree(stage, component)
     actual = {p.relative_to(stage).as_posix() for p in files if p.name != 'BUILD-MANIFEST.json'}

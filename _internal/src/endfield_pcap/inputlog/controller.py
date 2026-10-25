@@ -33,8 +33,22 @@ class InputController:
         env = dict(os.environ,PYTHONIOENCODING='utf-8',PYTHONDONTWRITEBYTECODE='1')
         self.process = subprocess.Popen([sys.executable,'-u','-c',bootstrap,json.dumps(cfg)],
             stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,
-            encoding='utf-8',creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0),env=env)
+            encoding='utf-8',errors='replace',creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0),env=env)
         process = self.process
+        error_tail = ''
+        error_lock = threading.Lock()
+        def drain_errors():
+            nonlocal error_tail
+            try:
+                while chunk := process.stderr.read(1024):
+                    with error_lock:
+                        error_tail = (error_tail + chunk)[-8192:]
+            except (OSError, ValueError):
+                pass
+            finally:
+                process.stderr.close()
+        errors = threading.Thread(target=drain_errors, name='input-stderr', daemon=True)
+        errors.start()
         def read():
             try:
                 for line in process.stdout:
@@ -45,14 +59,19 @@ class InputController:
                     with self._lock:
                         if self.process is process:
                             self.status = status
-                error = process.stderr.read()[-1500:]
                 process.wait()
+                errors.join(1)
+                with error_lock:
+                    error = error_tail[-1500:]
                 with self._lock:
                     if self.process is process and self.status.get('status') != 'error':
                         self.status = dict(self.status,status='error' if process.returncode else 'stopped',
                                            error=error if process.returncode else '')
-            except OSError:
+            except (OSError, ValueError):
                 pass
+            finally:
+                process.stdout.close()
+                process.stdin.close()
         threading.Thread(target=read,name='input-status',daemon=True).start()
 
     @property

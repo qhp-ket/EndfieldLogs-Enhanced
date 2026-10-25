@@ -15,6 +15,7 @@ def main():
     parser.add_argument('--root', required=True, type=Path)
     parser.add_argument('--output', required=True, type=Path)
     parser.add_argument('--trace', type=Path)
+    parser.add_argument('--use-app-profile', action='store_true')
     args = parser.parse_args()
     root, output = args.root.resolve(), args.output.resolve()
     trace = args.trace.resolve() if args.trace else None
@@ -23,7 +24,7 @@ def main():
     spec = importlib.util.spec_from_file_location('portable_launcher', root / 'launch_gui.py')
     launcher = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(launcher)
-    launcher.PROFILE = output / 'profile'
+    launcher.PROFILE = root / '.dev-gui' if args.use_app_profile else output / 'profile'
     assert launcher.main(['--check']) == 0
 
     from PySide6.QtCore import QCoreApplication, QEvent, QTimer, Qt, QUrl

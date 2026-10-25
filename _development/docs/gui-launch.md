@@ -63,5 +63,8 @@ OBS 使用 Windows 10（WGC）窗口采集，隐藏期间可继续接收同一�
 | `.dev-gui/logs/launcher-stdio.log` | 直接输出及 native 错误 |
 | `.dev-gui/logs/battles/` | 按日期归档的 trace、input log 和诊断 |
 
+配置采用临时文件、同步落盘和原子替换，并保留上一份有效备份；损坏文件单独保留，读取时恢复备份或默认值。
+包内路径随程序目录解析；游戏目录等外部选择保持原路径，历史引用和输入绑定随目录迁移。
+
 官网上传选择 `trace_*.log`，保留 `.log.status.json`，并满足官网完整性校验。
 上传器准备见 [运行资源](runtime-resources.md)。

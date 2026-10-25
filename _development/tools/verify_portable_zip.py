@@ -11,6 +11,13 @@ import tempfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def require(condition, message):
+    if not condition:
+        raise ValueError(message)
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument('archive', type=Path)
 parser.add_argument('--trace', type=Path, help='Optional trace for offline smoke; default is a synthetic fixture')
@@ -32,7 +39,7 @@ def sha(path):
 
 
 expected = archive_path.with_suffix('.zip.sha256').read_text(encoding='ascii').split()[0]
-assert sha(archive_path) == expected
+require(sha(archive_path) == expected, 'ZIP SHA-256 mismatch')
 with zipfile.ZipFile(archive_path) as archive:
     for info in archive.infolist():
         relative = PurePosixPath(info.filename)
@@ -42,25 +49,25 @@ with zipfile.ZipFile(archive_path) as archive:
     archive.extractall(output)
 
 folders = [p for p in output.iterdir() if p.is_dir()]
-assert len(folders) == 1
+require(len(folders) == 1, 'Verification failed: len(folders) == 1')
 app_root = folders[0]
 manifest = json.loads((app_root / 'BUILD-MANIFEST.json').read_text(encoding='utf8'))
 component = manifest.get('component', 'application')
 identity=runpy.run_path(str(app_root/'_internal/src/endfield_pcap/_version.py')) if component=='application' else {}
 app_name = identity.get('APP_NAME') if component == 'application' else 'EndfieldLogsUploader'
 package_name=identity.get('APP_PACKAGE_NAME',app_name) if component=='application' else app_name
-assert component in {'application', 'official_uploader'}
-assert manifest['application']['name'] == app_name
-assert manifest['application']['artifact'] == app_root.name == archive_path.stem
-assert app_root.name == f"{package_name}-{manifest['application']['version']}-windows-x64"
+require(component in {'application', 'official_uploader'}, "Verification failed: component in {'application', 'official_uploader'}")
+require(manifest['application']['name'] == app_name, "Verification failed: manifest['application']['name'] == app_name")
+require(manifest['application']['artifact'] == app_root.name == archive_path.stem, "Verification failed: manifest['application']['artifact'] == app_root.name == archive_path.stem")
+require(app_root.name == f"{package_name}-{manifest['application']['version']}-windows-x64", 'Verification failed: app_root.name == f"{package_name}-{manifest[\'application\'][\'version\']}-windows-x64"')
 actual = {p.relative_to(app_root).as_posix() for p in app_root.rglob('*') if p.is_file()}
-assert actual == set(manifest['files']) | {'BUILD-MANIFEST.json'}
+require(actual == set(manifest['files']) | {'BUILD-MANIFEST.json'}, "Verification failed: actual == set(manifest['files']) | {'BUILD-MANIFEST.json'}")
 for relative, entry in manifest['files'].items():
     path = app_root / relative
-    assert path.stat().st_size == entry['size'] and sha(path) == entry['sha256'], relative
-assert not (app_root / '.dev-gui').exists()
-assert not (app_root / '_development').exists()
-assert not any('/tests/' in p or '/__pycache__/' in p for p in actual)
+    require(path.stat().st_size == entry['size'] and sha(path) == entry['sha256'], 'Manifest hash mismatch: ' + relative)
+require(not (app_root / '.dev-gui').exists(), "Verification failed: not (app_root / '.dev-gui').exists()")
+require(not (app_root / '_development').exists(), "Verification failed: not (app_root / '_development').exists()")
+require(not any('/tests/' in p or '/__pycache__/' in p for p in actual), "Verification failed: not any('/tests/' in p or '/__pycache__/' in p for p in actual)")
 print('Extracted manifest and privacy boundary verified', flush=True)
 
 if component == 'official_uploader':
@@ -71,13 +78,13 @@ if component == 'official_uploader':
     with zipfile.ZipFile(original_archive) as original:
         members = [i for i in original.infolist() if not i.is_dir() and i.filename.startswith(PREFIX)]
         originals = {'Uploader/' + i.filename[len(PREFIX):]: i for i in members}
-        assert {p for p in actual if p.startswith('Uploader/')} == originals.keys()
+        require({p for p in actual if p.startswith('Uploader/')} == originals.keys(), "Verification failed: {p for p in actual if p.startswith('Uploader/')} == originals.keys()")
         for relative, member in originals.items():
-            assert (app_root / relative).read_bytes() == original.read(member), relative
+            require((app_root / relative).read_bytes() == original.read(member), relative)
     executable = app_root / 'Uploader/EndfieldLogsUploader/EndfieldLogsUploader.exe'
-    assert sha(executable) == manifest['official_uploader']['executable_sha256']
-    assert not (app_root / '_internal').exists()
-    assert not any(p.endswith(('.key', '.pfx', '.p12')) or '/secrets/' in p for p in actual)
+    require(sha(executable) == manifest['official_uploader']['executable_sha256'], "Verification failed: sha(executable) == manifest['official_uploader']['executable_sha256']")
+    require(not (app_root / '_internal').exists(), "Verification failed: not (app_root / '_internal').exists()")
+    require(not any(p.endswith(('.key', '.pfx', '.p12')) or '/secrets/' in p for p in actual), "Verification failed: not any(p.endswith(('.key', '.pfx', '.p12')) or '/secrets/' in p for p in actual)")
     result = dict(archive=archive_path.name, component=component,
                   bytes=archive_path.stat().st_size, sha256=expected,
                   uncompressed_bytes=sum((app_root / p).stat().st_size for p in actual),
@@ -88,7 +95,7 @@ if component == 'official_uploader':
     print(json.dumps(result, indent=2), flush=True)
     raise SystemExit(0)
 
-assert not (app_root / 'Uploader').exists(), 'Uploader must be distributed separately'
+require(not (app_root / 'Uploader').exists(), 'Uploader must be distributed separately')
 
 env = dict(os.environ)
 for key in list(env):
@@ -104,23 +111,56 @@ cmd = Path(env.get('SystemRoot', 'C:/Windows')) / 'System32/cmd.exe'
 check = subprocess.run([str(cmd), '/d', '/c', 'Start-GUI.cmd', '--check'], cwd=app_root,
                        env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=90)
 (output / 'cmd-check.log').write_bytes(check.stdout)
-assert check.returncode == 0, check.stdout.decode('utf8', errors='replace')[-3000:]
+require(check.returncode == 0, check.stdout.decode('utf8', errors='replace')[-3000:])
 config = json.loads((app_root / '.dev-gui/settings.json').read_text(encoding='utf8'))
-assert Path(config['service']['rsa_key_txt']).resolve().is_relative_to(app_root)
-assert Path(config['service']['log_dir']).resolve().is_relative_to(app_root)
+for key in ('rsa_key_txt', 'name_index_path', 'log_dir', 'debug_dir'):
+    require((app_root / config['service'][key]).resolve().is_relative_to(app_root),
+            'Application-owned path escaped package: ' + key)
 
-python = app_root / '_internal/python/python.exe'
-command = [str(python), '-B', str(ROOT / '_development/tools/smoke_portable.py'),
-           '--root', str(app_root), '--output', str(output / 'smoke'),
-           '--trace', str(args.trace.resolve() if args.trace else ROOT / '_internal/packages/parser_core/tests/fixtures/synthetic_fire_corrosion.log')]
-smoke = subprocess.run(command, cwd=output, env=env, stdout=subprocess.PIPE,
-                       stderr=subprocess.STDOUT, timeout=180)
-(output / 'smoke.log').write_bytes(smoke.stdout)
-assert smoke.returncode == 0, smoke.stdout.decode('utf8', errors='replace')[-3000:]
+
+def run_smoke(root, destination):
+    python = root / '_internal/python/python.exe'
+    command = [str(python), '-B', str(ROOT / '_development/tools/smoke_portable.py'),
+               '--root', str(root), '--output', str(destination), '--use-app-profile',
+               '--trace', str(args.trace.resolve() if args.trace else
+                              ROOT / '_internal/packages/parser_core/tests/fixtures/synthetic_fire_corrosion.log')]
+    result = subprocess.run(command, cwd=output, env=env, stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT, timeout=180)
+    destination.with_suffix('.log').write_bytes(result.stdout)
+    require(result.returncode == 0, result.stdout.decode('utf8', errors='replace')[-3000:])
+    return result
+
+
+smoke = run_smoke(app_root, output / 'smoke')
+previous_config = json.loads((app_root / '.dev-gui/settings.json').read_text(encoding='utf8'))
+marker = app_root / '.dev-gui/migration-marker.txt'
+marker.write_text('portable profile', encoding='utf8')
+old_root = app_root
+moved_parent = output / '运行后移动 目录'
+moved_parent.mkdir()
+app_root = app_root.rename(moved_parent / app_root.name)
+check_moved = subprocess.run([str(cmd), '/d', '/c', 'Start-GUI.cmd', '--check'], cwd=app_root,
+                            env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=90)
+(output / 'cmd-check-moved.log').write_bytes(check_moved.stdout)
+require(check_moved.returncode == 0, check_moved.stdout.decode('utf8', errors='replace')[-3000:])
+require(not old_root.exists(), 'Original portable directory still exists')
+require((app_root / '.dev-gui/migration-marker.txt').read_text(encoding='utf8') == 'portable profile',
+        'Profile contents changed during migration')
+moved_config = json.loads((app_root / '.dev-gui/settings.json').read_text(encoding='utf8'))
+require(moved_config['service']['ws_browser_token'] == previous_config['service']['ws_browser_token'],
+        'Persisted settings were reset during migration')
+require(moved_config['service']['dll_dir'] == previous_config['service']['dll_dir'],
+        'External game path changed during migration')
+for key in ('rsa_key_txt', 'name_index_path', 'log_dir', 'debug_dir'):
+    value = moved_config['service'][key]
+    require(not Path(value).is_absolute() and (app_root / value).resolve().is_relative_to(app_root),
+            'Moved package retained an absolute application path: ' + key)
+smoke_moved = run_smoke(app_root, output / 'smoke-moved')
 result = dict(archive=archive_path.name, bytes=archive_path.stat().st_size, sha256=expected,
               uncompressed_bytes=sum((app_root / p).stat().st_size for p in actual),
               manifest_files=len(manifest['files']), archive_has_personal_profile=False,
               cmd_check_exit=check.returncode, smoke_exit=smoke.returncode,
+              used_directory_relocation_verified=True, relocated_gui_exit=smoke_moved.returncode,
               relocation_with_spaces_and_chinese=(' ' in str(output) and any(ord(c) > 127 for c in str(output))),
               uploader_included=False, system_python_on_path=False,
               smoke=json.loads((output / 'smoke/result.json').read_text(encoding='utf8')))
