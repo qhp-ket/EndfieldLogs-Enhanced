@@ -92,6 +92,7 @@ window.addEventListener("endfield-analysis-snapshot", event => {
 
 伤害模板跟随 GUI 的历史/实时选择。URL 和无声明 HTML 自行连接实时 WS，浏览器需携带服务的 `access_token`。
 WS 模式本地模板可将 URL 的 `wsToken` 转为该参数；远程 URL 的凭据由用户配置。认证规则见 [实时摘要](live-summary-publisher.md)。
+远程页面按用户填写的 URL 导航；本地页面接收宿主提供的端口、资源目录及模板参数。
 
 ## OBS 与 UID
 

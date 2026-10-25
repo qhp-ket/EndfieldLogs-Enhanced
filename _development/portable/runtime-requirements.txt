@@ -1,4 +1,4 @@
-# Tested Windows x64 CPython 3.14.2 runtime distributions; no test extras.
+# Exact Windows x64 release dependency closure, also used by CI constraints.
 annotated-types==0.8.0
 anyio==4.15.0
 certifi==2026.7.22

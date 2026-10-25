@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 import pytest
-from PySide6.QtCore import QUrlQuery
+from PySide6.QtCore import QUrl, QUrlQuery
 from app_test_support.ui.window import entry
 from endfield_pcap.models import OverlaySourceType
 from endfield_pcap.overlays.config import OverlayWindowConfig
@@ -21,3 +21,9 @@ def test_only_local_ws_template_url_receives_browser_capability(remote, in_proce
     assert QUrlQuery(urls[0]).queryItemValue('wsToken') == (token if not remote and not in_process else '')
     if remote or in_process:
         assert token not in urls[0].toString()
+    if remote:
+        assert urls[0] == QUrl(selected.source_value)
+        assert not any(QUrlQuery(urls[0]).hasQueryItem(key) for key in ('assetRoot', 'wsPort', 'wsToken'))
+    else:
+        assert QUrlQuery(urls[0]).queryItemValue('assetRoot')
+        assert QUrlQuery(urls[0]).queryItemValue('wsPort') == '29325'

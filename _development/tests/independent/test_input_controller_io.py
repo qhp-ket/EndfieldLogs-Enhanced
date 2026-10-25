@@ -1,5 +1,7 @@
 """Real subprocess pipes must keep draining while JSON status stays open."""
 import time
+import subprocess
+from types import SimpleNamespace
 import pytest
 from endfield_pcap.inputlog import controller
 
@@ -34,3 +36,43 @@ sys.exit({exit_code})
         assert not inputs.running
     finally:
         inputs.stop(wait=True)
+
+
+@pytest.mark.parametrize('failure', ['timeout', 'terminate', 'kill', 'wait'])
+def test_stop_cleanup_failures_are_bounded_and_reported_without_raising(failure, caplog):
+    calls = []
+    def signal(name):
+        calls.append(name)
+        if failure == name:
+            raise PermissionError('synthetic access denied')
+    def wait(timeout):
+        calls.append(timeout)
+        if failure == 'wait':
+            raise OSError('synthetic wait failure')
+        raise subprocess.TimeoutExpired('input-worker', timeout)
+    inputs = controller.InputController()
+    inputs.process = SimpleNamespace(pid=123, poll=lambda: None, wait=wait,
+        terminate=lambda: signal('terminate'), kill=lambda: signal('kill'))
+    commands = []
+    inputs.command = lambda **payload: commands.append(payload)
+    inputs.stop(wait=True)
+    assert commands == [dict(command='stop')]
+    assert calls == [8, 'terminate', *([] if failure == 'terminate' else [3]),
+                     'kill', *([] if failure == 'kill' else [1])]
+    assert inputs.snapshot()['status'] == 'error'
+    assert '123' in caplog.text and '退出失败' in caplog.text
+
+
+def test_stop_escalates_once_then_reaps_process():
+    calls = []
+    def wait(timeout):
+        calls.append(timeout)
+        if timeout == 8:
+            raise subprocess.TimeoutExpired('input-worker', timeout)
+    inputs = controller.InputController()
+    inputs.command = lambda **payload: calls.append(payload['command'])
+    inputs.process = SimpleNamespace(poll=lambda: None, wait=wait,
+        terminate=lambda: calls.append('terminate'),
+        kill=lambda: pytest.fail('already reaped'))
+    inputs.stop(wait=True)
+    assert calls == ['stop', 8, 'terminate', 3]

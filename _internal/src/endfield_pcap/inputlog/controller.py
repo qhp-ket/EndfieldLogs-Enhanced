@@ -1,11 +1,14 @@
 """Parent ownership of input subprocess. IPC carries bounded status, never raw traffic."""
 from __future__ import annotations
 import json
+import logging
 import os
 from pathlib import Path
 import subprocess
 import sys
 import threading
+
+LOGGER = logging.getLogger(__name__)
 
 
 def worker_bootstrap(entry='from endfield_pcap.inputlog.worker import main; main()'):
@@ -96,9 +99,21 @@ class InputController:
 
     def stop(self,wait=False):
         self.command(command='stop')
-        if wait and self.running:
+        process = self.process
+        if not wait or process is None:
+            return
+        failure = None
+        for action, timeout in ((None, 8), ('terminate', 3), ('kill', 1)):
             try:
-                self.process.wait(8)
-            except subprocess.TimeoutExpired:
-                self.process.terminate()
-                self.process.wait(3)
+                if process.poll() is not None:
+                    return
+                if action is not None:
+                    getattr(process, action)()
+                process.wait(timeout)
+                return
+            except (OSError, subprocess.TimeoutExpired) as exc:
+                failure = exc
+        LOGGER.warning('输入记录进程退出失败（PID %s）：%s', process.pid, failure)
+        with self._lock:
+            if self.process is process:
+                self.status = dict(self.status, status='error', error='输入记录进程未能退出，请查看程序日志。')

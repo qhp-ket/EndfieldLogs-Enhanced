@@ -6,6 +6,26 @@ import json
 import pytest
 from pathlib import Path
 
+
+@pytest.mark.parametrize('relative,accepted', [
+    ('.github/workflows/ci.yml', True), ('.github/workflows/manual.yaml', True),
+    ('.github/secrets.txt', False), ('.github/workflows/random.txt', False),
+    ('.github/workflows/nested/ci.yml', False), ('unknown/source.py', False),
+])
+def test_repository_audit_accepts_only_workflow_yaml_under_github(tmp_path, monkeypatch, capsys, relative, accepted):
+    import subprocess
+    import sys
+    audit = tool('audit_repository')
+    subprocess.run(['git', 'init', '-q', str(tmp_path)], check=True, capture_output=True)
+    target = tmp_path / relative
+    target.parent.mkdir(parents=True)
+    target.write_text('fixture', encoding='utf8')
+    monkeypatch.setattr(audit, 'ROOT', tmp_path)
+    monkeypatch.setattr(sys, 'argv', ['audit_repository.py', '--worktree'])
+    assert audit.main() == (0 if accepted else 1)
+    assert ('unexpected root directory' in capsys.readouterr().out) == (not accepted)
+
+
 def test_public_protocol_fixtures_are_constructed_without_opening_a_recording(monkeypatch):
     generator = tool('generate_test_fixtures')
     folder = ROOT / '_internal/packages/parser_core/tests/fixtures'

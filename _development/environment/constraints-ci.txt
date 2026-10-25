@@ -1,0 +1,8 @@
+# Runtime closure shared with local release builds.
+-c ../portable/runtime-requirements.txt
+pytest==9.0.3
+packaging==26.3
+iniconfig==2.3.1
+pluggy==1.7.0
+pygments==2.21.0
+colorama==0.4.6

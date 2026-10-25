@@ -12,6 +12,7 @@ python -B _development/tools/release.py version 0.1.0-dev.2
 
 修改版本、选择测试、提交源码后构建，清单记录该 commit。
 Windows x64 构建使用当前 CPython 3.14 和实际安装的依赖，按使用范围及 PE 依赖闭包收集。
+`portable/runtime-requirements.txt` 固定发行依赖闭包；构建前核对包集合与精确版本，依赖升级需同步锁文件并验证。
 
 ```powershell
 .\Setup-Dev.cmd

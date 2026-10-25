@@ -49,6 +49,8 @@ def test_gitignore_keeps_source_and_tests_but_excludes_private_and_generated_fil
     ignored += ['_internal/src/nested/.dev-gui/settings.json',
                 '_internal/src/nested/private.input.jsonl.part',
                 '_development/tests/recorded_events.jsonl']
+    ignored += ['.github/secrets.txt', '.github/workflows/private.txt',
+                '.github/workflows/nested/job.yml']
     retained = ['launch_gui.py', 'Start-GUI.cmd', '_internal/src/endfield_pcap/service/runtime/server.py',
                 '_internal/packages/parser_core/tests/reporting/test_unified.py', '_development/tests/resources/test_portable_packaging.py',
                 '_development/tools/build_portable.py', '_internal/secrets/README.md', '.env.example',
@@ -70,6 +72,7 @@ def test_gitignore_keeps_source_and_tests_but_excludes_private_and_generated_fil
                 '_internal/data/ui/characters/chr_0002_endminm.png']
     retained += ['_internal/native/manifest.json','_internal/native/SDL3-LICENSE.txt',
                  '_development/tools/prepare_native.py','_development/docs/independent-services.md']
+    retained += ['.github/workflows/ci.yml', '.github/workflows/manual.yaml']
     for name in ignored + retained:
         put(tmp_path, name)
     result = subprocess.run(['git', '-c', 'core.excludesFile=NUL', '-c', 'core.quotepath=false', 'check-ignore', '--no-index', '--stdin'],
@@ -127,6 +130,7 @@ def test_portable_stage_includes_verified_capture_key(tmp_path, monkeypatch):
         put(source,'_internal/native/'+name)
     monkeypatch.setattr(builder, 'copy_runtime_data', lambda stage: None)
     monkeypatch.setattr(builder, 'copy_python', lambda stage: None)
+    monkeypatch.setattr(builder, 'dependencies', lambda: {})
     monkeypatch.setattr(builder, 'copy_dependencies', lambda stage: {})
     monkeypatch.setattr(builder, 'write_manifest', lambda stage, versions: None)
     stage = builder.stage_release()

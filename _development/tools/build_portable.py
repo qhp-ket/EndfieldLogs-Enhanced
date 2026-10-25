@@ -94,7 +94,28 @@ def dependencies():
             continue
         resolved[name] = dist
         pending.extend(dist.requires or [])
+    validate_dependency_versions(resolved)
     return resolved
+
+
+def validate_dependency_versions(resolved):
+    locked = {}
+    for line in (ROOT / '_development/portable/runtime-requirements.txt').read_text(encoding='utf8').splitlines():
+        if not line.strip() or line.lstrip().startswith('#'):
+            continue
+        req = Requirement(line)
+        specs = list(req.specifier)
+        if req.url or req.marker or req.extras or len(specs) != 1 or specs[0].operator != '==' or '*' in specs[0].version:
+            raise ValueError('Release dependencies require exact pins: ' + line)
+        name = req.name.lower().replace('_', '-')
+        if name in locked:
+            raise ValueError('Duplicate release dependency: ' + name)
+        locked[name] = specs[0].version
+    actual = {name: dist.version for name, dist in resolved.items()}
+    if actual != locked:
+        differences = [f'{name}: installed={actual.get(name, "missing")}, locked={locked.get(name, "missing")}'
+                       for name in sorted(actual.keys() | locked.keys()) if actual.get(name) != locked.get(name)]
+        raise ValueError('Release dependency lock mismatch: ' + '; '.join(differences))
 
 
 def copy_dependencies(stage):
@@ -221,6 +242,7 @@ def stage_release(name=None):
     name = name or RELEASE_NAME
     if name != RELEASE_NAME:
         raise ValueError(f'Release name must match the version file: {RELEASE_NAME}')
+    dependencies()
     from prepare_resources import prepare
     if prepare(ROOT, check=True):
         raise ValueError('Prepare the bundled runtime data before packaging')

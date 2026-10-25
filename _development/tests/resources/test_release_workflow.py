@@ -3,7 +3,31 @@ import hashlib
 import json
 import zipfile
 import pytest
+from types import SimpleNamespace
 from app_test_support.runtime.tools import tool
+
+
+@pytest.mark.parametrize('actual,pins,valid', [
+    ({'example': '1.2'}, 'example==1.2', True),
+    ({'example': '1.3'}, 'example==1.2', False),
+    ({}, 'example==1.2', False),
+    ({'extra': '1.0'}, '', False),
+    ({'example': '1.2'}, 'example>=1.2', False),
+    ({'example': '1.2'}, 'example==1.*', False),
+    ({'example': '1.2'}, 'example==1.2\nexample==1.2', False),
+])
+def test_release_dependency_lock_rejects_drift_missing_and_unpinned_packages(tmp_path, monkeypatch, actual, pins, valid):
+    release = tool('build_portable')
+    monkeypatch.setattr(release, 'ROOT', tmp_path)
+    lock = tmp_path / '_development/portable/runtime-requirements.txt'
+    lock.parent.mkdir(parents=True)
+    lock.write_text(pins, encoding='utf8')
+    installed = {name: SimpleNamespace(version=value) for name, value in actual.items()}
+    if valid:
+        release.validate_dependency_versions(installed)
+    else:
+        with pytest.raises(ValueError, match='[Dd]ependency|dependencies'):
+            release.validate_dependency_versions(installed)
 
 
 def resource_fixture(root):

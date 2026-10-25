@@ -17,6 +17,12 @@ LOCAL = re.compile(rb'(?:[A-Za-z]:[\\/]Users[\\/][^\s"\x27<>]+|[A-Za-z]:[\\/]MyF
 LINK = re.compile(r'(?<!!)\[[^\]]*\]\(([^)]+)\)')
 
 
+def allowed_repository_path(path):
+    return (len(path.parts) == 1 or path.parts[0] in {'_internal', '_development'}
+            or (len(path.parts) == 3 and path.parts[:2] == ('.github', 'workflows')
+                and path.suffix.lower() in {'.yml', '.yaml'}))
+
+
 def staged_blobs():
     entries = subprocess.check_output(['git', 'ls-files', '--stage', '-z'], cwd=ROOT).split(b'\0')
     names, hashes = [], []
@@ -66,7 +72,7 @@ def main():
                         issues.append((name + ':' + member, 'private content in runtime bundle'))
                     if member in expected and hashlib.sha256(data).hexdigest() != expected[member]['sha256']:
                         issues.append((name + ':' + member, 'runtime member hash mismatch'))
-        if path.parts[0] not in {'_internal', '_development'} and len(path.parts) > 1:
+        if not allowed_repository_path(path):
             issues.append((name, 'unexpected root directory'))
         if SECRET.search(content):
             issues.append((name, 'private key or credential token'))

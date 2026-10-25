@@ -11,6 +11,12 @@
 !/launch_gui.py
 !/_internal/
 !/_development/
+!/.github/
+/.github/*
+!/.github/workflows/
+/.github/workflows/*
+!/.github/workflows/*.yml
+!/.github/workflows/*.yaml
 /_internal/*
 !/_internal/src/
 !/_internal/packages/

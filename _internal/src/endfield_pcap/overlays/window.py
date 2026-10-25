@@ -303,6 +303,9 @@ class OverlayWindow(QWidget):
             url = QUrl.fromLocalFile(str(Path(self.entry.source_value).resolve()))
         else:
             url = QUrl.fromUserInput(self.entry.source_value)
+        if not url.isLocalFile():
+            self.webview.setUrl(url)
+            return
         query = QUrlQuery(url)
         query.addQueryItem("wsPort", str(self.config.ws_port))
         # Never disclose the capability to an arbitrary remote template URL.
