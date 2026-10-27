@@ -1,6 +1,6 @@
 from dataclasses import replace
 import json
-from endfield_pcap.gui.config import load_app_config, save_app_config
+from endfield_pcap.settings import load_app_config, save_app_config
 
 
 def test_browser_token_migrates_persists_and_is_not_in_config_repr(tmp_path):

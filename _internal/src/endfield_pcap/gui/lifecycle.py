@@ -35,10 +35,9 @@ class GuiLifecycle:
 
     def _gui_windows(self):
         # Overlay windows have an independent lifecycle and visibility control.
-        overlays=set(self.overlay_manager._windows.values())
         def belongs(window):
             while window is not None:
-                if window in overlays: return False
+                if self.overlay_manager.owns_window(window): return False
                 if window is self: return True
                 window=window.parentWidget()
             return False
@@ -77,17 +76,7 @@ class GuiLifecycle:
         self._drain_independent_services()
 
     def _release_history_caches(self):
-        # Rows keep their small summary and source ranges; full reports are
-        # rebuilt on demand. An open detail window retains its own snapshot.
-        for records in self._trace_records.values():
-            for record in records:
-                if hasattr(record,'snapshot'): record.snapshot={}
-        if self._history_detail_dialog is None:
-            self._history_detail_snapshot=None
-            self._history_detail_key=None
-            self._history_detail_signature=None
-            from endfield_pcap.inputlog.history import clear_cache
-            clear_cache()
+        self.history_controller.release_cache()
 
     def _update_gui_poll_interval(self):
         self._gui_hidden=not self.isVisible() or self.isMinimized()

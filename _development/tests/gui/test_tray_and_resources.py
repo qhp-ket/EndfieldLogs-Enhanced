@@ -7,7 +7,7 @@ from PySide6.QtGui import QKeySequence
 from PySide6.QtWidgets import QDialog
 from app_test_support.ui.window import main_window
 from app_test_support.scenarios.trace import wait_for
-from endfield_pcap.gui.config import load_app_config
+from endfield_pcap.settings import load_app_config
 from endfield_pcap.gui.pages.overlays import hotkeys
 from endfield_pcap.gui.lifecycle import QSystemTrayIcon
 
@@ -101,19 +101,20 @@ def test_hidden_ui_defers_log_layout_but_drains_input_and_combo(main_window,app,
     assert '键盘 12' in window.home_page.input_status.text()
 
 
-def test_closed_history_view_releases_full_report_and_input_archive_caches(main_window,app):
+def test_closed_history_view_releases_full_report_and_input_archive_caches(main_window,app,tmp_path):
     from app_test_support.scenarios.compact import sample
     from endfield_pcap.inputlog import history
     window=main_window
-    record=SimpleNamespace(snapshot={'retained':'full report'})
-    window._trace_records={'fixture':[record]}
-    window._history_detail_snapshot=sample();window._history_detail_key='fixture'
+    from endfield_pcap.history.importer import TraceCombatRecord
+    record=TraceCombatRecord(tmp_path/'fixture.log',1,1,'fixture',snapshot={'retained':'full report'})
+    window.history_controller._trace_records={'fixture':[record]}
+    window.history_controller.detail_snapshot=sample();window.history_controller.detail_key='fixture'
     with history._lock: history._cache['test']=object()
-    window._show_history_detail(window._history_detail_snapshot,'fixture')
-    dialog=window._history_detail_dialog
+    window.history_presenter._show_detail(window.history_controller.detail_snapshot,record)
+    dialog=window.history_presenter.dialog
     destroyed=[];dialog.destroyed.connect(lambda:destroyed.append(True))
     dialog.close()
     QCoreApplication.sendPostedEvents(None,QEvent.Type.DeferredDelete);app.processEvents()
     assert destroyed
-    assert window._history_detail_dialog is None and window._history_detail_snapshot is None
+    assert window.history_presenter.dialog is None and window.history_controller.detail_snapshot is None
     assert record.snapshot=={} and not history._cache

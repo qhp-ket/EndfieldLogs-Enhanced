@@ -1,6 +1,6 @@
 """Native, lazy history detail window using the existing canonical snapshot."""
 from __future__ import annotations
-from PySide6.QtCore import Qt, QRectF, QSignalBlocker
+from PySide6.QtCore import Qt, QRectF, QSignalBlocker, Signal
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QDialog, QWidget, QVBoxLayout, QHBoxLayout, QTabWidget, QLayout, QSizePolicy, QScrollArea, QFrame
 from qfluentwidgets import CaptionLabel, StrongBodyLabel, Slider, PushButton, CheckBox, isDarkTheme, qconfig
@@ -9,6 +9,7 @@ from endfield_pcap.gui.shared.placement import schedule_initial_placement
 from endfield_pcap.gui.battle.inspector import EnemyEvidencePage
 from endfield_pcap.gui.battle.controls import popup
 from endfield_pcap.gui.battle.tables import remember_columns
+from endfield_pcap.application.settings import BattleDisplaySettings
 
 
 class _DetailBody(QWidget):
@@ -20,12 +21,20 @@ class _DetailBody(QWidget):
 
 
 class BattleDetailDialog(QDialog):
-    def __init__(self, snapshot: dict, label: str, parent=None):
+    characterAvatarsChanged = Signal(bool)
+    avatarPercentChanged = Signal(int)
+    characterLanesChanged = Signal(str, object)
+    tableWidthsChanged = Signal(str, object)
+
+    def __init__(self, snapshot: dict, label: str, parent=None, *, record_info=None, display_settings=None):
         super().__init__(parent)
         self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.WindowTitleHint
                             | Qt.WindowType.WindowSystemMenuHint | Qt.WindowType.WindowMinMaxButtonsHint
                             | Qt.WindowType.WindowCloseButtonHint)
         self.snapshot = snapshot
+        self.record_info = record_info
+        self._display = display_settings or BattleDisplaySettings()
+        self._table_widths = dict(self._display.battle_table_widths)
         self._record_label = label
         self.setObjectName('battleDetailDialog')
         from endfield_pcap._version import APP_NAME
@@ -44,13 +53,13 @@ class BattleDetailDialog(QDialog):
         settings_layout = QVBoxLayout(settings_panel)
         settings_layout.setContentsMargins(12, 10, 12, 10)
         self.avatar_check = CheckBox('显示角色头像', self)
-        self.avatar_check.setChecked(getattr(getattr(parent, 'app_config', None), 'show_character_avatars', True))
+        self.avatar_check.setChecked(self._display.show_character_avatars)
         avatar_row = QHBoxLayout()
         avatar_row.addWidget(self.avatar_check)
         avatar_row.addWidget(CaptionLabel('头像大小', self))
         self.avatar_size_slider = Slider(Qt.Orientation.Horizontal, self)
         self.avatar_size_slider.setRange(50, 300)
-        self.avatar_size_slider.setValue(getattr(getattr(parent, 'app_config', None), 'character_avatar_percent', 100))
+        self.avatar_size_slider.setValue(self._display.character_avatar_percent)
         self.avatar_size_slider.setMinimumWidth(60)
         self.avatar_size_slider.setMaximumWidth(150)
         self.avatar_size_slider.setToolTip('独立调整头像比例，并随界面字号、时间轴图形缩放；不改变文字大小。')
@@ -94,8 +103,7 @@ class BattleDetailDialog(QDialog):
 
         self.hover_time_label = CaptionLabel('时间 —', self)
         header.insertWidget(2, self.hover_time_label)
-        config = getattr(parent, 'app_config', None)
-        self.timeline_page = TimelinePage(snapshot, self.input_history, settings_layout, config, self)
+        self.timeline_page = TimelinePage(snapshot, self.input_history, settings_layout, self._display, self)
         self.buff_check = self.timeline_page.buff_check
         self.character_combo = self.timeline_page.character_combo
         self.curve_combo = self.timeline_page.curve_combo
@@ -145,12 +153,17 @@ class BattleDetailDialog(QDialog):
         self._refresh_filter()
         self.skill_table.set_gui_font_scale = self._scale_skill_avatars
         from endfield_pcap.gui.shared.typography import apply_fonts
-        scale = getattr(getattr(parent, 'app_config', None), 'gui_font_percent', 115)/100
+        scale = self._display.gui_font_percent/100
         apply_fonts(self, scale)
-        self._table_timers = [remember_columns(self, table, key) for table, key in (
+        self._table_timers = [remember_columns(self, table, self._table_widths.get(key, []),
+            lambda widths, key=key: self._submit_table_widths(key, widths)) for table, key in (
             (self.skill_table, 'skills'), (self.inspector.contributions, 'contributions'),
             (self.inspector.hits, 'hits'), (self.enemy_page.stats, 'enemy_stats'),
             (self.enemy_page.poise, 'enemy_poise'))]
+
+    @property
+    def record_label(self):
+        return self._record_label
 
     def set_record_label(self, label):
         self._record_label = label
@@ -159,31 +172,29 @@ class BattleDetailDialog(QDialog):
         from endfield_pcap._version import APP_NAME
         self.setWindowTitle(f'{APP_NAME} · 战斗分析 · {label}')
 
+    def _submit_table_widths(self, key, widths):
+        self._table_widths[key] = list(widths)
+        self.tableWidthsChanged.emit(key, widths)
+
     def _show_summary(self):
         from endfield_pcap.gui.battle.summary import BattleSummaryDialog
-        self._summary_dialog = BattleSummaryDialog(self.snapshot, self)
+        self._summary_dialog = BattleSummaryDialog(self.snapshot, self,
+            initial_widths=self._table_widths.get('participants', []),
+            submit_widths=lambda widths: self._submit_table_widths('participants', widths))
         self._summary_dialog.open()
 
     def _set_character_avatars(self, visible):
         self.timeline.show_character_avatars = bool(visible)
         self.timeline.fit_columns()
         self._refresh_filter()
-        parent = self.parentWidget()
-        if getattr(parent, 'app_config', None) is not None:
-            from endfield_pcap.gui.config import save_app_config
-            parent.app_config.show_character_avatars = bool(visible)
-            save_app_config(parent.app_config, parent.config_path)
+        self.characterAvatarsChanged.emit(bool(visible))
 
     def _set_avatar_size(self, percent):
         self.avatar_size_value.setText(f'{percent}%')
         self.timeline.avatar_scale = percent/100
         self.timeline.fit_columns()
         self._scale_skill_avatars(self.property('gui_font_scale') or 1.15)
-        parent = self.parentWidget()
-        if getattr(parent, 'app_config', None) is not None:
-            from endfield_pcap.gui.config import save_app_config
-            parent.app_config.character_avatar_percent = percent
-            save_app_config(parent.app_config, parent.config_path)
+        self.avatarPercentChanged.emit(percent)
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -194,19 +205,14 @@ class BattleDetailDialog(QDialog):
 
     def _open_role_lanes(self, owner):
         from endfield_pcap.gui.battle.lane_settings import RoleLanesDialog
-        dialog = RoleLanesDialog(self.timeline._blocks, owner, self.timeline.lane_configs.get(owner), self)
+        options = self.timeline.role_lane_options(owner)
+        dialog = RoleLanesDialog(owner, options['skills'], options['lanes'], self)
         self._lane_dialog = dialog
         def apply():
             configs = dict(self.timeline.lane_configs)
             configs[owner] = dialog.value()
             self.timeline.set_lane_configs(configs)
-            parent = self.parentWidget()
-            config = getattr(parent, 'app_config', None)
-            if config is not None:
-                from endfield_pcap.gui.config import save_app_config
-                config.battle_lane_configs = self.timeline.lane_configs
-                if getattr(parent, 'config_path', None):
-                    save_app_config(config, parent.config_path)
+            self.characterLanesChanged.emit(owner, configs[owner])
         dialog.accepted.connect(apply)
         dialog.open()
 

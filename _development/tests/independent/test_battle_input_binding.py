@@ -11,8 +11,8 @@ from PySide6.QtWidgets import QApplication
 from app_test_support.ui.window import main_window
 from app_test_support.scenarios.compact import sample
 from app_test_support.scenarios.trace import wait_for
-from endfield_pcap.gui.battle.detail import BattleDetailDialog
-from endfield_pcap.gui.config import load_app_config
+from endfield_pcap.gui.battle.presenter import BattleDetailPresenter
+from endfield_pcap.settings import load_app_config
 from endfield_pcap.history.index import record_key
 from endfield_pcap.inputlog.bindings import read_binding,write_binding,relocate_bindings
 from endfield_pcap.inputlog.history import load_evidence,battle_start_wall_ms
@@ -69,9 +69,9 @@ def test_bound_file_without_skill_inputs_reports_recording_counts_instead_of_bin
     path.write_text('\n'.join(json.dumps(row) for row in rows),encoding='utf8')
     snapshot=sample();snapshot['battle'].update(battle_start_at='2026-10-25T12:00:00',duration_ms=1000)
     record=SimpleNamespace(file_path=trace,record_index=1,started_at_ms=1)
-    dialog=BattleDetailDialog(snapshot,'仅鼠标输入证据',main_window)
+    dialog=BattleDetailPresenter.create(snapshot,'仅鼠标输入证据',main_window.settings_store,parent=main_window)
     try:
-        bar=dialog.input_history;bar.set_record(record)
+        bar=dialog.input_history;dialog.presenter.set_record(record)
         wait_for(lambda:bar.status.text().startswith('已绑定'),app)
         bar.visible.setChecked(True)
         assert bar.evidence['recording_counts']=={'button':2}
@@ -101,23 +101,23 @@ def test_bind_and_display_are_separate_and_saved_for_each_battle(main_window,app
     first=SimpleNamespace(file_path=trace,record_index=1,started_at_ms=1)
     second=SimpleNamespace(file_path=trace,record_index=2,started_at_ms=2)
     monkeypatch.setattr(input_history.QFileDialog,'getOpenFileName',lambda *a:(str(path),''))
-    dialog=BattleDetailDialog(snapshot,'绑定测试',main_window)
+    dialog=BattleDetailPresenter.create(snapshot,'绑定测试',main_window.settings_store,parent=main_window)
     try:
-        bar=dialog.input_history;bar.set_record(first);bar.choose()
+        bar=dialog.input_history;dialog.presenter.set_record(first);bar.choose()
         wait_for(lambda:len(bar.evidence['actions'])==3,app)
         assert not bar.visible.isChecked() and not dialog.timeline.input_evidence['actions']
         assert read_binding(load_app_config(main_window.config_path).input_log_bindings[record_key(first)],trace)['path']==path
         bar.visible.setChecked(True)
         assert len(dialog.timeline.input_evidence['actions'])==3
         assert dialog.timeline._time_extent[:2]==(0.,1000.)
-        bar.set_record(second)
+        dialog.presenter.set_record(second)
         assert not bar.paths and not bar.visible.isChecked()
-        bar.set_record(first)
+        dialog.presenter.set_record(first)
         wait_for(lambda:len(bar.evidence['actions'])==3,app)
         assert bar.paths==[path] and bar.visible.isChecked()
         bar.unbind();assert not bar.paths and not dialog.timeline.input_evidence['actions']
         assert bar.visible.isChecked(), 'Unbinding must not change the independent display preference'
-        bar.set_record(first);assert not bar.paths
+        dialog.presenter.set_record(first);assert not bar.paths
     finally:
         dialog.close();dialog.deleteLater();app.processEvents()
 
@@ -130,7 +130,7 @@ def test_bind_button_releases_popup_and_picker_belongs_to_battle_window(main_win
     path=tmp_path/'selected.input.jsonl'
     input_file(path,datetime.fromisoformat('2026-10-25T12:00:00').timestamp()*1000)
     record=SimpleNamespace(file_path=trace,record_index=1,started_at_ms=1)
-    dialog=BattleDetailDialog(snapshot,'从输入菜单绑定',main_window)
+    dialog=BattleDetailPresenter.create(snapshot,'从输入菜单绑定',main_window.settings_store,parent=main_window)
     calls=[]
     def choose(parent,title,directory,filters):
         assert parent is dialog
@@ -141,7 +141,7 @@ def test_bind_button_releases_popup_and_picker_belongs_to_battle_window(main_win
         return ('' if cancel else str(path),'')
     monkeypatch.setattr(input_history.QFileDialog,'getOpenFileName',choose)
     try:
-        dialog.input_history.set_record(record)
+        dialog.presenter.set_record(record)
         dialog.show();QTest.qWait(40)
         QTest.mouseClick(dialog.input_button,Qt.MouseButton.LeftButton)
         wait_for(lambda:dialog.input_menu.isVisible(),app)

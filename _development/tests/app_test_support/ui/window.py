@@ -1,7 +1,7 @@
 from dataclasses import replace
 import pytest
 from PySide6.QtCore import QCoreApplication, QEvent
-import endfield_pcap.gui.config as gui_config
+import endfield_pcap.settings as gui_config
 import endfield_pcap.gui.main as gui_main
 from endfield_pcap.models import OverlayEntry
 from endfield_pcap.models import OverlaySourceType

@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from PySide6.QtCore import QTimer
 from qfluentwidgets import InfoBar
-from endfield_pcap.gui.config import save_app_config
+from endfield_pcap.settings import save_app_config
 from endfield_pcap.inputlog.controller import InputController
 from endfield_pcap.vision.controller import VisionController
 

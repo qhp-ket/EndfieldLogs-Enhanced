@@ -2,7 +2,7 @@
 from PySide6.QtCore import QModelIndex, Qt
 from PySide6.QtWidgets import QAbstractItemView
 from app_test_support.ui.window import main_window
-from endfield_pcap.gui.config import load_app_config
+from endfield_pcap.settings import load_app_config
 
 
 def test_overlay_internal_drag_saves_order_and_keeps_selection_and_windows(main_window):

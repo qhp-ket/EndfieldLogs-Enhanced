@@ -14,7 +14,7 @@ from endfield_pcap.gui.shared.typography import apply_fonts
 
 
 class BattleSummaryDialog(QDialog):
-    def __init__(self, snapshot, parent):
+    def __init__(self, snapshot, parent, *, initial_widths, submit_widths):
         super().__init__(parent)
         self.setWindowTitle(f'{APP_NAME} · 战斗概况与质量')
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
@@ -43,7 +43,7 @@ class BattleSummaryDialog(QDialog):
                                              ensure_ascii=False, indent=2))
         self.tabs.addTab(self.quality, '快照质量与原始字段')
         apply_fonts(self, parent.property('gui_font_scale') or 1.15)
-        self._table_timer = remember_columns(self, self.participants, 'participants')
+        self._table_timer = remember_columns(self, self.participants, initial_widths, submit_widths)
 
     def showEvent(self, event):
         super().showEvent(event)

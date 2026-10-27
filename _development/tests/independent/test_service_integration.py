@@ -10,7 +10,7 @@ from app_test_support.ui.qt import EVIDENCE
 from app_test_support.scenarios.trace import wait_for
 from app_test_support.scenarios.compact import sample
 from endfield_pcap.gui.battle.detail import BattleDetailDialog
-from endfield_pcap.gui.config import load_app_config
+from endfield_pcap.settings import load_app_config
 from endfield_pcap.models import OverlayEntry, OverlaySourceType
 from endfield_pcap.overlays.templates import with_template_value
 from endfield_pcap.overlays.window import OverlayWindow, OverlayWindowConfig

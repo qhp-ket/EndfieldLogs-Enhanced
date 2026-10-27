@@ -8,7 +8,7 @@ from qfluentwidgets import isDarkTheme, TransparentToolButton, FluentIcon
 from endfield_pcap.analysis.battle.detail import timeline_blocks
 from endfield_pcap.analysis.battle.enemy import enemy_observations
 from endfield_pcap.analysis.battle.energy import energy_tracks
-from endfield_pcap.analysis.battle.lane_config import normalize_lane_configs
+from endfield_pcap.analysis.battle.lane_config import normalize_lane_configs, skill_options, resolved_lanes
 from endfield_pcap.gui.battle.plots.energy import draw_energy_tracks, resource_hover_text
 from endfield_pcap.gui.shared.scrolling import install_immediate_scrolling
 from endfield_pcap.analysis.battle.time import ruler_ticks, format_time
@@ -105,6 +105,11 @@ class BattleTimeline(QGraphicsView):
         self.lane_configs = normalize_lane_configs(configs)
         fit_label_columns(self)
         self.render_timeline()
+
+    def role_lane_options(self, owner):
+        """Return editable preferences and labels, without exposing block evidence."""
+        return dict(skills=skill_options(self._blocks, owner),
+                    lanes=resolved_lanes(self._blocks, owner, self.lane_configs.get(owner)))
 
     def _sync_role_buttons(self):
         if not hasattr(self, '_role_buttons'):

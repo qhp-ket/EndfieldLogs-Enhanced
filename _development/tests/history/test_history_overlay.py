@@ -1,10 +1,8 @@
 from app_test_support.scenarios.raw import raw_hit, raw_scene
 import json
 from datetime import datetime
-from types import SimpleNamespace
 import endfield_pcap.history.analysis as history_analysis
 import endfield_pcap.overlays.manager as overlay_host
-import endfield_pcap.gui.main as gui_main
 from endfield_pcap.history.records import load_combat_records
 from endfield_pcap.models import OverlayEntry
 from endfield_pcap.models import OverlaySourceType
@@ -60,23 +58,6 @@ def test_history_mode_keeps_latest_live_and_reopen_replays_current_presentation(
     manager.apply_analysis_snapshot({**message(3), "snapshot": None})
     manager.return_live()
     assert manager._analysis_snapshot["snapshot"] is None
-
-def test_return_live_invalidates_pending_history_result():
-    status = []
-    shown = []
-    resynced = []
-    target = SimpleNamespace(_history_generation=1,
-        _sync_record_selection=lambda: resynced.append(True),
-        overlay_manager=SimpleNamespace(return_live=lambda: shown.append("live"), show_history=lambda *x: shown.append(x)),
-        records_page=SimpleNamespace(overlay_source_status=SimpleNamespace(setText=status.append)))
-    gui_main.MainWindow._return_live_overlay(target)
-    gui_main.MainWindow._complete_history_load(target, (1, "old", {"battle": {}}, None))
-    assert shown == ["live"]
-    assert resynced == [True]
-
-def test_older_history_completion_cannot_replace_newer_request():
-    target = SimpleNamespace(_history_generation=3)
-    gui_main.MainWindow._complete_history_load(target, (2, "old", {}, None))
 
 def test_official_start_before_indexed_range_and_leave_reset_do_not_erase_history(tmp_path):
     started = int(datetime(2026, 10, 21, 10).timestamp() * 1000)

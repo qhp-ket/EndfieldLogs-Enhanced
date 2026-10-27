@@ -4,8 +4,9 @@ from PySide6.QtGui import QWheelEvent, QFontMetrics
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QStyleOptionViewItem
 from qfluentwidgets import CaptionLabel, Theme, setTheme
-import endfield_pcap.gui.config as gui_config
+import endfield_pcap.settings as gui_config
 from endfield_pcap.gui.battle.detail import BattleDetailDialog
+from endfield_pcap.gui.battle.presenter import BattleDetailPresenter
 from app_test_support.ui.window import main_window
 from app_test_support.ui.qt import snapshot_message, EVIDENCE
 
@@ -39,8 +40,8 @@ def test_graphic_zoom_changes_block_height_font_and_markers_not_only_time_axis(a
 
 def test_font_size_persists_scales_dynamic_details_without_compounding(main_window, app):
     window = main_window
-    window._show_history_detail(snapshot_message()['snapshot'], '可调字号战斗分析')
-    dialog = window._history_detail_dialog
+    window.history_presenter.dialog = BattleDetailPresenter.create(snapshot_message()['snapshot'], '可调字号战斗分析', window.settings_store, parent=window)
+    dialog = window.history_presenter.dialog
     QTest.qWait(100)
     before = pixels(dialog.event_detail)
     overlay_fonts = [e.font_scale for e in window.app_config.overlays]
@@ -67,16 +68,16 @@ def test_font_size_persists_scales_dynamic_details_without_compounding(main_wind
     setTheme(Theme.DARK); QTest.qWait(60)
     assert pixels(dialog.event_detail) == size
     dialog.grab().save(str(EVIDENCE / 'battle-global-font-160.png'))
-    window._show_history_detail(snapshot_message()['snapshot'], '新打开窗口继承字号')
+    window.history_presenter.dialog = BattleDetailPresenter.create(snapshot_message()['snapshot'], '新打开窗口继承字号', window.settings_store, parent=window)
     QTest.qWait(80)
-    assert pixels(window._history_detail_dialog.event_detail) == size
+    assert pixels(window.history_presenter.dialog.event_detail) == size
 
 
 def test_large_global_font_pages_scroll_and_windows_stay_on_screen(main_window, app):
     window = main_window
     window.settings_page.gui_font_slider.setValue(180)
-    window._show_history_detail(snapshot_message()['snapshot'], '大字号仍在屏幕内')
-    dialog = window._history_detail_dialog
+    window.history_presenter.dialog = BattleDetailPresenter.create(snapshot_message()['snapshot'], '大字号仍在屏幕内', window.settings_store, parent=window)
+    dialog = window.history_presenter.dialog
     QTest.qWait(140)
     assert dialog.screen().availableGeometry().contains(dialog.frameGeometry())
     assert dialog.body_scroll.widget().height() >= dialog.body_scroll.viewport().height()

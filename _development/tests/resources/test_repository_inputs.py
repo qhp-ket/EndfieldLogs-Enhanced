@@ -26,21 +26,6 @@ def test_repository_audit_accepts_only_workflow_yaml_under_github(tmp_path, monk
     assert ('unexpected root directory' in capsys.readouterr().out) == (not accepted)
 
 
-@pytest.mark.parametrize('label,accepted', [('悬浮窗配置已迁移', True), ('确认？', True), ('?' * 7, False)])
-def test_repository_audit_rejects_unreadable_gui_text(tmp_path, monkeypatch, capsys, label, accepted):
-    import subprocess
-    import sys
-    audit = tool('audit_repository')
-    subprocess.run(['git', 'init', '-q', str(tmp_path)], check=True, capture_output=True)
-    target = tmp_path / '_internal/src/endfield_pcap/gui/main.py'
-    target.parent.mkdir(parents=True)
-    target.write_text(f'title = {label!r}\n', encoding='utf8')
-    monkeypatch.setattr(audit, 'ROOT', tmp_path)
-    monkeypatch.setattr(sys, 'argv', ['audit_repository.py', '--worktree'])
-    assert audit.main() == (0 if accepted else 1)
-    assert ('unreadable GUI text placeholder' in capsys.readouterr().out) == (not accepted)
-
-
 def test_public_protocol_fixtures_are_constructed_without_opening_a_recording(monkeypatch):
     generator = tool('generate_test_fixtures')
     folder = ROOT / '_internal/packages/parser_core/tests/fixtures'

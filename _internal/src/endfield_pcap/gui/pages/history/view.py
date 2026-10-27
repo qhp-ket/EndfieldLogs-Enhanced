@@ -27,6 +27,7 @@ from qfluentwidgets import (
 from endfield_pcap.gui.shared.widgets import InterfacePage, _format_duration
 from endfield_pcap.history.records import CombatRecord
 from endfield_pcap.history.files import record_label
+from endfield_pcap.history.index import record_key
 
 
 class _HistoryHint(CaptionLabel):
@@ -198,7 +199,7 @@ class BattleLogPage(InterfacePage):
             )
             self.record_list.addItem(item_text)
             item = self.record_list.item(self.record_list.count() - 1)
-            item.setData(Qt.ItemDataRole.UserRole, (str(record.file_path), record.record_index))
+            item.setData(Qt.ItemDataRole.UserRole, record_key(record))
             item.setToolTip(f"{record.label}\n{record.file_path.name}")
             item.setSelected(item.data(Qt.ItemDataRole.UserRole) in selected_keys)
             if item.data(Qt.ItemDataRole.UserRole) == selected_key:

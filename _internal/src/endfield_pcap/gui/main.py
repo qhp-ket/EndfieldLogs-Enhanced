@@ -5,7 +5,6 @@ import ctypes
 import logging
 import queue
 import sys
-import threading
 from pathlib import Path
 from collections.abc import Callable
 from PySide6.QtCore import QTimer
@@ -18,7 +17,8 @@ from qfluentwidgets import (
     NavigationItemPosition,
     setTheme,
 )
-from endfield_pcap.gui.config import (
+from endfield_pcap.application.settings import SettingsStore
+from endfield_pcap.settings import (
     AppConfig,
     default_config_path,
     load_app_config,
@@ -28,9 +28,8 @@ from endfield_pcap.runtime.logging import configure_logging, runtime_log_directo
 from endfield_pcap.models import FlowKey, RuntimeMetrics, ServiceState, SquadMemberPayload
 from endfield_pcap.overlays.manager import OverlayManager
 from endfield_pcap.overlays.templates import template_for
-from endfield_pcap.history.records import CombatRecord
-from endfield_pcap.history.index import HistoryIndex
-from endfield_pcap.gui.pages.history.actions import HistoryActions
+from endfield_pcap.application.history import HistoryController
+from endfield_pcap.gui.pages.history.presenter import HistoryPresenter
 from endfield_pcap.gui.pages.history.view import BattleLogPage
 from endfield_pcap.gui.pages.settings.view import SettingsPage
 from endfield_pcap.gui.service import ServiceController
@@ -63,13 +62,19 @@ class MainWindow(
     OverlayHotkeys,
     UpdateActions,
     WindowTheme,
-    HistoryActions,
     FluentWindow,
 ):
+    @property
+    def app_config(self):
+        return self.settings_store.current
+
+    @property
+    def config_path(self):
+        return self.settings_store.path
+
     def __init__(self, app_config: AppConfig, config_path: Path) -> None:
         super().__init__()
-        self.app_config = app_config
-        self.config_path = config_path
+        self.settings_store = SettingsStore(app_config, config_path)
         self.service_controller = ServiceController(self.app_config.service)
         self._init_independent_services()
         self.overlay_manager = OverlayManager(
@@ -81,33 +86,11 @@ class MainWindow(
             on_analysis_requirement=self._set_analysis_requirements,
         )
         self.avatar_index = _load_avatar_index()
-        self.records: list[CombatRecord] = []
-        self._selected_record: CombatRecord | None = None
-        self._history_generation = 0
-        self._history_record: CombatRecord | None = None
-        self._history_selection_order: list[tuple] = []
-        self._history_pending_keys: set[str] = set()
-        self._history_cancel = threading.Event()
         self._stop_pending = False
         self._auto_start_attempted = False
         self._closing = False
         self._capture_error = ''
         self._capture_error_bar = None
-        self._history_displayed_key: str | None = None
-        self._history_detail_snapshot = None
-        self._history_detail_key = None
-        self._history_detail_signature = None
-        self._history_detail_dialog = None
-        self._history_inspect_generation = None
-        self._records_generation = 0
-        self._records_pending = False
-        self._records_log_dir: Path | None = None
-        self._raw_records: list[CombatRecord] = []
-        self._history_index = HistoryIndex(config_path.parent / 'history-index')
-        self._trace_import_generation = 0
-        self._trace_import_pending = False
-        self._trace_records: dict[Path, list[CombatRecord]] = {}
-        self._trace_signatures: dict[Path, tuple[int, int]] = {}
         self.current_state = ServiceState.WAITING_GAME
         self.current_session_id: str | None = None
         self.current_flow: FlowKey | None = None
@@ -128,12 +111,16 @@ class MainWindow(
         self.settings_page = SettingsPage(self)
         self.logs_page = RuntimeLogPage(runtime_log_directory(config_path.parent / 'logs'), self)
 
+        self.history_controller = HistoryController(self.settings_store, self.service_controller.writing_state)
+        self.history_presenter = HistoryPresenter(self.records_page, self.history_controller,
+            self.settings_store, self.overlay_manager, self._replace_overlay_entry,
+            self._refresh_settings_page, self)
         self._init_window()
         self._init_gui_lifecycle()
         self._bind_events()
         self.home_page.status_card.set_squad_members([])
         self._refresh_overlay_views()
-        self._load_records()
+        self.history_presenter.refresh()
         self._refresh_settings_page()
         self._apply_gui_theme()
         self.gui_typography = GuiTypography(self, app_config.gui_font_percent/100)
@@ -149,7 +136,7 @@ class MainWindow(
         self.queue_timer.start()
         self._bind_independent_services()
         if app_config.overlay_migration_count:
-            from endfield_pcap.gui.config import save_app_config
+            from endfield_pcap.settings import save_app_config
             count = app_config.overlay_migration_count
             app_config.overlay_migration_count = 0
             save_app_config(app_config, config_path)
@@ -159,6 +146,7 @@ class MainWindow(
 
     def _drain_queue(self) -> None:
         self._drain_independent_services()
+        self.history_presenter.drain()
         while True:
             try:
                 event_type, payload = self.service_controller.queue.get_nowait()
@@ -187,14 +175,6 @@ class MainWindow(
                 self.overlay_manager.apply_analysis_snapshot(payload, take_ownership=True)
             elif event_type == "analysis_summary":
                 self.overlay_manager.apply_analysis_summary(payload, take_ownership=True)
-            elif event_type == "history_snapshot":
-                self._complete_history_load(payload)
-            elif event_type == "history_batch":
-                self._complete_history_batch(payload)
-            elif event_type == "trace_import":
-                self._complete_trace_import(payload)
-            elif event_type == "history_index":
-                self._complete_record_index(payload)
             elif event_type == "error":
                 exc = payload if isinstance(payload, BaseException) else RuntimeError(str(payload))
                 LOGGER.error("service thread crashed", exc_info=(type(exc), exc, exc.__traceback__))
@@ -254,25 +234,21 @@ class MainWindow(
     def _bind_events(self) -> None:
         self._bind_home_events()
         self._bind_overlay_events()
-        self._bind_records_events()
         self._bind_settings_events()
 
         stacked = getattr(self, "stackedWidget", None)
         if stacked is not None:
-                    stacked.currentChanged.connect(self._handle_current_interface_changed)
+            stacked.currentChanged.connect(lambda index:
+                self.history_presenter.refresh() if stacked.widget(index) is self.records_page else None)
 
     def closeEvent(self, event) -> None:  # noqa: N802
         self._closing = True
-        self._history_cancel.set()
-        self._history_generation += 1
-        self._trace_import_generation += 1
-        self._records_generation += 1
+        self.history_presenter.close()
         self.queue_timer.stop()
         logging.getLogger().removeHandler(self.log_handler)
         self._unregister_overlay_hotkey()
         self._unregister_gui_hotkey()
         self.tray_icon.hide()
-        if self._history_detail_dialog is not None:self._history_detail_dialog.close()
         save_app_config(self.app_config, self.config_path)
         self.overlay_manager.close_all()
         self._stop_independent_services()

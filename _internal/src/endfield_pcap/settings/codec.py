@@ -1,14 +1,16 @@
+"""Defaults, configuration migration and JSON encoding."""
 from __future__ import annotations
 import os
 import re
 import sys
 import uuid
-from dataclasses import dataclass, field, replace
+from dataclasses import replace
 from pathlib import Path
 from endfield_pcap.models import OverlayEntry, OverlayGeometry, OverlaySourceType
 from endfield_pcap.runtime.paths import app_root, bundle_root
 from endfield_pcap.service.config import ServiceConfig
-from endfield_pcap.gui.config_storage import number, path_value, portable_paths, read_settings, write_settings
+from endfield_pcap.settings.model import AppConfig
+from endfield_pcap.settings.storage import number, path_value, portable_paths, read_settings, write_settings
 from endfield_pcap.analysis.battle.lane_config import normalize_lane_configs
 
 
@@ -23,30 +25,6 @@ _BUILTIN_COMBO_NAME = "连携cd监控"
 _BUILTIN_UID_MASK_NAME = "UID遮挡"
 
 
-@dataclass(slots=True)
-class AppConfig:
-    service: ServiceConfig
-    overlays: list[OverlayEntry] = field(default_factory=list)
-    theme_mode: str = "system"
-    gui_font_percent: int = 115
-    toggle_overlays_hotkey: str = "Ctrl+O"
-    toggle_gui_hotkey: str = "Ctrl+Shift+O"
-    imported_trace_files: list[Path] = field(default_factory=list)
-    hidden_history_records: list[str] = field(default_factory=list)
-    overlay_migration_count: int = 0
-    battle_table_widths: dict = field(default_factory=dict)
-    battle_lane_configs: dict = field(default_factory=dict)
-    overlay_restore_ids: list[str] = field(default_factory=list)
-    start_capture_on_launch: bool = False
-    check_updates_on_start: bool = True
-    ignored_update_version: str = ''
-    show_character_avatars: bool = True
-    character_avatar_percent: int = 100
-    input_recording_enabled: bool = False
-    start_input_recording_on_launch: bool = False
-    input_settings: dict = field(default_factory=dict)
-    input_log_bindings: dict = field(default_factory=dict)
-    vision_settings: dict = field(default_factory=dict)
 
 
 def _table_widths(value):

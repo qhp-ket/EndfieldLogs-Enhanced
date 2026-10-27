@@ -10,6 +10,8 @@
 | `trace/` | 已解码事件转成统一 trace 文本，管理战斗上下文与来源证据 |
 | `analysis/` | 实时简报与完整报告发布、战斗分析的界面投影 |
 | `history/` | 历史索引、记录文件操作、trace 导入导出与离线分析 |
+| `application/` | 设置所有权、历史索引/任务/缓存、输入证据流程及公开写入状态 |
+| `settings/` | 配置模型、编解码、迁移、原子写入与备份恢复 |
 | `data/` | 数据读取、装备数值、技能名称/帧数与离线头像身份解析；小型映射在 `assets/` |
 | `gui/` | 主窗口、侧栏、战斗分析与共享 Qt 控件 |
 | `overlays/` | 浮窗管理、原生窗口、QPainter 模块和 JSON 皮肤 |
@@ -29,15 +31,16 @@
 - `logs/`：日志显示及 Python logging 转发。
 - `settings/`：设置表单、保存动作和游戏路径选择。
 
-页面通常由 `view.py` 构造界面、`actions.py` 实现操作并绑定控件。
-`*Actions` mixin 复用主窗口配置和生命周期；抓包线程由服务层创建。
+页面由 `view.py` 构造界面。历史页通过 `HistoryPresenter` 调用 `HistoryController`，
+索引、导入和分析使用独立结果队列，由所属线程提交状态；其他页面的 `actions.py` 负责现有设置与窗口操作。
 快捷键与主题各有独立模块。
-`gui/lifecycle.py` 管理托盘显隐、后台刷新频率和可释放的历史缓存；GUI 显隐快捷键与浮窗快捷键分别注册。
+`gui/lifecycle.py` 管理托盘显隐和后台刷新频率，通过历史控制器释放缓存；GUI 显隐快捷键与浮窗快捷键分别注册。
 更新检查的后台任务与提示在 `gui/updates.py`，版本比较与 GitHub 请求在 `runtime/releases.py`。
 共享头像由 `data/avatars.py` 按 ID 解析，Qt 缓存在 `gui/shared/avatars.py`，图片在 `_internal/data/ui/characters/`。
 
 `gui/battle/` 是历史战斗分析：`timeline/` 管理原生时间轴，
 `plots/` 管理伤害、技力和失衡曲线。
+`BattleDetailPresenter` 显式传入显示设置与记录，将窗口信号交给 `SettingsStore` 和 `InputEvidenceController`；Qt 父窗口负责归属与定位。
 详细入口见 [战斗分析组件位置](../../_development/docs/battle-analysis-components.md)。
 
 ## 服务与 trace
@@ -65,16 +68,14 @@ GUI 支持的内置类型为 `damage`、`uid_mask`、`combo_skill`。
 新增模板使用独立目录、稳定配置 ID 和相对资源路径。
 
 `gui/services.py` 组装输入与视觉服务，`gui/independent/` 是绑定配置、预览校准界面。
-`gui/battle/input_history.py` 管理输入绑定和证据，原生绘制在 `timeline/inputs.py`。
+`gui/battle/input_history.py` 提供绑定、对齐和解释设置编辑控件，`application/input_evidence.py` 管理异步解释及失效结果，原生绘制在 `timeline/inputs.py`。
 `inputlog/backends/windows.py` 隔离 Windows 消息线程，`windows_state.py` 提供带精度标记的状态采样兜底；`inputlog/bindings.py` 保存每场战斗的输入文件绑定。
 `inputlog/elevation.py` 仅为输入记录器申请管理员权限，通过认证的本机命名管道转发控制和状态，不提升主 GUI 权限。
 输入与视觉状态使用独立展示数据。
 
 ## 维护约定
 
-一个目录开始混入多类职责、文件数量接近七个时，考虑分组；
-单个 Python 文件超过约 500 行时，检查是否有可独立维护的职责。
-紧密相关的短代码可保留在同一文件；生成文件按生成工具约定维护。
+按状态所有权和调用边界拆分职责，紧密相关的短代码可保留在同一文件；生成文件按生成工具约定维护。
 
 内部使用完整包导入；页面资源相对所属模块定位，运行数据通过 `runtime.paths` 定位。
 开发与便携构建使用同一目录树，构建器递归收集源码和资源。

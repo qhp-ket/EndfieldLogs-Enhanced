@@ -6,7 +6,7 @@ from PySide6.QtWidgets import QFileDialog
 import json
 import pytest
 from PySide6.QtCore import QEventLoop, QTimer
-import endfield_pcap.gui.config as gui_config
+import endfield_pcap.settings as gui_config
 from endfield_pcap.history.analysis import load_record_snapshot
 from endfield_pcap.history.importer import load_trace_records
 from app_test_support.ui.window import main_window
@@ -67,17 +67,17 @@ def test_gui_import_repeat_failure_history_and_return_live(main_window, app, mon
     window.switchTo(window.records_page)
     window.overlay_manager.apply_analysis_snapshot(snapshot_message())
     window.records_page.import_trace_btn.click()
-    wait_for(lambda: not window._trace_import_pending, app)
-    assert len(window.records) == 2
+    wait_for(lambda: not window.history_controller.import_pending, app)
+    assert len(window.history_controller.records) == 2
     assert window.app_config.imported_trace_files == [path]
     assert gui_config.load_app_config(window.config_path).imported_trace_files == [path]
     assert not window.overlay_manager._history_mode  # import alone never switches sources
     window.records_page.import_trace_btn.click()
-    wait_for(lambda: not window._trace_import_pending, app)
-    assert len(window.records) == 2
+    wait_for(lambda: not window.history_controller.import_pending, app)
+    assert len(window.history_controller.records) == 2
     window.records_page.load_overlay_btn.click()
     wait_for(lambda: window.overlay_manager._history_mode, app)
-    selected = window._selected_record
+    selected = window.history_controller.selected_records[-1]
     assert window.overlay_manager._analysis_snapshot['snapshot']['battle']['total_damage'] == selected.total_damage
     platform=app.platformName()
     loop=QEventLoop(); QTimer.singleShot(200,loop.quit); loop.exec()
@@ -97,16 +97,12 @@ def test_gui_import_repeat_failure_history_and_return_live(main_window, app, mon
     before = window.overlay_manager._analysis_snapshot
     monkeypatch.setattr(QFileDialog, 'getOpenFileNames', lambda *a: ([str(tmp_path/'missing.log')], ''))
     window.records_page.import_trace_btn.click()
-    wait_for(lambda: not window._trace_import_pending, app)
-    assert len(window.records) == 2 and window.overlay_manager._analysis_snapshot == before
+    wait_for(lambda: not window.history_controller.import_pending, app)
+    assert len(window.history_controller.records) == 2 and window.overlay_manager._analysis_snapshot == before
     assert window.records_page.import_trace_status.toolTip()
     monkeypatch.setattr(QFileDialog, 'getOpenFileNames', lambda *a: ([], ''))
     window.records_page.import_trace_btn.click()
-    assert not window._trace_import_pending
-    generation = window._trace_import_generation
-    window._trace_import_generation += 1
-    window._complete_trace_import((generation, [(path, (0,0),[])], []))
-    assert len(window.records) == 2
+    assert not window.history_controller.import_pending
     # Refresh reuses unchanged cached imports.
-    window._load_records()
-    assert not window._trace_import_pending
+    window.history_presenter.refresh()
+    assert not window.history_controller.import_pending

@@ -89,38 +89,46 @@ def test_history_details_load_only_requested_record_reuse_open_and_release_close
     window = main_window
     source = tmp_path / 'trace_20261022-100000.log'
     source.write_text(two_battles(), encoding='utf8')
-    window._queue_trace_import([source])
-    wait_for(lambda: not window._trace_import_pending, app)
-    assert all(not r.snapshot for r in window.records)
+    window.history_presenter.import_files([source])
+    wait_for(lambda: not window.history_controller.import_pending, app)
+    assert all(not r.snapshot for r in window.history_controller.records)
     calls = []
     from endfield_pcap.history.analysis import load_record_snapshot
     def analyze(record):
         calls.append(record.record_index)
         return load_record_snapshot(record)
-    monkeypatch.setattr('endfield_pcap.gui.pages.history.actions.load_record_snapshot', analyze)
+    monkeypatch.setattr('endfield_pcap.history.analysis.load_record_snapshot', analyze)
     listing = window.records_page.record_list
     window.records_page.select_all_btn.click()
-    target = window._selected_history_records()[-1]
+    target = window.history_controller.selected_records[-1]
     window.records_page.analysis_detail_btn.click()
-    wait_for(lambda: window._history_detail_dialog is not None, app)
+    wait_for(lambda: window.history_presenter.dialog is not None, app)
     assert calls == [target.record_index], 'Inspect must not eagerly parse every selected/file record'
-    assert window._history_detail_dialog.snapshot['battle']['total_damage'] == target.total_damage
-    dialog = window._history_detail_dialog
+    assert window.history_presenter.dialog.snapshot['battle']['total_damage'] == target.total_damage
+    dialog = window.history_presenter.dialog
     window.records_page.analysis_detail_btn.click()
     assert calls == [target.record_index]
-    assert window._history_detail_dialog is dialog
+    assert window.history_presenter.dialog is dialog
     dialog.close()
-    assert window._history_detail_snapshot is None
+    assert window.history_controller.detail_snapshot is None
     assert not target.snapshot
     window.records_page.analysis_detail_btn.click()
-    wait_for(lambda: window._history_detail_dialog is not None, app)
+    wait_for(lambda: window.history_presenter.dialog is not None, app)
     assert calls == [target.record_index, target.record_index]
-    assert window._history_detail_dialog is not None
-    window._return_live_overlay()
+    assert window.history_presenter.dialog is not None
+    opened = window.history_presenter.dialog
+    retained = opened.snapshot
+    window._release_history_caches()
+    assert window.history_controller.detail_snapshot is None
+    assert opened.snapshot is retained
+    window.records_page.analysis_detail_btn.click()
+    assert window.history_presenter.dialog is opened
+    assert calls == [target.record_index, target.record_index]
+    window.history_presenter.return_live()
     assert not window.overlay_manager._history_mode
     window.records_page.remove_record_btn.click()
-    assert window._history_detail_snapshot is None
-    assert window._history_detail_dialog is None
+    assert window.history_controller.detail_snapshot is None
+    assert window.history_presenter.dialog is None
     assert source.exists()
 
 
@@ -153,22 +161,22 @@ def test_return_live_cancels_pending_detail_dialog(main_window, app, tmp_path, m
     window = main_window
     source = tmp_path / 'trace_20261022-100000.log'
     source.write_text(two_battles(), encoding='utf8')
-    window._queue_trace_import([source])
-    wait_for(lambda: not window._trace_import_pending, app)
+    window.history_presenter.import_files([source])
+    wait_for(lambda: not window.history_controller.import_pending, app)
     entered, release, finished = threading.Event(), threading.Event(), threading.Event()
     def analyze(record):
         entered.set()
         release.wait(5)
         finished.set()
         return snapshot_message()['snapshot']
-    monkeypatch.setattr('endfield_pcap.gui.pages.history.actions.load_record_snapshot', analyze)
+    monkeypatch.setattr('endfield_pcap.history.analysis.load_record_snapshot', analyze)
     window.records_page.analysis_detail_btn.click()
     wait_for(entered.is_set, app)
-    window._return_live_overlay()
+    window.history_presenter.return_live()
     release.set()
     wait_for(finished.is_set, app)
     window._drain_queue()
-    assert window._history_detail_dialog is None
+    assert window.history_presenter.dialog is None
     assert not window.overlay_manager._history_mode
 
 

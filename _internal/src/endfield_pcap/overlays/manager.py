@@ -178,6 +178,10 @@ class OverlayManager:
             if window is not None:
                 window.set_desktop_visible(self.visible and not entry.hidden)
 
+    def owns_window(self, window):
+        """Identify overlay windows without exposing the mutable registry."""
+        return window in self._windows.values()
+
     def close_all(self) -> None:
         for entry_id in list(self._windows):
             self._close_window(entry_id)

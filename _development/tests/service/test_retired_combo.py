@@ -1,7 +1,7 @@
 """Visual CD configuration is optional; capture service never restores its old timer."""
 import asyncio
 import json
-import endfield_pcap.gui.config as gui_config
+import endfield_pcap.settings as gui_config
 import endfield_pcap.overlays.manager as overlay_host
 from endfield_pcap.models import ServiceObserver
 from app_test_support.ui.window import entry

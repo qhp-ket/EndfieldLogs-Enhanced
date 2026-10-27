@@ -11,7 +11,7 @@ from app_test_support.ui.qt import EVIDENCE, snapshot_message
 from endfield_pcap.models import OverlayGeometry
 from endfield_pcap.overlays.manager import OverlayManager
 from endfield_pcap.overlays.templates import with_template_value
-from endfield_pcap.gui.config import load_app_config
+from endfield_pcap.settings import load_app_config
 
 
 def damage(seq=1, **changes):
@@ -209,7 +209,7 @@ def test_gui_combo_setting_persists_and_damage_multi_instance_is_independent(mai
 
 
 def test_damage_defaults_to_rdmg_and_keeps_explicit_dmg_choice(hosts, app):
-    from endfield_pcap.gui.config import _overlay_entry_from_dict, _overlay_entry_to_dict
+    from endfield_pcap.settings.codec import _overlay_entry_from_dict, _overlay_entry_to_dict
     from endfield_pcap.overlays.native.damage import DamageModule
     from endfield_pcap.overlays.templates import template_for
 

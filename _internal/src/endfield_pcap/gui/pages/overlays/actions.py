@@ -3,7 +3,7 @@ import uuid
 from dataclasses import replace
 from pathlib import Path
 from PySide6.QtWidgets import QFileDialog, QInputDialog, QMessageBox
-from endfield_pcap.gui.config import save_app_config
+from endfield_pcap.settings import save_app_config
 from endfield_pcap.models import OverlayEntry, OverlayGeometry, OverlaySourceType
 from endfield_pcap.overlays.templates import template_for, with_template_value
 from endfield_pcap.gui.resources import ROOT

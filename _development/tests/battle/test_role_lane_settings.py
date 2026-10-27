@@ -15,9 +15,10 @@ from endfield_pcap.analysis.battle.lane_config import (
     default_lanes, normalize_lane_configs, resolved_lanes, skill_key, skill_options,
 )
 from endfield_pcap.analysis.battle.layout import skill_lanes
-from endfield_pcap.gui.battle.detail import BattleDetailDialog
+from endfield_pcap.gui.battle.presenter import BattleDetailPresenter
+from endfield_pcap.application.settings import SettingsStore
 from endfield_pcap.gui.battle.lane_settings import RoleLanesDialog
-from endfield_pcap.gui.config import load_app_config
+from endfield_pcap.settings import load_app_config
 
 
 def blocks():
@@ -79,7 +80,7 @@ def test_editor_allows_unchecking_removing_reordering_and_cancel(app):
     items = blocks()
     saved = default_lanes(skill_options(items, OWNER))
     before = deepcopy(saved)
-    dialog = RoleLanesDialog(items, OWNER, saved)
+    dialog = RoleLanesDialog(OWNER, skill_options(items, OWNER), resolved_lanes(items, OWNER, saved))
     try:
         dialog.skills.item(0).setCheckState(Qt.CheckState.Unchecked)
         assert dialog.save_button.isEnabled() and '其他' in dialog.status.text()
@@ -110,14 +111,14 @@ def test_editor_allows_unchecking_removing_reordering_and_cancel(app):
 def test_role_button_saves_configuration_and_reopens_from_portable_settings(app, tmp_path, theme):
     setTheme(theme)
     parent = QWidget()
-    parent.config_path = tmp_path/'settings.json'
-    parent.app_config = load_app_config(parent.config_path)
+    path = tmp_path/'settings.json'
+    store = SettingsStore(load_app_config(path), path)
     snapshot = report()
     snapshot['casts'] += [dict(character_key=OWNER, skill_key=OWNER+suffix,
                               ts_ms_from_start=300, end_ms_from_start=1500)
                           for suffix in ('_combo_skill', '_ultimate_skill')]
     before = deepcopy(snapshot)
-    dialog = BattleDetailDialog(snapshot, '角色轨道', parent)
+    dialog = BattleDetailPresenter.create(snapshot, '角色轨道', store, parent=parent)
     try:
         dialog._initial_placement_scheduled = True
         dialog.resize(1160, 760)
@@ -139,7 +140,7 @@ def test_role_button_saves_configuration_and_reopens_from_portable_settings(app,
         assert view.skill_lane_rows == {(OWNER, '其他'): 1}
         assert view.drawn_blocks == 3 and view.hit_markers == 2
         assert view._time_extent[:2] == (0., 7000.)
-        assert load_app_config(parent.config_path).battle_lane_configs[OWNER] == []
+        assert load_app_config(path).battle_lane_configs[OWNER] == []
         assert dialog.grab().save(str(EVIDENCE/f'role-lanes-merged-{theme.value}.png'))
         view.set_graphics_zoom(200)
         view.verticalScrollBar().setValue(view.verticalScrollBar().maximum())
@@ -149,8 +150,8 @@ def test_role_button_saves_configuration_and_reopens_from_portable_settings(app,
             assert button.y() >= view.TOP
         assert snapshot == before
         dialog.close(); app.processEvents()
-        parent.app_config = load_app_config(parent.config_path)
-        restored = BattleDetailDialog(snapshot, '恢复轨道', parent)
+        restored = BattleDetailPresenter.create(snapshot, '恢复轨道',
+            SettingsStore(load_app_config(path), path), parent=parent)
         try:
             assert restored.timeline.skill_lane_rows == {(OWNER, '其他'): 1}
             assert restored.timeline.drawn_blocks == 3

@@ -8,7 +8,8 @@ from app_test_support.ui.window import entry
 from endfield_pcap.models import OverlaySourceType, OverlayGeometry
 from endfield_pcap.overlays.templates import read_template, template_for, template_values, with_template_value
 from endfield_pcap.overlays.manager import OverlayManager
-from endfield_pcap.gui.config import default_overlay_entries, load_app_config, save_app_config, _overlay_entry_to_dict
+from endfield_pcap.settings import default_overlay_entries, load_app_config, save_app_config
+from endfield_pcap.settings.codec import _overlay_entry_to_dict
 
 
 def skin(tmp_path, **changes):
@@ -106,7 +107,7 @@ def test_industrial_skin_persists_and_uses_existing_content_geometry(tmp_path, a
     from PySide6.QtCore import QRectF
     from PySide6.QtGui import QPainter
     from endfield_pcap.overlays.native.damage import DamageModule
-    from endfield_pcap.gui.config import AppConfig, default_service_config
+    from endfield_pcap.settings import AppConfig, default_service_config
     current = with_template_value(entry(), 'theme', 'endfield')
     path = tmp_path/'settings.json'
     config = AppConfig(service=default_service_config())

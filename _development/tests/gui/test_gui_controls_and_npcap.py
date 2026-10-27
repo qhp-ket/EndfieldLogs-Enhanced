@@ -13,7 +13,7 @@ from app_test_support.ui.qt import EVIDENCE
 
 @pytest.mark.parametrize('select_exe', [True, False])
 def test_settings_game_path_selection_persists_without_restarting_capture(main_window, app, tmp_path, monkeypatch, select_exe):
-    from endfield_pcap.gui.config import load_app_config
+    from endfield_pcap.settings import load_app_config
     window = main_window
     directory = tmp_path / 'new game location'
     directory.mkdir()
@@ -91,14 +91,14 @@ def test_gui_and_overlay_font_sliders(main_window, app):
     assert isinstance(avatar, Slider)
     avatar.setValue(175)
     assert window._selected_overlay().template_settings['avatar_size_percent'] == 175
-    from endfield_pcap.gui.config import load_app_config
+    from endfield_pcap.settings import load_app_config
     saved = load_app_config(window.config_path)
     assert next(e for e in saved.overlays if e.id == window._selected_overlay().id).template_settings['avatar_size_percent'] == 175
 
 
 def test_default_game_path_is_independent_of_application_directory(tmp_path, monkeypatch):
     from pathlib import Path
-    import endfield_pcap.gui.config as config
+    from endfield_pcap.settings import codec as config
     monkeypatch.setattr(config, 'app_root', lambda: tmp_path / 'relocated app')
     fresh = config.load_app_config(tmp_path / 'fresh-settings.json')
     assert fresh.service.dll_dir / fresh.service.game_exe == Path(
@@ -154,11 +154,11 @@ def test_missing_npcap_warns_in_gui_and_console_but_history_still_works(main_win
     assert window._npcap_infobar is bar
     path = tmp_path / 'trace_20261022-100000.log'
     path.write_text(two_battles(), encoding='utf8')
-    window._queue_trace_import([path])
-    wait_for(lambda: not window._trace_import_pending, app)
-    window._inspect_selected_history()
-    wait_for(lambda: window._history_detail_dialog is not None, app)
-    assert window._history_detail_dialog.snapshot['battle']['total_damage'] > 0
+    window.history_presenter.import_files([path])
+    wait_for(lambda: not window.history_controller.import_pending, app)
+    window.history_presenter.inspect_selected()
+    wait_for(lambda: window.history_presenter.dialog is not None, app)
+    assert window.history_presenter.dialog.snapshot['battle']['total_damage'] > 0
     monkeypatch.setattr(capture_actions, 'has_npcap', lambda: True)
     assert window._ensure_npcap_ready()
     assert window._npcap_infobar is None
@@ -167,7 +167,7 @@ def test_missing_npcap_warns_in_gui_and_console_but_history_still_works(main_win
 @pytest.mark.parametrize('choice', ['exe', 'directory', 'defer', 'close'])
 def test_missing_game_startup_prompts_once_and_allows_manual_setup_or_history(
         main_window, app, tmp_path, monkeypatch, choice):
-    from endfield_pcap.gui.config import load_app_config
+    from endfield_pcap.settings import load_app_config
     window = main_window
     original = tmp_path / 'missing-game'
     window.app_config.start_capture_on_launch = True

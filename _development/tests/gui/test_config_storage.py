@@ -3,7 +3,7 @@ import json
 import os
 from pathlib import Path
 import pytest
-from endfield_pcap.gui import config, config_storage
+from endfield_pcap.settings import codec as config, storage as config_storage
 
 
 def test_battle_table_widths_roundtrip_and_bounds(tmp_path):

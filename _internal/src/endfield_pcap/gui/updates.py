@@ -6,7 +6,7 @@ import threading
 from PySide6.QtCore import QObject, QTimer, Signal, QUrl
 from PySide6.QtGui import QDesktopServices
 from endfield_pcap._version import __version__
-from endfield_pcap.gui.config import save_app_config
+from endfield_pcap.settings import save_app_config
 from endfield_pcap.runtime.releases import check_update
 from qfluentwidgets import InfoBar, InfoBarPosition, PushButton
 

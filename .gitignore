@@ -85,6 +85,9 @@
 !/_development/tools/verify_runtime_projection.py
 !/_development/tools/audit_runtime_data.py
 !/_development/tools/audit_repository.py
+!/_development/tools/select_tests.py
+!/_development/tools/run_ci_tests.py
+!/_development/tools/check_documentation.py
 !/_development/tools/generate_test_fixtures.py
 !/_development/tools/build_portable.py
 !/_development/tools/portable_dependencies.py

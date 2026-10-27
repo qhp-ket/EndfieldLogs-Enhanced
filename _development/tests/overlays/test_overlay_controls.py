@@ -7,7 +7,7 @@ import pytest
 from qfluentwidgets import CaptionLabel
 from PySide6.QtCore import QPoint, QSize, QEvent, Qt
 from PySide6.QtTest import QTest
-import endfield_pcap.gui.config as gui_config
+import endfield_pcap.settings as gui_config
 import endfield_pcap.gui.main as gui_main
 import endfield_pcap.overlays.manager as overlay_host
 from endfield_pcap.models import OverlayGeometry

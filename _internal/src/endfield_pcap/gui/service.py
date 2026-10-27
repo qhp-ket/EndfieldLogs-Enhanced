@@ -5,6 +5,8 @@ import queue
 import threading
 from copy import deepcopy
 from enum import StrEnum
+from pathlib import Path
+from endfield_pcap.application.capture_state import CaptureWritingState, WritingKind
 from endfield_pcap.models import ServiceObserver
 from endfield_pcap.service.runtime.server import DamageLogService
 from endfield_pcap.service.config import ServiceConfig
@@ -20,6 +22,7 @@ class CaptureLifecycle(StrEnum):
 
 class ServiceController:
     def __init__(self, config: ServiceConfig) -> None:
+        self._owner = threading.get_ident()
         self.config = config
         self.queue: "queue.Queue[tuple[str, object]]" = GuiDeliveryQueue()
         self._full_analysis_required = False
@@ -47,7 +50,23 @@ class ServiceController:
     def is_running(self) -> bool:
         return self._thread is not None and self._thread.is_alive()
 
+    def writing_state(self):
+        if threading.get_ident() != self._owner:
+            raise RuntimeError('抓包写入状态只能由控制线程查询')
+        if not self.is_running():
+            return CaptureWritingState(WritingKind.IDLE)
+        service = self._service
+        if self.lifecycle != CaptureLifecycle.RUNNING or service is None:
+            return CaptureWritingState(WritingKind.UNCERTAIN)
+        bridge = getattr(service, 'trace_bridge', None)
+        paths = (getattr(service, 'current_log_path', None), getattr(bridge, 'trace_file', None),
+                 getattr(self.running_config, 'trace_file', None))
+        active = tuple(dict.fromkeys(Path(path).resolve() for path in paths if path))
+        return CaptureWritingState(WritingKind.ACTIVE if active else WritingKind.UNCERTAIN, active)
+
     def start(self) -> None:
+        if threading.get_ident() != self._owner:
+            raise RuntimeError('抓包启动只能由控制线程发起')
         if self.is_running():
             return
         with self._lifecycle_lock:

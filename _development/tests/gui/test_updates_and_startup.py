@@ -5,7 +5,7 @@ import pytest
 from PySide6.QtCore import QTimer
 from app_test_support.ui.window import main_window
 from app_test_support.scenarios.trace import wait_for
-from endfield_pcap.gui.config import load_app_config
+from endfield_pcap.settings import load_app_config
 from endfield_pcap.runtime import releases
 import endfield_pcap.gui.updates as updates
 
@@ -93,7 +93,7 @@ def test_legacy_input_running_state_is_not_restored(tmp_path):
 
 
 def test_default_order_and_custom_order_survive_restart(tmp_path):
-    from endfield_pcap.gui.config import default_overlay_entries,save_app_config
+    from endfield_pcap.settings import default_overlay_entries,save_app_config
     assert [e.source_value for e in default_overlay_entries()]==['damage','combo_skill','uid_mask']
     path=tmp_path/'settings.json'
     config=load_app_config(path)

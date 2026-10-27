@@ -41,13 +41,14 @@ Windows x64 项目根目录执行 `Setup-Dev.cmd`，完成后用 `Start-GUI.cmd`
 
 ## 持续集成
 
-`.github/workflows/ci.yml` 在 main 推送、PR 和手动触发时运行一个 Windows 任务：
+`.github/workflows/ci.yml` 在 `main/python-qt`、`main` 推送、PR 和手动触发时运行一个 Windows 任务：
 
-1. 安装 CPython 3.14.2 与约束文件指定的依赖。
-2. 从仓库内精简包离线恢复运行数据，执行仓库审计。
-3. 执行 `live`、`parser_core`、`uploader_core`，保留测试日志和 JUnit 报告 14 天。
+1. 使用 CPython 3.14.2，按完整 Git 差异选择验证范围。
+2. 执行仓库审计与便携文档引用检查；选中测试时安装约束依赖并离线恢复运行数据。
+3. 顺序执行所选分类。共享边界、分类不明和手动验证执行全套；文档变更执行基础检查。
+4. 汇总实际执行和跳过范围，保留选择原因、结果、测试日志和 JUnit 报告 14 天。
 
-Actions 固定到官方提交。桌面、硬件及外部资源测试沿用各自启用条件；发行 ZIP 在本地构建验证。
+Actions 固定到官方提交。映射与开发验证规则见 [测试说明](../tests/README.md)。桌面、硬件及外部资源测试沿用各自启用条件；发行 ZIP 在本地构建验证。
 
 ## 启动与验证
 

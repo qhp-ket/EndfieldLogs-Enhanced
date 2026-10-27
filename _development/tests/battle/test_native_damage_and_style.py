@@ -10,19 +10,21 @@ from app_test_support.ui.qt import EVIDENCE
 from app_test_support.ui.window import main_window
 from endfield_pcap.analysis.battle.damage import damage_series
 from endfield_pcap.gui.battle.detail import BattleDetailDialog
+from endfield_pcap.gui.battle.presenter import BattleDetailPresenter
+from endfield_pcap.application.settings import SettingsStore
 from endfield_pcap.gui.battle.plots.damage import damage_hover_text
 from endfield_pcap.gui.battle.tables import EvidenceItem
 
 
 def test_native_summary_preserves_participant_totals_quality_and_column_widths(main_window, app):
-    from endfield_pcap.gui.config import load_app_config
+    from endfield_pcap.settings import load_app_config
     snapshot = sample()
     snapshot['participants'][0].update(total_damage=1234.5, total_rd=1111.25,
                                        dps=123.45, rdps=111.125, crit_rate=.25)
     snapshot['participants'][1]['crit_rate'] = float('nan')
     snapshot['snapshot_quality'] = {'rdps': {'status': 'provisional', 'reasons': ['保留的原因']}}
     before = deepcopy(snapshot)
-    dialog = BattleDetailDialog(snapshot, '原生报告信息', main_window)
+    dialog = BattleDetailPresenter.create(snapshot, '原生报告信息', main_window.settings_store, parent=main_window)
     try:
         assert not hasattr(dialog, '_summary_dialog')
         dialog._show_summary()
@@ -190,11 +192,11 @@ def test_combo_input_spans_only_visible_character_tracks(app, character):
 
 def test_user_table_resize_persists_in_portable_settings(app, tmp_path):
     from PySide6.QtWidgets import QWidget
-    from endfield_pcap.gui.config import load_app_config
+    from endfield_pcap.settings import load_app_config
     owner = QWidget()
-    owner.config_path = tmp_path/'settings.json'
-    owner.app_config = load_app_config(owner.config_path)
-    dialog = BattleDetailDialog(sample(), 'Column widths', owner)
+    path = tmp_path/'settings.json'
+    store = SettingsStore(load_app_config(path), path)
+    dialog = BattleDetailPresenter.create(sample(), 'Column widths', store, parent=owner)
     try:
         dialog.show(); dialog.tabs.setCurrentIndex(1); QTest.qWait(120)
         header = dialog.skill_table.horizontalHeader()
@@ -206,11 +208,11 @@ def test_user_table_resize_persists_in_portable_settings(app, tmp_path):
         QTest.mouseRelease(header.viewport(),Qt.MouseButton.LeftButton,pos=point+QPoint(48,0))
         QTest.qWait(400)
         assert header.sectionSize(0) > before
-        saved = load_app_config(owner.config_path).battle_table_widths['skills'][0]
+        saved = load_app_config(path).battle_table_widths['skills'][0]
         assert saved == header.sectionSize(0)
     finally:
         dialog.close(); app.processEvents()
-    restored = BattleDetailDialog(sample(), 'Restored widths', owner)
+    restored = BattleDetailPresenter.create(sample(), 'Restored widths', store, parent=owner)
     try:
         assert restored.skill_table.columnWidth(0) == saved
     finally:

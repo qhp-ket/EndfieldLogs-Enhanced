@@ -1,7 +1,7 @@
 from __future__ import annotations
 from pathlib import Path
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QWidget
-from endfield_pcap.gui.config import AppConfig, save_app_config
+from endfield_pcap.settings import AppConfig, save_app_config
 from endfield_pcap.gui.resources import ROOT
 from endfield_pcap.gui.shared.typography import apply_fonts
 

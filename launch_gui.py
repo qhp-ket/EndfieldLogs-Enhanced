@@ -110,11 +110,11 @@ def bootstrap() -> None:
 
 
 def prepare_config(game_dir: Path | None = None, ws_port: int | None = None) -> Path:
-    from endfield_pcap.gui.config import AppConfig
-    from endfield_pcap.gui.config import default_overlay_entries
-    from endfield_pcap.gui.config import default_service_config
-    from endfield_pcap.gui.config import load_app_config
-    from endfield_pcap.gui.config import save_app_config
+    from endfield_pcap.settings import AppConfig
+    from endfield_pcap.settings import default_overlay_entries
+    from endfield_pcap.settings import default_service_config
+    from endfield_pcap.settings import load_app_config
+    from endfield_pcap.settings import save_app_config
 
     path = PROFILE / "settings.json"
     backup = path.with_suffix(path.suffix + '.bak')
@@ -159,7 +159,7 @@ def main(argv: list[str] | None = None) -> int:
             importlib.import_module(name)
         from endfield_pcap.gui.pages.settings.paths import _is_valid_game_dir
         from endfield_pcap.gui.main import run_gui
-        from endfield_pcap.gui.config import load_app_config
+        from endfield_pcap.settings import load_app_config
         from endfield_pcap.capture.npcap import has_npcap
 
         config_path = prepare_config(args.game_dir, args.ws_port)

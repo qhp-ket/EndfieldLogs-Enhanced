@@ -1,21 +1,22 @@
 """Edit one character's ordered skill tracks using only evidenced skills."""
 from uuid import uuid4
+from copy import deepcopy
 from PySide6.QtCore import Qt, QSignalBlocker
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QListWidgetItem, QAbstractItemView
 from qfluentwidgets import CaptionLabel, ListWidget, LineEdit, PushButton, PrimaryPushButton, isDarkTheme, qconfig
-from endfield_pcap.analysis.battle.lane_config import skill_options, default_lanes, resolved_lanes, normalize_lane_configs
+from endfield_pcap.analysis.battle.lane_config import default_lanes, normalize_lane_configs
 from endfield_pcap.data.skill_names import character_name
 from endfield_pcap.gui.shared.placement import schedule_initial_placement
 
 
 class RoleLanesDialog(QDialog):
-    def __init__(self, blocks, owner, saved=None, parent=None):
+    def __init__(self, owner, options, rows, parent=None):
         super().__init__(parent)
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.setObjectName('roleLanesDialog')
         self.owner = owner
-        self.options = skill_options(blocks, owner)
-        self.rows = resolved_lanes(blocks, owner, saved)
+        self.options = deepcopy(options)
+        self.rows = deepcopy(rows)
         self.setWindowTitle(character_name(owner)+' · 时间轴设置')
         self.resize(660, 480)
         self.setMinimumSize(520, 360)

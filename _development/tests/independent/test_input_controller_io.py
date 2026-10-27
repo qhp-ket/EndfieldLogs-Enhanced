@@ -41,12 +41,15 @@ sys.exit({exit_code})
 @pytest.mark.parametrize('failure', ['timeout', 'terminate', 'kill', 'wait'])
 def test_stop_cleanup_failures_are_bounded_and_reported_without_raising(failure, caplog):
     calls = []
+    waits = []
     def signal(name):
         calls.append(name)
         if failure == name:
             raise PermissionError('synthetic access denied')
     def wait(timeout):
-        calls.append(timeout)
+        assert 0 < timeout <= 30, 'Exit must use a bounded positive wait'
+        waits.append(timeout)
+        calls.append('wait')
         if failure == 'wait':
             raise OSError('synthetic wait failure')
         raise subprocess.TimeoutExpired('input-worker', timeout)
@@ -57,17 +60,22 @@ def test_stop_cleanup_failures_are_bounded_and_reported_without_raising(failure,
     inputs.command = lambda **payload: commands.append(payload)
     inputs.stop(wait=True)
     assert commands == [dict(command='stop')]
-    assert calls == [8, 'terminate', *([] if failure == 'terminate' else [3]),
-                     'kill', *([] if failure == 'kill' else [1])]
+    assert calls[0] == 'wait'
+    assert calls.count('terminate') == calls.count('kill') == 1
+    assert calls.index('terminate') < calls.index('kill')
+    assert len(waits) == (2 if failure in {'terminate', 'kill'} else 3)
+    assert sum(waits) <= 60
     assert inputs.snapshot()['status'] == 'error'
     assert '123' in caplog.text and '退出失败' in caplog.text
 
 
 def test_stop_escalates_once_then_reaps_process():
     calls = []
+    waits = []
     def wait(timeout):
-        calls.append(timeout)
-        if timeout == 8:
+        assert 0 < timeout <= 30
+        waits.append(timeout)
+        if len(waits) == 1:
             raise subprocess.TimeoutExpired('input-worker', timeout)
     inputs = controller.InputController()
     inputs.command = lambda **payload: calls.append(payload['command'])
@@ -75,4 +83,19 @@ def test_stop_escalates_once_then_reaps_process():
         terminate=lambda: calls.append('terminate'),
         kill=lambda: pytest.fail('already reaped'))
     inputs.stop(wait=True)
-    assert calls == ['stop', 8, 'terminate', 3]
+    assert calls == ['stop', 'terminate']
+    assert len(waits) == 2 and sum(waits) <= 60
+
+
+def test_stop_allows_normal_exit_without_signalling():
+    calls = []
+    def wait(timeout):
+        assert 0 < timeout <= 30
+        calls.append('reaped')
+    inputs = controller.InputController()
+    inputs.command = lambda **payload: calls.append(payload['command'])
+    inputs.process = SimpleNamespace(poll=lambda: None, wait=wait,
+        terminate=lambda: pytest.fail('graceful exit must not terminate'),
+        kill=lambda: pytest.fail('graceful exit must not kill'))
+    inputs.stop(wait=True)
+    assert calls == ['stop', 'reaped']

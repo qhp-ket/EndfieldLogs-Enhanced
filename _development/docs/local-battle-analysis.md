@@ -29,6 +29,6 @@ GUI 字号在设置中调整；角色名、技能类型及 BUFF 使用各自基�
 | 时间轴 | 40px | GUI 字号 × 头像比例 × 图形比例，受可见单元格限制 |
 
 时间轴每名角色显示一次头像。源 PNG 分辨率为 128×128，显示大小由上表计算。
-默认比例在 `gui/config.py: character_avatar_percent`；Qt 基准分别为 `detail.py: SKILL_AVATAR_PIXELS`、`timeline/labels.py: ROLE_AVATAR_PIXELS`。
+默认比例在 `settings/model.py: character_avatar_percent`；Qt 基准分别为 `pages.py: SKILL_AVATAR_PIXELS`、`timeline/labels.py: ROLE_AVATAR_PIXELS`。
 
 控件路径见 [组件位置](battle-analysis-components.md)。名称优先显示词典，缺项回退核心名称或原 ID。

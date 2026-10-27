@@ -5,45 +5,41 @@ import threading
 from PySide6.QtCore import QItemSelectionModel
 from PySide6.QtTest import QTest
 import endfield_pcap.gui.service as gui_service
-from endfield_pcap.gui.config import load_app_config
+from endfield_pcap.settings import load_app_config
 from app_test_support.ui.window import main_window
 from app_test_support.scenarios.trace import two_battles, wait_for
-from app_test_support.ui.qt import EVIDENCE
 
 
 def test_batch_load_preserves_click_order_and_only_presents_last(main_window, app, tmp_path, monkeypatch):
     window = main_window
     source = tmp_path / 'trace_20261022-100000.log'
     source.write_text(two_battles(), encoding='utf8')
-    window._queue_trace_import([source])
-    wait_for(lambda: not window._trace_import_pending, app)
+    window.history_presenter.import_files([source])
+    wait_for(lambda: not window.history_controller.import_pending, app)
     listing = window.records_page.record_list
     # Select the older row, then Ctrl-select the newer row: presentation follows
     # the final selection, not row order or the last worker to finish.
     listing.setCurrentRow(1)
     listing.setCurrentRow(0, QItemSelectionModel.SelectionFlag.Select)
-    order = window._selected_history_records()
+    order = window.history_controller.selected_records
     assert [r.record_index for r in order] == [1, 2]
     calls = []
     from endfield_pcap.history.analysis import load_record_snapshot
     def analyze(record):
         calls.append(record.record_index)
         return load_record_snapshot(record)
-    monkeypatch.setattr('endfield_pcap.gui.pages.history.actions.load_record_snapshot', analyze)
+    monkeypatch.setattr('endfield_pcap.history.analysis.load_record_snapshot', analyze)
     window.records_page.load_overlay_btn.click()
     wait_for(lambda: window.overlay_manager._history_mode, app)
     assert calls == [1, 2]
-    assert all(record.analysis_loaded for record in window.records)
+    assert all(record.analysis_loaded for record in window.history_controller.records)
     assert len(listing.selectedItems()) == 2
     assert listing.delegate.selectedRows == {0, 1}
     assert window.overlay_manager._analysis_snapshot['snapshot']['battle']['total_damage'] == 860
-    assert window._selected_record.record_index == 2
-    window.switchTo(window.records_page)
-    QTest.qWait(350)
-    assert window.grab().save(str(EVIDENCE / 'gui-history-batch.png'))
+    assert window.history_controller.selected_records[-1].record_index == 2
     before = source.read_bytes()
     window.records_page.remove_record_btn.click()
-    assert not window.records
+    assert not window.history_controller.records
     assert not window.overlay_manager._history_mode
     assert len(load_app_config(window.config_path).hidden_history_records) == 2
     assert source.read_bytes() == before
@@ -53,20 +49,20 @@ def test_partial_batch_failure_keeps_last_selection_as_presentation_target(main_
     window = main_window
     source = tmp_path / 'trace_20261022-100000.log'
     source.write_text(two_battles(), encoding='utf8')
-    window._queue_trace_import([source])
-    wait_for(lambda: not window._trace_import_pending, app)
+    window.history_presenter.import_files([source])
+    wait_for(lambda: not window.history_controller.import_pending, app)
     window.records_page.select_all_btn.click()
-    target = window._selected_history_records()[-1]
+    target = window.history_controller.selected_records[-1]
     from endfield_pcap.history.analysis import load_record_snapshot
     def analyze(record):
-        if record is target:
+        if record.record_index == target.record_index:
             raise ValueError('selected target failed')
         return load_record_snapshot(record)
-    monkeypatch.setattr('endfield_pcap.gui.pages.history.actions.load_record_snapshot', analyze)
-    window._load_selected_history()
+    monkeypatch.setattr('endfield_pcap.history.analysis.load_record_snapshot', analyze)
+    window.history_presenter.load_selected()
     wait_for(lambda: '加载失败' in window.records_page.overlay_source_status.text(), app)
     assert not window.overlay_manager._history_mode
-    assert sum(record.analysis_loaded for record in window.records) == 1
+    assert sum(record.analysis_loaded for record in window.history_controller.records) == 1
     assert window.records_page.overlay_source_status.toolTip()
 
 
@@ -125,16 +121,10 @@ def test_single_capture_button_saved_port_and_nonblocking_stop(main_window, app,
     assert window.overlay_manager.ws_port == 31235
     QTest.qWait(150)  # An old stop poll must not disable the new start.
     assert not window._stop_pending
-    window.switchTo(window.home_page)
-    QTest.qWait(350)
-    assert window.grab().save(str(EVIDENCE / 'gui-home-service-controls.png'))
-    window.switchTo(window.settings_page)
-    QTest.qWait(350)
-    assert window.grab().save(str(EVIDENCE / 'gui-settings-port.png'))
 
 
 def test_controller_constructs_off_thread_and_does_not_reuse_generated_paths(monkeypatch, tmp_path):
-    from endfield_pcap.gui.config import default_service_config
+    from endfield_pcap.settings import default_service_config
     config = default_service_config()
     created = []
     class Service:

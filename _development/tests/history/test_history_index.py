@@ -2,7 +2,7 @@
 import json
 import threading
 import pytest
-import endfield_pcap.gui.config as gui_config
+import endfield_pcap.settings as gui_config
 import endfield_pcap.history.index as history_index
 from endfield_pcap.history.analysis import load_record_snapshot
 from endfield_pcap.history.index import HistoryIndex
@@ -62,43 +62,43 @@ def test_ndjson_cache_skips_reparsing_and_recovers_from_corruption(tmp_path, mon
 
 def test_gui_indexes_off_thread_and_removes_only_one_battle_persistently(main_window, app, tmp_path, monkeypatch):
     window = main_window
-    wait_for(lambda: not window._records_pending, app)
+    wait_for(lambda: not window.history_controller.records_pending, app)
     source = tmp_path / 'trace_20261022-100000.log'
     source.write_text(two_battles(), encoding='utf-8')
     original_bytes = source.read_bytes()
-    original = window._history_index.records
+    original = window.history_controller.index.records
     threads = []
     def indexed(*args, **kwargs):
         threads.append(threading.current_thread())
         return original(*args, **kwargs)
-    monkeypatch.setattr(window._history_index, 'records', indexed)
-    window._queue_trace_import([source])
-    wait_for(lambda: not window._trace_import_pending, app)
-    assert len(window.records) == 2
+    monkeypatch.setattr(window.history_controller.index, 'records', indexed)
+    window.history_presenter.import_files([source])
+    wait_for(lambda: not window.history_controller.import_pending, app)
+    assert len(window.history_controller.records) == 2
     assert all(t is not threading.main_thread() for t in threads)
-    assert all(not r.snapshot for r in window.records)
+    assert all(not r.snapshot for r in window.history_controller.records)
     assert window.records_page.summary_total.text() == '待加载'
     assert '不会删除原始日志文件' in window.records_page.remove_record_hint.text()
-    removed = window._selected_record
+    removed = window.history_controller.selected_records[-1]
     key = record_key(removed)
     window.records_page.remove_record_btn.click()
-    assert len(window.records) == 1
+    assert len(window.history_controller.records) == 1
     assert key in gui_config.load_app_config(window.config_path).hidden_history_records
     assert source.read_bytes() == original_bytes
-    window._load_records()
-    wait_for(lambda: not window._records_pending and not window._trace_import_pending, app)
-    assert len(window.records) == 1
+    window.history_presenter.refresh()
+    wait_for(lambda: not window.history_controller.records_pending and not window.history_controller.import_pending, app)
+    assert len(window.history_controller.records) == 1
     # Simulate a restart: forget all in-memory trace records/signatures.
-    window._trace_records.clear()
-    window._trace_signatures.clear()
-    window._load_records()
-    wait_for(lambda: not window._records_pending and not window._trace_import_pending, app)
-    assert len(window.records) == 1
-    assert record_key(window.records[0]) != key
+    window.history_controller._trace_records.clear()
+    window.history_controller._trace_signatures.clear()
+    window.history_presenter.refresh()
+    wait_for(lambda: not window.history_controller.records_pending and not window.history_controller.import_pending, app)
+    assert len(window.history_controller.records) == 1
+    assert record_key(window.history_controller.records[0]) != key
     # Explicit import restores the hidden battle; background refresh never does.
-    window._queue_trace_import([source])
-    wait_for(lambda: not window._trace_import_pending, app)
-    assert len(window.records) == 2
+    window.history_presenter.import_files([source])
+    wait_for(lambda: not window.history_controller.import_pending, app)
+    assert len(window.history_controller.records) == 2
     assert key not in window.app_config.hidden_history_records
     assert source.read_bytes() == original_bytes
 
@@ -107,55 +107,55 @@ def test_removal_during_analysis_and_reimport_cannot_resurrect_record(main_windo
     window = main_window
     source = tmp_path / 'trace_20261022-100000.log'
     source.write_text(two_battles(), encoding='utf8')
-    window._queue_trace_import([source])
-    wait_for(lambda: not window._trace_import_pending, app)
+    window.history_presenter.import_files([source])
+    wait_for(lambda: not window.history_controller.import_pending, app)
     entered, release, finished = threading.Event(), threading.Event(), threading.Event()
     def analyze(record):
         entered.set()
         release.wait(5)
         finished.set()
         return {'battle': {'total_damage': 999999}}
-    monkeypatch.setattr('endfield_pcap.gui.pages.history.actions.load_record_snapshot', analyze)
-    window._load_selected_history()
+    monkeypatch.setattr('endfield_pcap.history.analysis.load_record_snapshot', analyze)
+    window.history_presenter.load_selected()
     wait_for(entered.is_set, app)
     # Queue a reimport first, then remove before its result is delivered.
-    window._queue_trace_import([source])
-    window._remove_selected_history()
+    window.history_presenter.import_files([source])
+    window.history_presenter.remove_selected()
     release.set()
-    wait_for(lambda: finished.is_set() and not window._trace_import_pending, app)
+    wait_for(lambda: finished.is_set() and not window.history_controller.import_pending, app)
     window._drain_queue()
-    assert len(window.records) == 1
+    assert len(window.history_controller.records) == 1
     assert not window.overlay_manager._history_mode
     assert len(window.app_config.hidden_history_records) == 1
 
 
 def test_ndjson_scan_does_not_block_gui_and_removed_row_stays_hidden(main_window, app, tmp_path, monkeypatch):
     window = main_window
-    wait_for(lambda: not window._records_pending, app)
+    wait_for(lambda: not window.history_controller.records_pending, app)
     source = tmp_path / 'session_test.ndjson'
     source.write_text('\n'.join(json.dumps(e) for e in [raw_scene(), raw_hit(1001000, 123)]), encoding='utf8')
     original_bytes = source.read_bytes()
     entered, release = threading.Event(), threading.Event()
-    original = window._history_index.records
+    original = window.history_controller.index.records
     def slow_index(*args, **kwargs):
         assert threading.current_thread() is not threading.main_thread()
         entered.set()
         release.wait(5)
         return original(*args, **kwargs)
-    monkeypatch.setattr(window._history_index, 'records', slow_index)
-    window._load_records()
+    monkeypatch.setattr(window.history_controller.index, 'records', slow_index)
+    window.history_presenter.refresh()
     wait_for(entered.is_set, app)
-    assert window._records_pending
+    assert window.history_controller.records_pending
     # The UI event loop remains available while the source is being indexed.
     window.records_page.return_live_btn.click()
     assert window.records_page.overlay_source_status.text() == '悬浮窗：实时日志'
     release.set()
-    wait_for(lambda: not window._records_pending, app)
-    assert len(window.records) == 1
+    wait_for(lambda: not window.history_controller.records_pending, app)
+    assert len(window.history_controller.records) == 1
     window.records_page.remove_record_btn.click()
-    assert not window.records
-    window._load_records()
-    wait_for(lambda: not window._records_pending, app)
-    assert not window.records and not window.records_page.remove_record_btn.isEnabled()
+    assert not window.history_controller.records
+    window.history_presenter.refresh()
+    wait_for(lambda: not window.history_controller.records_pending, app)
+    assert not window.history_controller.records and not window.records_page.remove_record_btn.isEnabled()
     assert source.read_bytes() == original_bytes
     assert len(gui_config.load_app_config(window.config_path).hidden_history_records) == 1

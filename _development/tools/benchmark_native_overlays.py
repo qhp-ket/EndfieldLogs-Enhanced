@@ -23,7 +23,7 @@ def main():
     import psutil
     from PySide6.QtWidgets import QApplication
     from PySide6.QtTest import QTest
-    from endfield_pcap.gui.config import default_overlay_entries
+    from endfield_pcap.settings import default_overlay_entries
     from endfield_pcap.overlays.manager import OverlayManager
 
     app = QApplication([])

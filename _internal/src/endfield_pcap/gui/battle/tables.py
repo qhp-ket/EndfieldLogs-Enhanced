@@ -44,17 +44,13 @@ def style_table(view):
     view.horizontalHeader().setMinimumSectionSize(40)
 
 
-def remember_columns(dialog, view, key):
+def remember_columns(dialog, view, initial_widths, submit):
     """Save only user drags; automatic font/avatar measurements stay automatic."""
     header = view.horizontalHeader()
     view.resizeColumnsToContents()
     header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
     header.setStretchLastSection(True)
-    owner = dialog.parentWidget()
-    while owner is not None and not hasattr(owner, 'app_config'):
-        owner = owner.parentWidget()
-    config = getattr(owner, 'app_config', None)
-    widths = getattr(config, 'battle_table_widths', {}).get(key, [])
+    widths = initial_widths
     for column, width in enumerate(widths[:view.columnCount()]):
         view.setColumnWidth(column, width)
     timer = QTimer(view)
@@ -62,10 +58,8 @@ def remember_columns(dialog, view, key):
     timer.setInterval(350)
 
     def save():
-        if config is not None and hasattr(owner, 'config_path'):
-            from endfield_pcap.gui.config import save_app_config
-            config.battle_table_widths[key] = [view.columnWidth(i) for i in range(view.columnCount())]
-            save_app_config(config, owner.config_path)
+        timer.stop()
+        submit([view.columnWidth(i) for i in range(view.columnCount())])
 
     def changed(*_):
         if QApplication.mouseButtons() & Qt.MouseButton.LeftButton:

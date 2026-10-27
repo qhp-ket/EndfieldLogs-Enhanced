@@ -32,8 +32,8 @@ def main():
     from PySide6.QtWidgets import QApplication, QLabel, QMessageBox
     from qfluentwidgets import Slider, Theme, setTheme
     import endfield_pcap.gui.main as gui_main
-    from endfield_pcap.gui.config import load_app_config
-    from endfield_pcap.gui.battle.detail import BattleDetailDialog
+    from endfield_pcap.settings import load_app_config
+    from endfield_pcap.gui.battle.presenter import BattleDetailPresenter
 
 
     def wait(condition, seconds=45):
@@ -153,7 +153,7 @@ def main():
             assert host.canvas.grab().save(str(output / ('overlay-'+host.canvas.template.modules[0]['type']+'-endfield.png')))
     result['native_overlays'] = sorted(kinds)
     result['native_skin_verified'] = 'endfield'
-    dialog = BattleDetailDialog(snapshot, '合成战斗', window)
+    dialog = BattleDetailPresenter.create(snapshot, '合成战斗', window.settings_store, parent=window)
     dialog.show()
     for tab in range(dialog.tabs.count()):
         dialog.tabs.setCurrentIndex(tab)

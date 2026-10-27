@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from PySide6.QtGui import QKeySequence
 from PySide6.QtWidgets import QFileDialog, QMessageBox
-from endfield_pcap.gui.config import save_app_config
+from endfield_pcap.settings import save_app_config
 from endfield_pcap.gui.resources import ROOT
 from endfield_pcap.gui.pages.settings.paths import (
     _is_valid_game_dir,
@@ -87,7 +87,7 @@ class SettingsActions:
         self.app_config.service.log_dir = target
         save_app_config(self.app_config, self.config_path)
         self._refresh_settings_page()
-        self._load_records()
+        self.history_presenter.refresh()
 
     def _set_overlay_port(self, port: int) -> None:
         self.overlay_manager.ws_port = port

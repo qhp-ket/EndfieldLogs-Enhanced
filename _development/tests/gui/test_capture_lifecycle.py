@@ -12,12 +12,31 @@ import pytest
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 import endfield_pcap.gui.service as gui_service
-from endfield_pcap.gui.config import default_service_config
+from endfield_pcap.settings import default_service_config
 from endfield_pcap.gui.service import CaptureLifecycle
 from endfield_pcap.models import ServiceState
 from app_test_support.ui.window import main_window
 from app_test_support.ui.qt import EVIDENCE
 from app_test_support.scenarios.trace import two_battles, wait_for
+
+
+def test_capture_public_writing_state_reports_startup_and_active_paths(monkeypatch, tmp_path):
+    from types import SimpleNamespace
+    from endfield_pcap.application.capture_state import WritingKind
+    controller = gui_service.ServiceController(default_service_config())
+    assert controller.writing_state().kind == WritingKind.IDLE
+    monkeypatch.setattr(controller, 'is_running', lambda: True)
+    controller._lifecycle = CaptureLifecycle.STARTING
+    assert controller.writing_state().kind == WritingKind.UNCERTAIN
+    trace, raw = tmp_path/'capture.log', tmp_path/'session.ndjson'
+    controller._service = SimpleNamespace(current_log_path=raw, trace_bridge=SimpleNamespace(trace_file=trace))
+    controller._lifecycle = CaptureLifecycle.RUNNING
+    state = controller.writing_state()
+    assert state.kind == WritingKind.ACTIVE and set(state.paths) == {trace, raw}
+    assert not state.permits_rename(trace) and not state.permits_rename(raw)
+    assert state.permits_rename(tmp_path/'history.log')
+    controller._lifecycle = CaptureLifecycle.STOPPING
+    assert controller.writing_state().kind == WritingKind.UNCERTAIN
 
 
 def test_controller_waits_for_ready_and_cleanup_before_stopped(monkeypatch, tmp_path):
@@ -198,11 +217,11 @@ def test_missing_prerequisite_retains_history(main_window, missing, monkeypatch,
     assert window._capture_error
     source = tmp_path / 'trace_20261023-100000.log'
     source.write_text(two_battles(), encoding='utf8')
-    window._queue_trace_import([source])
-    wait_for(lambda: not window._trace_import_pending, app)
-    window._inspect_selected_history()
-    wait_for(lambda: window._history_detail_dialog is not None, app)
-    assert window._history_detail_dialog.snapshot['battle']['total_damage'] > 0
+    window.history_presenter.import_files([source])
+    wait_for(lambda: not window.history_controller.import_pending, app)
+    window.history_presenter.inspect_selected()
+    wait_for(lambda: window.history_presenter.dialog is not None, app)
+    assert window.history_presenter.dialog.snapshot['battle']['total_damage'] > 0
 
 
 def test_logs_collect_off_page_copy_clear_only_display_and_open_folder(main_window, app, tmp_path, monkeypatch):
@@ -250,7 +269,7 @@ def launcher(tmp_path):
 
 @pytest.mark.parametrize('override', [False, True])
 def test_launcher_restores_backup_only_profile_and_applies_explicit_overrides(tmp_path, override):
-    from endfield_pcap.gui.config import AppConfig, load_app_config, save_app_config
+    from endfield_pcap.settings import AppConfig, load_app_config, save_app_config
     launch = launcher(tmp_path)
     path = launch.PROFILE / 'settings.json'
     backup = path.with_suffix(path.suffix + '.bak')
@@ -272,7 +291,7 @@ def test_launcher_restores_backup_only_profile_and_applies_explicit_overrides(tm
 
 
 def test_launcher_first_profile_uses_defaults_with_existing_legacy_settings(tmp_path, monkeypatch):
-    from endfield_pcap.gui import config
+    from endfield_pcap.settings import codec as config
     launch = launcher(tmp_path)
     legacy = tmp_path / 'old-installation.json'
     settings = config.AppConfig(service=default_service_config())
@@ -410,7 +429,7 @@ def test_gui_reports_ready_after_window_is_exposed(app, tmp_path, monkeypatch):
     from PySide6.QtCore import QTimer
     from PySide6.QtWidgets import QWidget
     import endfield_pcap.gui.main as gui_main
-    from endfield_pcap.gui.config import AppConfig, save_app_config
+    from endfield_pcap.settings import AppConfig, save_app_config
     config = tmp_path/'settings.json'
     save_app_config(AppConfig(service=default_service_config()), config)
     windows, states = [], []
