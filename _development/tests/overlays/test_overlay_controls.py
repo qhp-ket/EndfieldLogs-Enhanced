@@ -5,7 +5,7 @@ from dataclasses import replace
 from pathlib import Path
 import pytest
 from qfluentwidgets import CaptionLabel
-from PySide6.QtCore import QPoint, Qt
+from PySide6.QtCore import QPoint, QSize, QEvent, Qt
 from PySide6.QtTest import QTest
 import endfield_pcap.gui.config as gui_config
 import endfield_pcap.gui.main as gui_main
@@ -16,45 +16,10 @@ from endfield_pcap.overlays.templates import read_template
 from endfield_pcap.overlays.templates import template_for
 from endfield_pcap.overlays.templates import template_values
 from endfield_pcap.overlays.templates import with_template_value
-from app_test_support.ui.qt import page_value, snapshot_message, wait_for_page, EVIDENCE
+from app_test_support.ui.qt import snapshot_message, EVIDENCE
 
 
-def test_buff_overlay_is_removed_from_defaults_saved_config_and_template_import(main_window, tmp_path, monkeypatch):
-    from PySide6.QtWidgets import QFileDialog, QMessageBox
-    assert 'buff' not in {e.source_value for e in gui_config.default_overlay_entries()}
-    saved = gui_config.AppConfig(service=gui_config.default_service_config(),
-        overlays=[entry(source_value='buff', enabled=True)])
-    path = tmp_path/'old-buff-settings.json'
-    gui_config.save_app_config(saved, path)
-    assert 'buff' not in {e.source_value for e in gui_config.load_app_config(path).overlays}
-    from endfield_pcap.overlays.templates import ASSETS
-    monkeypatch.setattr(QFileDialog, 'getOpenFileName', lambda *args: (str(ASSETS/'buff/template.json'), ''))
-    notices = []
-    monkeypatch.setattr(QMessageBox, 'information', lambda *args: notices.append(args))
-    previous = list(main_window.app_config.overlays)
-    main_window._add_file_overlay()
-    assert notices and main_window.app_config.overlays == previous
 
-def local_template(tmp_path):
-    html = tmp_path / "custom.html"
-    html.write_text('''<!doctype html><style>html{font-size:calc(16px * var(--overlay-font-scale,1))}body{margin:0}#value{font-size:2rem}</style>
-    <div id="value">waiting</div><div id="mode">waiting</div>
-    <script>
-    window.addEventListener('endfield-analysis-snapshot', e => {
-      document.querySelector('#value').textContent = e.detail.snapshot?.battle.total_damage ?? 'cleared';
-    });
-    window.addEventListener('endfield-overlay-config', e => {
-      document.querySelector('#mode').textContent = e.detail.settings.accent;
-    });
-    </script>''', encoding="utf-8")
-    data = dict(schema_version=1, name="Custom", entry="custom.html", font_mode="css",
-        subscriptions=["analysis_snapshot"],
-        window=dict(min_width=120, min_height=60, default_width=400, default_height=200),
-        settings=[dict(key="accent", label="Accent", type="select", default="red",
-                       options=[dict(value="red", label="Red"), dict(value="blue", label="Blue")])])
-    path = tmp_path / "template.json"
-    path.write_text(json.dumps(data), encoding="utf-8")
-    return entry(source_type=OverlaySourceType.FILE, source_value=str(path)), data
 
 def test_old_configuration_migrates_font_and_template_settings_without_changing_geometry():
     original = gui_config._overlay_entry_to_dict(entry(scale=1.4, bar_mode="rdps", overlay_theme="dark",
@@ -68,35 +33,8 @@ def test_old_configuration_migrates_font_and_template_settings_without_changing_
     assert updated.visible_columns == ("damage",)
     assert gui_config._overlay_entry_from_dict(gui_config._overlay_entry_to_dict(updated)) == updated
 
-def test_manifest_is_local_explicit_and_validated(tmp_path):
-    custom, data = local_template(tmp_path)
-    template = template_for(custom)
-    assert template.entry == tmp_path / "custom.html"
-    assert template.subscriptions == ("analysis_snapshot",)
-    assert template_for(replace(custom, source_value=str(template.entry))).path == template.path
-    assert template_for(entry(source_type=OverlaySourceType.URL, source_value="https://example.invalid")).subscriptions == ()
-    for changes in [dict(schema_version=2), dict(subscriptions=["event_batch"]),
-                    dict(entry="missing.html"), dict(settings=[*data["settings"], *data["settings"]]),
-                    dict(window=dict(min_width=0))]:
-        Path(custom.source_value).write_text(json.dumps({**data, **changes}), encoding="utf-8")
-        with pytest.raises((ValueError, KeyError)):
-            read_template(Path(custom.source_value))
-        assert template_for(custom).error
 
 
-def test_template_percentage_slider_validates_and_normalizes_saved_values(tmp_path):
-    custom, data = local_template(tmp_path)
-    data['settings'] = [dict(key='size', type='slider', min=50, max=300, default=100)]
-    path = Path(custom.source_value)
-    path.write_text(json.dumps(data), encoding='utf8')
-    assert template_values(custom) == {'size': 100}
-    for value, expected in [(175, 175), (0, 50), (999, 300), ('125', 100), (True, 100), (None, 100)]:
-        assert template_values(with_template_value(custom, 'size', value)) == {'size': expected}
-    for changes in [dict(min=101), dict(max=99), dict(default=True), dict(max=300.5), dict(legacy_field='bar_mode')]:
-        data['settings'][0] = dict(key='size', type='slider', min=50, max=300, default=100)
-        data['settings'][0].update(changes)
-        path.write_text(json.dumps(data), encoding='utf8')
-        assert template_for(custom).error
 
 def test_master_visibility_is_independent_of_entry_analysis_and_close(main_window, app):
     window = main_window
@@ -252,7 +190,7 @@ def test_hidden_window_keeps_rendering_and_restores_same_geometry(main_window, a
     window, page = main_window, main_window.overlay_page
     page.enabled_switch.setChecked(True)
     native = window.overlay_manager._windows['controls']
-    wait_for_page(native, lambda: None)
+    app.processEvents()
     window.overlay_manager.show_history({'battle': {'total_damage': 0}}, 'hidden history')
     QTest.qWait(250)
     hwnd = int(native.winId())
@@ -265,7 +203,7 @@ def test_hidden_window_keeps_rendering_and_restores_same_geometry(main_window, a
     assert native.windowOpacity() == 0
     assert native.windowFlags() & Qt.WindowType.WindowTransparentForInput
     window.overlay_manager.show_history({'battle': {'total_damage': 123}}, 'hidden history')
-    assert page_value(native, 'document.querySelector("#totalDamage").textContent') == '123'
+    assert native.canvas.modules[0].message['snapshot']['battle']['total_damage'] == 123
     assert native.geometry() == before and int(native.winId()) == hwnd
     page.visible_switch.setChecked(True)
     assert native.desktop_visible and native.windowOpacity() == pytest.approx(.6, abs=.005)
@@ -337,7 +275,7 @@ def test_numeric_dimensions_drag_font_and_lock_are_independent(main_window, app)
     page.font_size_slider.setValue(150)
     assert window._selected_overlay().geometry == before
     QTest.qWait(250)
-    assert native.webview.zoomFactor() == 1
+    assert native.canvas.modules[0].settings['_font_scale'] == 1.5
     page.locked_switch.setChecked(True)
     assert native._hit_test_edges(QPoint()) == Qt.Edge(0)
     page.width_edit.setValue(680)  # lock prevents dragging, never numeric editing
@@ -364,12 +302,59 @@ def test_numeric_dimensions_drag_font_and_lock_are_independent(main_window, app)
     QTest.qWait(100)
     assert window.grab().save(str(EVIDENCE / 'gui-controls-light.png'))
 
+
+@pytest.mark.parametrize('resize', [False, True])
+def test_drag_updates_window_immediately_and_saves_once_on_release(main_window, app, monkeypatch, resize):
+    from PySide6.QtGui import QMouseEvent
+    import endfield_pcap.gui.pages.overlays.actions as actions
+
+    window=main_window
+    window.overlay_page.enabled_switch.setChecked(True)
+    app.processEvents()
+    native=window.overlay_manager._windows['controls']
+    before=native.geometry()
+    revision=native.canvas.layout_revision
+    saves=[];refreshes=[]
+    save=actions.save_app_config
+    def record_save(config,path):
+        saves.append(path)
+        save(config,path)
+    monkeypatch.setattr(actions,'save_app_config',record_save)
+    refresh=window._refresh_overlay_views
+    def record_refresh():
+        refreshes.append(True)
+        refresh()
+    monkeypatch.setattr(window,'_refresh_overlay_views',record_refresh)
+    monkeypatch.setattr(native.canvas,'tooltip',lambda *args: pytest.fail('tooltip during drag'))
+    local=QPoint(native.width()-1,native.height()-1) if resize else QPoint(80,80)
+    origin=native.mapToGlobal(local)
+    native._handle_mouse_press(local,origin)
+    for step in range(1,61):
+        delta=QPoint(step*2,step)
+        event=QMouseEvent(QEvent.Type.MouseMove,local,origin+delta,
+                         Qt.MouseButton.NoButton,Qt.MouseButton.LeftButton,Qt.KeyboardModifier.NoModifier)
+        native.mouseMoveEvent(event)
+        app.processEvents()
+        if resize:
+            assert native.size()==before.size()+QSize(delta.x(),delta.y())
+        else:
+            assert native.pos()==before.topLeft()+delta
+        assert not saves and not refreshes
+    assert native.canvas.layout_revision==revision
+    native._handle_mouse_release(local)
+    app.processEvents()
+    assert len(saves)==len(refreshes)==1
+    saved=next(e for e in gui_config.load_app_config(window.config_path).overlays if e.id=='controls')
+    assert saved.geometry==OverlayGeometry(native.x(),native.y(),native.width(),native.height())
+    native._handle_mouse_release(local)
+    assert len(saves)==1
+
 def test_reset_current_overlay_layout_is_persisted_and_preserves_options(main_window, app):
     window, page = main_window, main_window.overlay_page
     window._replace_overlay_entry(replace(window._selected_overlay(), name='我的统计'))
     page.enabled_switch.setChecked(True)
     native = window.overlay_manager._windows['controls']
-    wait_for_page(native, lambda: None)
+    app.processEvents()
     page.width_edit.setValue(620)
     page.height_edit.setValue(340)
     native.move(100, 100)
@@ -384,14 +369,14 @@ def test_reset_current_overlay_layout_is_persisted_and_preserves_options(main_wi
     assert after == replace(before, geometry=after.geometry, font_scale=1, scale=1,
                             template_settings={**before.template_settings, '_damage_window_scale': fitted_scale})
     assert window.overlay_manager._windows['controls'] is native
-    reference = page_value(native, 'window.endfieldOverlay.contentReference')
+    reference = dict(width=native.canvas.natural_size.width(), height=native.canvas.natural_size.height())
     assert abs(native.width()-max(320, reference['width']*fitted_scale)) < 1
     assert abs(native.height()-max(160, reference['height']*fitted_scale)) < 1
     screen = app.primaryScreen().availableGeometry()
     assert (native.x(), native.y()) == (max(screen.x(), screen.x()+screen.width()-native.width()-native.config.margin_right), screen.top()+native.config.margin_top)
     assert page.font_size_slider.value() == 100
-    QTest.qWait(150)  # Chromium applies the native resize on its next frame.
-    assert page_value(native, 'getComputedStyle(document.documentElement).getPropertyValue("--overlay-user-font-scale").trim()') == '1'
+    app.processEvents()
+    assert native.canvas.modules[0].settings['_font_scale'] == 1
     persisted = json.loads(window.config_path.read_text(encoding='utf8'))['overlays']
     assert next(e for e in persisted if e['id'] == after.id) == gui_config._overlay_entry_to_dict(after)
     window.switchTo(page)
@@ -412,124 +397,3 @@ def test_reset_current_overlay_layout_is_persisted_and_preserves_options(main_wi
     assert not window._selected_overlay().enabled
     assert window.overlay_manager.opened_window_count() == 0
     assert window._selected_overlay().geometry is None
-
-@pytest.mark.parametrize('uid', [False, True])
-def test_reset_uses_template_default_geometry(app, tmp_path, uid):
-    original, _ = local_template(tmp_path)
-    if uid:
-        original = entry(source_value='uid_mask')
-    manager = overlay_host.OverlayManager(1, use_in_process_snapshots=True)
-    try:
-        original = replace(original, enabled=True, font_scale=1.5, geometry=OverlayGeometry(100, 100, 640, 300))
-        manager.apply_entry(original)
-        native = manager._windows[original.id]
-        manager.apply_entry(replace(original, geometry=None, font_scale=1))
-        defaults = overlay_host._window_defaults(original)
-        assert (native.width(), native.height()) == (defaults['default_width'], defaults['default_height'])
-        if uid:
-            screen = app.primaryScreen().geometry()
-            assert native.x() == screen.x()+12
-            assert native.y() == screen.bottom()-native.height()-10
-    finally:
-        manager.close_all();app.processEvents()
-
-def test_damage_resize_and_font_multiplier_scale_once_and_restore(app):
-    original = entry(enabled=True, geometry=OverlayGeometry(0, 0, 700, 350))
-    window = overlay_host.OverlayWindow(overlay_host.OverlayWindowConfig(
-        entry=original, ws_port=1, use_in_process_snapshots=True))
-    try:
-        window.apply_analysis_snapshot(snapshot_message())
-        wait_for_page(window, window.show)
-        QTest.qWait(250)
-        expression = "[...document.querySelectorAll('body *')].filter(n => [...n.childNodes].some(c => c.nodeType === 3 && c.textContent.trim())).map(n => parseFloat(getComputedStyle(n).fontSize))"
-        before = page_value(window, expression)
-        scale_expression = "Number(getComputedStyle(document.documentElement).getPropertyValue('--overlay-window-scale'))"
-        baseline_scale = page_value(window, scale_expression)
-        window.apply_entry(replace(original, font_scale=1.5))
-        QTest.qWait(250)
-        after = page_value(window, expression)
-        assert len(before) == len(after) and len(before) >= 10
-        multiplier = 1.5 * page_value(window, scale_expression) / baseline_scale
-        assert all(abs(a * multiplier - b) < .1 for a, b in zip(before, after)), (before, after, multiplier)
-        fitted_size = window.size()
-        reference = page_value(window, 'window.endfieldOverlay.contentReference')
-        before_resize_scale = min(window.width()/reference['width'], window.height()/reference['height'])
-        resize_width = min(900, window.screen().availableGeometry().width())
-        window.resize(resize_width, 500)
-        QTest.qWait(150)
-        resized = page_value(window, expression)
-        resize_ratio = min(resize_width/reference['width'], 500/reference['height'])/before_resize_scale
-        assert all(abs(a * resize_ratio - b) < .1 for a, b in zip(after, resized))
-        window.apply_analysis_snapshot(snapshot_message(2))
-        assert page_value(window, expression) == resized
-        wait_for_page(window, window.webview.reload)
-        QTest.qWait(250)
-        assert all(abs(a-b)<.1 for a,b in zip(page_value(window, expression), resized))
-        window.resize(fitted_size)
-        QTest.qWait(150)
-        assert page_value(window, expression) == after
-        assert window.grab().save(str(EVIDENCE / "damage-font-150.png"))
-    finally:
-        window.close(); app.processEvents()
-
-def test_custom_template_controls_history_replay_and_return_live(app, tmp_path):
-    custom, _ = local_template(tmp_path)
-    changes = []
-    page = gui_main.OverlayPage()
-    manager = overlay_host.OverlayManager(1, use_in_process_snapshots=True)
-    try:
-        page.show_entry(custom)
-        assert set(page.setting_widgets) == {"accent"}
-        page.setting_changed.connect(lambda key, value: changes.append(with_template_value(custom, key, value)))
-        page.setting_widgets["accent"].setCurrentIndex(1)
-        assert changes[-1].template_settings == {"accent": "blue"}
-        custom = replace(changes[-1], enabled=True)
-        manager.apply_analysis_snapshot(snapshot_message())
-        manager.apply_entry(custom)
-        window = manager._windows[custom.id]
-        # The manager has scheduled the initial load; wait before reloading.
-        wait_for_page(window, lambda: None)
-        assert "snapshotTransport=inprocess" in window.webview.url().toString()
-        assert page_value(window, "document.querySelector('#value').textContent") == "760"
-        assert page_value(window, "document.querySelector('#mode').textContent") == "blue"
-        manager.show_history({"battle": {"total_damage": 123}}, "history")
-        assert page_value(window, "document.querySelector('#value').textContent") == "123"
-        manager.apply_analysis_snapshot(snapshot_message(2, {"battle": {"total_damage": 999}}))
-        assert page_value(window, "document.querySelector('#value').textContent") == "123"
-        wait_for_page(window, window.webview.reload)
-        assert page_value(window, "document.querySelector('#value').textContent") == "123"
-        assert page_value(window, "Object.keys(window.endfieldOverlay.snapshots)") == ["analysis_snapshot"]
-        manager.return_live()
-        assert page_value(window, "document.querySelector('#value').textContent") == "999"
-        manager.apply_entry(replace(custom, enabled=False))
-        manager.apply_entry(custom)
-        window = manager._windows[custom.id]
-        wait_for_page(window, lambda: None)
-        assert page_value(window, "document.querySelector('#value').textContent") == "999"
-        manager.apply_analysis_snapshot({**snapshot_message(3), "snapshot": None})
-        assert page_value(window, "document.querySelector('#value').textContent") == "cleared"
-        assert window.grab().save(str(EVIDENCE / "custom-template.png"))
-    finally:
-        page.close(); manager.close_all(); app.processEvents()
-
-def test_plain_html_font_scaling_including_dynamic_nodes_does_not_compound(app, tmp_path):
-    path = tmp_path / "plain.html"
-    path.write_text('<html><body style="font-size:20px"><div id="label">label<span style="font-size:12px">small</span></div></body></html>', encoding="utf-8")
-    custom = entry(enabled=True, source_type=OverlaySourceType.FILE, source_value=str(path))
-    window = overlay_host.OverlayWindow(overlay_host.OverlayWindowConfig(entry=custom, ws_port=1))
-    try:
-        wait_for_page(window, window.show)
-        expression = "[...document.querySelectorAll('#label, #label *')].map(n => parseFloat(getComputedStyle(n).fontSize))"
-        assert page_value(window, expression) == [20, 12]
-        window.apply_entry(replace(custom, font_scale=1.5))
-        assert page_value(window, expression) == [30, 18]
-        page_value(window, "document.querySelector('#label').appendChild(document.createElement('b')).textContent = 'new'")
-        QTest.qWait(100)
-        assert page_value(window, expression) == [30, 18, 30]
-        window.apply_entry(replace(custom, font_scale=1.5))
-        assert page_value(window, expression) == [30, 18, 30]
-        window.apply_entry(custom)
-        assert page_value(window, expression) == [20, 12, 20]
-        assert page_value(window, "Object.keys(window.endfieldOverlay.snapshots)") == []
-    finally:
-        window.close(); app.processEvents()

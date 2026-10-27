@@ -1,0 +1,1 @@
+"""Parser timing responsibilities."""

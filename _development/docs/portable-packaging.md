@@ -27,7 +27,7 @@ python -B _development/tools/release.py build --component uploader   # 官网上
 
 | 产物 | 内容 |
 | --- | --- |
-| `Endfield-Logs-Enhanced-<版本>-windows-x64.zip` | 本体源码、精简数据、隔离 Python、Qt/WebEngine、SDL3、依赖、许可和使用说明 |
+| `Endfield-Logs-Enhanced-<版本>-windows-x64.zip` | 本体源码、精简数据、隔离 Python、Qt Widgets/Multimedia、SDL3、依赖、许可和使用说明 |
 | `EndfieldLogsUploader-3.0.12-windows-x64.zip` | 校验过的官方 ZIP 内 uploader 目录及原始运行依赖 |
 | `*.zip.sha256` | 整包校验值 |
 | `BUILD-MANIFEST.json` | 版本、UTC 时间、源 commit、`source_dirty`、依赖版本及逐文件大小/SHA-256 |
@@ -55,7 +55,7 @@ python -B _development/tools/release.py verify "_releases/Endfield-Logs-Enhanced
 ```
 
 本体验证使用包内 Python，清除外部 Python 配置和系统 Python PATH。
-中文空格新目录中检查 CMD、GUI、浮窗、合成 trace、两种战斗分析及独立工作进程，输出写入 `_development/verification/`。
+中文空格新目录中检查 CMD、GUI、三类原生浮窗、合成 trace、原生战斗分析各页及独立工作进程，输出写入 `_development/verification/`。
 GUI 首次运行后整体移动目录，再检查启动、已保存设置和包内资源路径。验包完整性检查在 `python -O` 下同样执行。
 Uploader 验证将 3261 个原始文件与官方 ZIP 逐字节比较。
 
@@ -72,8 +72,10 @@ python -B _development/tools/verify_uploader_resources.py `
 
 - 解析数据约 16.9 MB，构建器只收集 schema 2 清单成员；更新流程见 [data 说明](../../_internal/data/README.md)。
 - `portable_dependencies.py` 列明 Qt 模块、插件和资源，沿 PE 普通/延迟导入补齐 DLL；新增模块同步修改清单。
-- 保留 Windows/offscreen 平台、图片、TLS、软件 OpenGL、Multimedia/FFmpeg 及简繁中文/英文浏览器资源。
+- 保留 Windows/offscreen 平台、图片、TLS、软件 OpenGL、Multimedia/FFmpeg 及简繁中文/英文 Qt 资源。
 - 包体以解压后的文件大小总和计量，个人配置、日志、测试及开发缓存由构建边界排除。
 - 发行携带 GPLv3、上游 MIT、依赖许可与版本清单；对应源码及构建材料按 [许可说明](licensing.md) 交付。
 
 构建、Git 推送和 GitHub Release 发布分别执行；驱动由使用者安装。
+
+Qt 运行闭包从 Essentials/Addons 与实际 PE 导入计算，排除浏览器/PDF 元包及专用绑定。精确发行锁记录所有保留的 distribution 版本。

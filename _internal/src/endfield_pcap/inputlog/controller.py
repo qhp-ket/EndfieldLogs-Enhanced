@@ -23,7 +23,7 @@ def worker_bootstrap(entry='from endfield_pcap.inputlog.worker import main; main
 class InputController:
     def __init__(self):
         self.process = None
-        self.status = {'status':'stopped','count':0,'lost':0,'recent':[]}
+        self.status = {'status':'stopped','count':0,'lost':0}
         self._lock = threading.Lock()
         self._trace = None
 
@@ -32,7 +32,7 @@ class InputController:
             return
         bootstrap = worker_bootstrap()
         cfg = dict(game_exe=str(game_exe),log_dir=str(log_dir),trace=self._trace,elevated=elevated)
-        self.status = dict(status='starting',count=0,lost=0,recent=[])
+        self.status = dict(status='starting',count=0,lost=0)
         env = dict(os.environ,PYTHONIOENCODING='utf-8',PYTHONDONTWRITEBYTECODE='1')
         self.process = subprocess.Popen([sys.executable,'-u','-c',bootstrap,json.dumps(cfg)],
             stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,

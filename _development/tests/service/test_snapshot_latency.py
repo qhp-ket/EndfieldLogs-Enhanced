@@ -11,7 +11,7 @@ from endfield_pcap.analysis.live.publisher import SnapshotPublisher
 from parser_core.live import LiveOverlayBattleParser
 from app_test_support.runtime.service import FIXTURE, service_factory
 from app_test_support.ui.window import entry, main_window
-from app_test_support.ui.qt import EVIDENCE, snapshot_message, page_value, wait_for_page
+from app_test_support.ui.qt import EVIDENCE, snapshot_message
 
 
 def test_process_uses_canonical_results_and_reset_closes_its_own_worker():
@@ -82,7 +82,7 @@ def test_bulk_buttons_and_enabled_count_fit_together(main_window, app):
     assert window.grab().save(str(EVIDENCE / 'gui-home-count.png'))
 
 
-def test_builtin_table_gets_small_view_but_custom_and_manager_retain_full_report(app, tmp_path):
+def test_native_table_gets_small_view_and_manager_retains_full_report(app, tmp_path):
     frame = snapshot_message()
     frame['snapshot']['buff_events'] = [{'evidence': 'x' * 10000} for _ in range(100)]
     frame['snapshot']['timeline_events'] = ['x' * 10000] * 100
@@ -92,19 +92,19 @@ def test_builtin_table_gets_small_view_but_custom_and_manager_retain_full_report
         manager.apply_analysis_snapshot(frame)
         manager.apply_entry(current)
         window = manager._windows[current.id]
-        wait_for_page(window, lambda: None)
-        view = window._analysis_snapshot['snapshot']
+        app.processEvents()
+        view = window.canvas.modules[0].snapshot
         for key in ('battle', 'participants', 'snapshot_quality', 'rdps_damage_basis', 'rdps_preflight'):
             assert view[key] == frame['snapshot'][key]
         assert 'buff_events' not in view and 'timeline_events' not in view
         assert manager._analysis_snapshot['snapshot'] == frame['snapshot']
         assert len(json.dumps(view)) < len(json.dumps(frame['snapshot'])) / 10
-        assert page_value(window, 'document.querySelector("#totalDamage").textContent') == '760'
+        assert window.canvas.modules[0].snapshot["battle"]["total_damage"] == 760
         # Unsubscribed windows do not copy/cache multi-MB damage evidence.
         combo = overlay_host.OverlayWindow(overlay_host.OverlayWindowConfig(entry=entry(source_value='combo_skill'), ws_port=1))
         try:
             combo.apply_analysis_snapshot(frame)
-            assert combo._analysis_snapshot is None
+            assert not hasattr(combo.canvas.modules[0], 'message')
         finally: combo.close()
     finally:
         manager.close_all(); app.processEvents()

@@ -5,6 +5,23 @@ from parser_core import battle_log_parser as parser
 from parser_core import damage_core
 from parser_core.hit_debug import _skill_mapping_info
 from parser_core.hit_debug import parse_hit_debug_log_text
+import parser_core.catalog.buff_templates as parser_buff_templates
+import parser_core.catalog.dungeons as parser_dungeons
+import parser_core.catalog.names as parser_names
+import parser_core.catalog.packet_semantics as parser_packet_semantics
+import parser_core.catalog.resources as parser_resources
+import parser_core.catalog.skill_damage as parser_skill_damage
+import parser_core.effects.damage_types as parser_damage_types
+import parser_core.catalog.display as parser_display
+import parser_core.effects.packet_mapping as parser_packet_mapping
+import parser_core.ingestion.loadout as parser_loadout
+import parser_core.ingestion.skill_identity as parser_skill_identity
+import parser_core.ingestion.hits as parser_hits
+import parser_core.allocation.attack_model as parser_attack_model
+import parser_core.allocation.static_loadout as parser_static_loadout
+import parser_core.reporting.skill_stats as parser_skill_stats
+import parser_core.reporting.timeline as parser_timeline
+import parser_core.hit_debug as parser_hit_debug
 
 
 CHAR = 'chr_0004_pelica'
@@ -19,7 +36,14 @@ def exact_units(monkeypatch):
         {'index': 0, 'damage_attribute_type': 'hp', 'element': 'pulse'},
         {'index': 1, 'damage_attribute_type': 'poise', 'element': 'physical'},
     ]}
-    monkeypatch.setattr(parser, '_load_skill_action_damage_units', lambda key: actions if key == SKILL else {})
+    for patched_consumer in (
+        parser,
+        parser_attack_model,
+        parser_hits,
+        parser_damage_types,
+        parser_skill_damage,
+    ):
+        monkeypatch.setattr(patched_consumer, '_load_skill_action_damage_units', lambda key: actions if key == SKILL else {})
     return actions
 
 
@@ -50,7 +74,12 @@ def test_unresolved_attribute_does_not_become_hp(exact_units):
 
 def test_official_profile_lookup_does_not_expand_prefixes(monkeypatch):
     profile = {'resolved': True, 'elements': ['pulse']}
-    monkeypatch.setattr(parser, '_load_official_skill_damage_catalog', lambda: {SKILL: profile})
+    for patched_consumer in (
+        parser,
+        parser_skill_identity,
+        parser_skill_damage,
+    ):
+        monkeypatch.setattr(patched_consumer, '_load_official_skill_damage_catalog', lambda: {SKILL: profile})
     assert parser._resolve_official_skill_damage_profile(SKILL) is profile
     assert parser._resolve_official_skill_damage_profile(SKILL + '_invented_child') is None
 
@@ -85,7 +114,18 @@ def test_current_action_unit_mask_is_bound_to_exact_action_and_unit():
 
 
 def test_scanned_or_partial_catalog_cannot_supply_strict_evidence(tmp_path, monkeypatch):
-    monkeypatch.setattr(parser, '_repo_root', lambda: tmp_path)
+    for patched_consumer in (
+        parser,
+        parser_static_loadout,
+        parser_display,
+        parser_buff_templates,
+        parser_dungeons,
+        parser_names,
+        parser_packet_semantics,
+        parser_resources,
+        parser_skill_damage,
+    ):
+        monkeypatch.setattr(patched_consumer, '_repo_root', lambda: tmp_path)
     path = tmp_path / 'data/local_static/skill/damage_element_catalog.json'
     path.parent.mkdir(parents=True)
     payload = {'schemaVersion': 1, 'source': 'official_local_skilldata_memorypack',
@@ -137,8 +177,21 @@ def test_buff_name_cannot_supply_source_actor(exact_units):
 
 
 def test_viewer_uses_explicit_mapping_but_ignores_recent_cast(monkeypatch):
-    monkeypatch.setattr(parser, '_canonical_num_table_skill_id', lambda key, char: SKILL if key == 'skill_7' else None)
-    monkeypatch.setattr(parser, '_canonical_num_table_buff_number', lambda *args: None)
+    for patched_consumer in (
+        parser,
+        parser_hit_debug,
+        parser_timeline,
+        parser_skill_stats,
+        parser_loadout,
+        parser_skill_identity,
+    ):
+        monkeypatch.setattr(patched_consumer, '_canonical_num_table_skill_id', lambda key, char: SKILL if key == 'skill_7' else None)
+    for patched_consumer in (
+        parser,
+        parser_packet_mapping,
+        parser_skill_identity,
+    ):
+        monkeypatch.setattr(patched_consumer, '_canonical_num_table_buff_number', lambda *args: None)
     common = dict(character_key=CHAR, target_enemy_key='eny_0051_rodin', damage_element=None,
                   original_template_int_id=None, ts_ms=100,
                   recent_actor_maps_by_char={}, recent_numeric_buffs_by_source={},
@@ -149,8 +202,21 @@ def test_viewer_uses_explicit_mapping_but_ignores_recent_cast(monkeypatch):
 
 
 def test_namespace_collision_is_unresolved(monkeypatch):
-    monkeypatch.setattr(parser, '_canonical_num_table_skill_id', lambda *args: SKILL)
-    monkeypatch.setattr(parser, '_canonical_num_table_buff_number', lambda *args: 'buff_common_other')
+    for patched_consumer in (
+        parser,
+        parser_hit_debug,
+        parser_timeline,
+        parser_skill_stats,
+        parser_loadout,
+        parser_skill_identity,
+    ):
+        monkeypatch.setattr(patched_consumer, '_canonical_num_table_skill_id', lambda *args: SKILL)
+    for patched_consumer in (
+        parser,
+        parser_packet_mapping,
+        parser_skill_identity,
+    ):
+        monkeypatch.setattr(patched_consumer, '_canonical_num_table_buff_number', lambda *args: 'buff_common_other')
     assert parser._canonical_hit_skill_id('skill_7', CHAR) == 'skill_7'
     assert parser._canonical_runtime_buff_skill_id('skill_7', CHAR, action_id=0, damage_unit_index=0) is None
     assert parser._canonical_hit_skill_id_from_cast_context(

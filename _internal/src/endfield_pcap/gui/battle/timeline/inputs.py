@@ -13,11 +13,14 @@ def draw_inputs(view,y,scale,x_at):
     raw=evidence.get('raw',[])
     view.input_markers=0
     global_actions=[]
+    role_cells=[cell for cell in view._role_cells if cell[3]]
     for action in actions:
         if action['action'] not in {'skill','ultimate','combo'} and not evidence.get('settings',{}).get('show_other'): continue
         owner=action.get('character_key')
         if action['action']=='combo':
-            top,height=view.TOP,y-view.TOP
+            if not role_cells: continue
+            top=min(cell[0] for cell in role_cells)
+            height=max(cell[0]+cell[1] for cell in role_cells)-top
         else:
             cell=next((c for c in view._role_cells if c[3]==owner),None) if owner else None
             if not cell:

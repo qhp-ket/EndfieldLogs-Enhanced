@@ -2,6 +2,9 @@
 from copy import deepcopy
 import pytest
 from parser_core import battle_log_parser as parser
+import parser_core.reporting.empty as parser_empty
+import parser_core.reporting.loadout as parser_loadout
+import parser_core.reporting.baseline as parser_baseline
 
 
 def loadout(character, weapon, skills, **extra):
@@ -96,11 +99,17 @@ def test_arts_skill_zero_attack_placeholder_cannot_authorize_nonzero_attack():
 
 def test_known_trigger_does_not_erase_an_unknown_field_on_same_weapon(monkeypatch):
     char = 'chr_0030_zhuangfy'
-    monkeypatch.setattr(parser, '_select_loadout_snapshot_for_battle', lambda *args, **kwargs: {
-        char: {'character_key': char, 'weapon_template': 'wpn_funnel_0017',
-               'weapon_source_skills': [{'skill_id': '2913', 'level': 9,
-                   'bb': {'pulse_dmg_up2': 0.154, 'new_unreviewed_field': 0.4}}],
-               'suit_effects': [], 'equips': [], 'equipment_snapshot_complete': True}})
+    for patched_consumer in (
+        parser,
+        parser_baseline,
+        parser_empty,
+        parser_loadout,
+    ):
+        monkeypatch.setattr(patched_consumer, '_select_loadout_snapshot_for_battle', lambda *args, **kwargs: {
+            char: {'character_key': char, 'weapon_template': 'wpn_funnel_0017',
+                   'weapon_source_skills': [{'skill_id': '2913', 'level': 9,
+                       'bb': {'pulse_dmg_up2': 0.154, 'new_unreviewed_field': 0.4}}],
+                   'suit_effects': [], 'equips': [], 'equipment_snapshot_complete': True}})
     result = parser.parse_raw_battle_log_text('\n'.join([
         f'[10:00:00.000] BUFF_START #1 id="buff_wpn_funnel_0017_layer" uid=77 '
         f'owner={char} src={char} ownerId=100 srcId=100 dur=30 lifeT=30 passed=0 enh=1',

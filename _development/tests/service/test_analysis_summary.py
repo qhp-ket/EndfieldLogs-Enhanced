@@ -20,11 +20,10 @@ def frame(revision=1, *, snapshot=True):
 
 
 def test_existing_observer_positional_arguments_keep_their_meaning():
-    full, combo, buff = (lambda value: None for _ in range(3))
-    observer = ServiceObserver(None, None, None, full, combo, buff)
+    full, combo, summary = (lambda value: None for _ in range(3))
+    observer = ServiceObserver(None, None, None, full, combo, summary)
     assert observer.on_analysis_snapshot is full
-    assert observer.on_combo_snapshot is combo and observer.on_buff_snapshot is buff
-    assert observer.on_analysis_summary is None
+    assert observer.on_combo_snapshot is combo and observer.on_analysis_summary is summary
 
 
 def test_hello_reports_application_version_from_shared_source(service_factory,monkeypatch):
@@ -82,7 +81,6 @@ def test_summary_and_full_ws_handshakes_reconnect_and_raw_compatibility(service_
                 async with websockets.connect(f'ws://127.0.0.1:{port}/ws?analysis=summary') as socket:
                     assert (await receive(socket))['type'] == 'hello'
                     assert await receive(socket) == expected
-                    assert (await receive(socket))['type'] == 'buff_snapshot'
                     assert not service._has_full_consumers()
                     service.batch.append({'type': 'diagnostic'})
                     await service._flush_batch()

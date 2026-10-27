@@ -405,7 +405,7 @@ def test_ws_new_connection_without_damage_receives_explicit_null(service_factory
             if len(socket.sent) == 4:
                 break
             await asyncio.sleep(0)
-        assert [message["type"] for message in socket.sent] == ["hello", "analysis_snapshot", "buff_snapshot"]
+        assert [message["type"] for message in socket.sent] == ["hello", "analysis_snapshot"]
         assert socket.sent[1]["snapshot"] is None
         socket.closed.set()
         await task
@@ -444,7 +444,6 @@ def test_localhost_websocket_full_handshake_raw_next_snapshot_and_reconnect(serv
             async with websockets.connect(f"ws://127.0.0.1:{port}") as socket:
                 assert (await receive(socket))["type"] == "hello"
                 assert await receive(socket) == initial
-                assert (await receive(socket))["type"] == "buff_snapshot"
                 service.batch.append({"type": "raw_control", "value": 7})
                 await service._flush_batch()
                 raw = await receive(socket)
@@ -464,7 +463,6 @@ def test_localhost_websocket_full_handshake_raw_next_snapshot_and_reconnect(serv
             async with websockets.connect(f"ws://127.0.0.1:{port}") as socket:
                 assert (await receive(socket))["type"] == "hello"
                 assert await receive(socket) == latest
-                assert (await receive(socket))["type"] == "buff_snapshot"
         assert not service.clients
     asyncio.run(scenario())
 

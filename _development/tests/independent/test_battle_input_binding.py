@@ -5,7 +5,9 @@ from pathlib import Path
 from types import SimpleNamespace
 import json
 import pytest
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QTimer, Qt
+from PySide6.QtTest import QTest
+from PySide6.QtWidgets import QApplication
 from app_test_support.ui.window import main_window
 from app_test_support.scenarios.compact import sample
 from app_test_support.scenarios.trace import wait_for
@@ -116,5 +118,44 @@ def test_bind_and_display_are_separate_and_saved_for_each_battle(main_window,app
         bar.unbind();assert not bar.paths and not dialog.timeline.input_evidence['actions']
         assert bar.visible.isChecked(), 'Unbinding must not change the independent display preference'
         bar.set_record(first);assert not bar.paths
+    finally:
+        dialog.close();dialog.deleteLater();app.processEvents()
+
+
+@pytest.mark.parametrize('cancel',[False,True])
+def test_bind_button_releases_popup_and_picker_belongs_to_battle_window(main_window,app,tmp_path,monkeypatch,cancel):
+    from endfield_pcap.gui.battle import input_history
+    snapshot=sample();snapshot['battle'].update(battle_start_at='2026-10-25T12:00:00',duration_ms=1000)
+    trace=tmp_path/'session.ndjson';trace.write_text('',encoding='utf8')
+    path=tmp_path/'selected.input.jsonl'
+    input_file(path,datetime.fromisoformat('2026-10-25T12:00:00').timestamp()*1000)
+    record=SimpleNamespace(file_path=trace,record_index=1,started_at_ms=1)
+    dialog=BattleDetailDialog(snapshot,'从输入菜单绑定',main_window)
+    calls=[]
+    def choose(parent,title,directory,filters):
+        assert parent is dialog
+        assert QApplication.activePopupWidget() is None
+        assert not dialog.input_menu.isVisible()
+        assert directory==str(trace.parent)
+        calls.append(True)
+        return ('' if cancel else str(path),'')
+    monkeypatch.setattr(input_history.QFileDialog,'getOpenFileName',choose)
+    try:
+        dialog.input_history.set_record(record)
+        dialog.show();QTest.qWait(40)
+        QTest.mouseClick(dialog.input_button,Qt.MouseButton.LeftButton)
+        wait_for(lambda:dialog.input_menu.isVisible(),app)
+        QTest.mouseClick(dialog.input_history.attach,Qt.MouseButton.LeftButton)
+        wait_for(lambda:len(calls)==1,app)
+        if cancel:
+            assert not dialog.input_history.paths
+            assert record_key(record) not in main_window.app_config.input_log_bindings
+        else:
+            wait_for(lambda:len(dialog.input_history.evidence['actions'])==3,app)
+            saved=load_app_config(main_window.config_path).input_log_bindings[record_key(record)]
+            assert read_binding(saved,trace)['path']==path
+            assert not saved['visible']
+            dialog.input_history.visible.setChecked(True)
+            assert len(dialog.timeline.input_evidence['actions'])==3
     finally:
         dialog.close();dialog.deleteLater();app.processEvents()

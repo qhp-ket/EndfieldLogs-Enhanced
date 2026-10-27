@@ -4,6 +4,7 @@ from PySide6.QtCore import Qt, QPointF, QRectF
 from PySide6.QtGui import QColor, QBrush, QPen, QPainterPath
 from PySide6.QtWidgets import QGraphicsItem, QGraphicsSimpleTextItem
 from endfield_pcap.analysis.battle.energy import control_segments, energy_series, energy_value_at
+from endfield_pcap.gui.battle.style import stroke
 
 
 CONTROL_COLORS = ('#357ca6', '#96713b', '#7865b1', '#268573')
@@ -35,7 +36,7 @@ def draw_energy_tracks(view, y, scale, font, x_at):
     samples = view._energy_series['samples']
     if not samples:
         return y
-    height = 182*scale
+    height = 145*scale
     extent = [p['value'] for p in samples]
     extent.extend(p['end_value'] for p in view._energy_series['segments'])
     capacity = view._energy_series.get('capacity')
@@ -46,8 +47,8 @@ def draw_energy_tracks(view, y, scale, font, x_at):
     view._labels.append((y, height, '全队技力', 'energy', ''))
     py = lambda value: bottom-(value-low)/(high-low)*(bottom-top)
     for value in range(int(low), int(high)+1, 100):
-        scene.addLine(view.LEFT, py(value), view._plot_right, py(value), QPen(view._grid, .7))
-    pen = QPen(QColor('#199cce'), 1.8)
+        scene.addLine(view.LEFT, py(value), view._plot_right, py(value), stroke(view._grid, .7))
+    pen = stroke('#199cce', 1.9)
     pen.setStyle(Qt.PenStyle.DashLine)
     path = QPainterPath()
     previous_stop = None

@@ -1,13 +1,14 @@
 # 开发指南
 
 - [源码目录导航](../_internal/src/README.md)：功能分组、侧栏操作、服务和浮窗的修改入口。
+- [解析与上传代码导航](docs/parser-components.md)：摄取状态、效果、归因阶段、报告及上传字段投影。
 
 - [环境准备](docs/development-environment.md)：零环境、部分环境、完整环境的复用与安装。
 - [外部资源](docs/runtime-resources.md)：运行数据、官网 uploader 与上传兼容。
 - [GUI 启动](docs/gui-launch.md)、[浮窗模板](docs/overlay-templates.md)。
 - [输入记录与连携图像识别](docs/independent-services.md)：独立服务、校准、历史输入证据及故障边界。
 - [本地战斗分析](docs/local-battle-analysis.md)、[trace 导入与贡献口径](docs/trace-import-and-rdps.md)。
-- [界面组件位置](docs/battle-analysis-components.md)：控件、字号、时间轴和网页资产。
+- [界面组件位置](docs/battle-analysis-components.md)：控件、字号、时间轴和原生曲线。
 - [实时摘要接口](docs/live-summary-publisher.md)、[质量契约](docs/snapshot-quality-contract.md)。
 - [版本与打包](docs/portable-packaging.md)。
 - [许可与再分发](docs/licensing.md)：GPLv3 组合程序、上游 MIT、对应源码及外部资源的边界。

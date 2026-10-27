@@ -38,5 +38,5 @@ def test_retired_combo_has_no_service_analysis_input_queue_or_ws_frames(service_
         socket = Socket()
         await service._ws_handler(socket)
         assert not callbacks
-        assert [row['type'] for row in socket.frames] == ['hello', 'analysis_snapshot', 'buff_snapshot']
+        assert [row['type'] for row in socket.frames] == ['hello', 'analysis_snapshot']
     asyncio.run(run())

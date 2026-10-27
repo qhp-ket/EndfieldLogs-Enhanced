@@ -65,6 +65,7 @@
 !/_development/tools/
 /_development/docs/*
 !/_development/docs/battle-analysis-components.md
+!/_development/docs/parser-components.md
 !/_development/docs/development-environment.md
 !/_development/docs/gui-launch.md
 !/_development/docs/local-battle-analysis.md
@@ -94,6 +95,8 @@
 !/_development/tools/build_character_avatars.py
 !/_development/tools/smoke_portable.py
 !/_development/tools/verify_portable_zip.py
+!/_development/tools/benchmark_native_overlays.py
+!/_development/tools/compare_parser_reference.py
 
 # Secrets, private captures, binaries and caches, at any depth.
 .dev-gui/

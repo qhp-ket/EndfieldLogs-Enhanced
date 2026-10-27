@@ -9,6 +9,8 @@ from copy import deepcopy
 import json
 import pytest
 from parser_core import battle_log_parser as parser
+import parser_core.catalog.packet_semantics as parser_packet_semantics
+import parser_core.effects.approval as parser_approval
 
 
 CASES = json.loads((FIXTURES / 'whitelist_character_matrix.json').read_text(encoding='utf8'))['rows']
@@ -40,7 +42,12 @@ def test_each_character_approval_has_effective_allocation_and_exclusion_contract
     assert entry['effects'] == case['declaredEffects']
     registry['verified_effects'] = {key: entry}
     registry['verified_prefixes'] = []
-    monkeypatch.setattr(parser, '_load_rdps_semantics_registry', lambda: registry)
+    for patched_consumer in (
+        parser,
+        parser_approval,
+        parser_packet_semantics,
+    ):
+        monkeypatch.setattr(patched_consumer, '_load_rdps_semantics_registry', lambda: registry)
     positive_cases = 0
     for original in case['records']:
         record = deepcopy(original)
@@ -151,7 +158,12 @@ def test_jsspsi_new_parent_approval_requires_exact_enabled_main_origin(monkeypat
     registry = deepcopy(parser._load_rdps_semantics_registry())
     registry['verified_effects'] = {key: registry['verified_effects'][key]}
     registry['verified_prefixes'] = []
-    monkeypatch.setattr(parser, '_load_rdps_semantics_registry', lambda: registry)
+    for patched_consumer in (
+        parser,
+        parser_approval,
+        parser_packet_semantics,
+    ):
+        monkeypatch.setattr(patched_consumer, '_load_rdps_semantics_registry', lambda: registry)
     record = deepcopy(case['records'][0])
     assert parser._collect_zone_effects(record)
     if change == 'missing_origin':

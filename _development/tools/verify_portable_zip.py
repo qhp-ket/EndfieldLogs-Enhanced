@@ -8,6 +8,7 @@ from pathlib import Path, PurePosixPath
 import subprocess
 import sys
 import tempfile
+import time
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -106,7 +107,6 @@ env['PYTHONHOME'] = str(output / 'nonexistent-python-home')
 env['PYTHONPATH'] = str(output / 'nonexistent-site-packages')
 env['ENDFIELD_GUI_NO_PAUSE'] = '1'
 env['QT_QPA_PLATFORM'] = os.environ.get('ENDFIELD_UI_TEST_PLATFORM', 'offscreen')
-env['QTWEBENGINE_CHROMIUM_FLAGS'] = '--no-sandbox --disable-gpu --disable-dev-shm-usage'
 cmd = Path(env.get('SystemRoot', 'C:/Windows')) / 'System32/cmd.exe'
 check = subprocess.run([str(cmd), '/d', '/c', 'Start-GUI.cmd', '--check'], cwd=app_root,
                        env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=90)
@@ -138,7 +138,16 @@ marker.write_text('portable profile', encoding='utf8')
 old_root = app_root
 moved_parent = output / '运行后移动 目录'
 moved_parent.mkdir()
-app_root = app_root.rename(moved_parent / app_root.name)
+for attempt in range(21):
+    try:
+        app_root = app_root.rename(moved_parent / app_root.name)
+        break
+    except PermissionError:
+        # Windows can briefly retain a mapping after process shutdown or scan
+        # freshly extracted files. A persistent lock must still fail the gate.
+        if attempt == 20:
+            raise
+        time.sleep(.1)
 check_moved = subprocess.run([str(cmd), '/d', '/c', 'Start-GUI.cmd', '--check'], cwd=app_root,
                             env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=90)
 (output / 'cmd-check-moved.log').write_bytes(check_moved.stdout)

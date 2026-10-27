@@ -56,8 +56,6 @@ class WebSocketDelivery:
             encoded = (json.dumps(handshake_state, ensure_ascii=False) if summary else
                        await asyncio.to_thread(json.dumps, handshake_state, ensure_ascii=False))
             await asyncio.wait_for(websocket.send(encoded), 1.0)
-            await self._catch_up_display_inputs()
-            await asyncio.wait_for(websocket.send(json.dumps(self.buff_publisher.current_message(), ensure_ascii=False)), 1.0)
             sender = ClientSender(websocket,
                 lambda payload: json.dumps(payload, ensure_ascii=False, allow_nan=False), self.clients.discard)
             self._client_senders[websocket] = sender

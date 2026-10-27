@@ -40,7 +40,7 @@ os.environ['ENDFIELD_LOGS_DATA_ROOT'] = str(internal)
 from parser_core.unified import parse_overlay_battle_snapshot_text
 from parser_core.live import LiveOverlayBattleParser
 from endfield_pcap.data.names import load_name_index
-from endfield_pcap.analysis.battle.web_data import WebBattleModel
+from endfield_pcap.analysis.battle.detail import timeline_blocks
 import endfield_pcap.data.skill_frames as skill_frame_reference
 skill_frame_reference.bundle_root = lambda: internal
 key = 'chr_9999_future' if unknown else 'chr_0004_pelica'
@@ -53,8 +53,7 @@ assert any(p['character_key'] == key and p['total_damage'] == 760 for p in repor
 assert report['snapshot_quality']['status'] != 'verified'
 assert report['rdps_preflight']['ok'] is False
 assert report['battle']['rdps_damage_basis']['rdps_conservation_ok'] is True
-model = WebBattleModel(report, 'missing-character')
-assert json.loads(model.json())['blocks']
+assert timeline_blocks(report)
 live = LiveOverlayBattleParser(summary=True, align_to_data_watermark=True)
 live.feed_lines(text.splitlines())
 summary = live.snapshot()

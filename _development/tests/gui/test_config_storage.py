@@ -6,6 +6,15 @@ import pytest
 from endfield_pcap.gui import config, config_storage
 
 
+def test_battle_table_widths_roundtrip_and_bounds(tmp_path):
+    path = tmp_path/'settings.json'
+    settings = config.load_app_config(path)
+    settings.battle_table_widths = {'skills':[120,220,360], 'hits':[10,9000,'bad'], 'other':[99]}
+    config.save_app_config(settings,path)
+    restored = config.load_app_config(path)
+    assert restored.battle_table_widths == {'skills':[120,220,360], 'hits':[40,2000,100]}
+
+
 def installation(monkeypatch, root):
     monkeypatch.setattr(config, 'bundle_root', lambda: root / '_internal')
     return root / '.dev-gui/settings.json'

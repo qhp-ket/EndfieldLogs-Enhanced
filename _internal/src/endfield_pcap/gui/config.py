@@ -9,6 +9,7 @@ from endfield_pcap.models import OverlayEntry, OverlayGeometry, OverlaySourceTyp
 from endfield_pcap.runtime.paths import app_root, bundle_root
 from endfield_pcap.service.config import ServiceConfig
 from endfield_pcap.gui.config_storage import number, path_value, portable_paths, read_settings, write_settings
+from endfield_pcap.analysis.battle.lane_config import normalize_lane_configs
 
 
 _LEGACY_BUILTIN_NAMES = {
@@ -32,7 +33,9 @@ class AppConfig:
     toggle_gui_hotkey: str = "Ctrl+Shift+O"
     imported_trace_files: list[Path] = field(default_factory=list)
     hidden_history_records: list[str] = field(default_factory=list)
-    battle_analysis_view: str = 'native'
+    overlay_migration_count: int = 0
+    battle_table_widths: dict = field(default_factory=dict)
+    battle_lane_configs: dict = field(default_factory=dict)
     overlay_restore_ids: list[str] = field(default_factory=list)
     start_capture_on_launch: bool = False
     check_updates_on_start: bool = True
@@ -44,6 +47,14 @@ class AppConfig:
     input_settings: dict = field(default_factory=dict)
     input_log_bindings: dict = field(default_factory=dict)
     vision_settings: dict = field(default_factory=dict)
+
+
+def _table_widths(value):
+    if not isinstance(value, dict):
+        return {}
+    return {key: [max(40, min(2000, int(number(width, 100)))) for width in widths[:12]]
+            for key, widths in value.items()
+            if key in {'skills', 'participants', 'contributions', 'hits', 'enemy_stats', 'enemy_poise'} and isinstance(widths, list)}
 
 
 def default_config_path() -> Path:
@@ -116,12 +127,25 @@ def load_app_config(path: Path | None = None) -> AppConfig:
     overlays_payload = payload.get("overlays", [])
     if not isinstance(overlays_payload, list):
         overlays_payload = []
-    entries = []
+    entries, removed = [], 0
     for item in overlays_payload:
         if isinstance(item, dict):
+            source_type = item.get('source_type', 'builtin')
+            source = str(item.get('source_value') or 'damage').strip().lower()
+            if (source_type == 'builtin' and source not in {'damage', 'combo_skill', 'uid_mask'}
+                    or source_type not in {'builtin', 'file'}
+                    or source_type == 'file' and Path(str(item.get('source_value') or '')).suffix.lower() != '.json'):
+                removed += 1
+                continue
             try:
-                entries.append(_overlay_entry_from_dict(item))
+                entry = _overlay_entry_from_dict(item)
+                from endfield_pcap.overlays.templates import template_for
+                if template_for(entry).error:
+                    removed += 1
+                    continue
+                entries.append(entry)
             except ValueError:
+                removed += 1
                 continue
     imported_paths = payload.get("imported_trace_files")
     if not isinstance(imported_paths, list):
@@ -161,7 +185,9 @@ def load_app_config(path: Path | None = None) -> AppConfig:
         input_settings=payload.get('input_settings') if isinstance(payload.get('input_settings'),dict) else {},
         input_log_bindings=payload.get('input_log_bindings') if isinstance(payload.get('input_log_bindings'),dict) else {},
         vision_settings=payload.get('vision_settings') if isinstance(payload.get('vision_settings'),dict) else {},
-        battle_analysis_view='web' if payload.get('battle_analysis_view') == 'web' else 'native',
+        overlay_migration_count=removed,
+        battle_table_widths=_table_widths(payload.get('battle_table_widths')),
+        battle_lane_configs=normalize_lane_configs(payload.get('battle_lane_configs')),
         toggle_overlays_hotkey=_normalize_hotkey(payload.get("toggle_overlays_hotkey")),
         toggle_gui_hotkey=str(payload.get('toggle_gui_hotkey') or 'Ctrl+Shift+O'),
         imported_trace_files=list(dict.fromkeys(p for value in imported_paths
@@ -213,7 +239,8 @@ def save_app_config(config: AppConfig, path: Path | None = None) -> None:
                 "input_settings": config.input_settings,
                 "input_log_bindings": config.input_log_bindings,
                 "vision_settings": config.vision_settings,
-                "battle_analysis_view": 'web' if config.battle_analysis_view == 'web' else 'native',
+                "battle_table_widths": _table_widths(config.battle_table_widths),
+                "battle_lane_configs": normalize_lane_configs(config.battle_lane_configs),
                 "toggle_overlays_hotkey": _normalize_hotkey(config.toggle_overlays_hotkey),
                 "toggle_gui_hotkey": config.toggle_gui_hotkey,
                 "imported_trace_files": [str(path) for path in config.imported_trace_files],
@@ -243,8 +270,6 @@ def _overlay_entry_from_dict(payload: dict[str, object]) -> OverlayEntry:
         name = _BUILTIN_DAMAGE_NAME if raw_name in _LEGACY_BUILTIN_NAMES else (raw_name or _BUILTIN_DAMAGE_NAME)
     elif source_type == OverlaySourceType.BUILTIN and source_value == "combo_skill":
         name = raw_name or _BUILTIN_COMBO_NAME
-    elif source_type == OverlaySourceType.BUILTIN and source_value == "buff":
-        name = raw_name or "BUFF"
     elif source_type == OverlaySourceType.BUILTIN and source_value == "uid_mask":
         name = raw_name or _BUILTIN_UID_MASK_NAME
     else:
@@ -264,11 +289,11 @@ def _overlay_entry_from_dict(payload: dict[str, object]) -> OverlayEntry:
         geometry=geometry,
         font_scale=max(0.5, min(3.0, number(payload.get("font_scale", payload.get("scale")), 1.0))),
         template_settings=payload.get("template_settings", {}) if isinstance(payload.get("template_settings"), dict) else {},
-        bar_mode="rdps" if payload.get("bar_mode") == "rdps" else "dps",
+        bar_mode="dps" if payload.get("bar_mode") == "dps" else "rdps",
         visible_columns=tuple(key for key in ("damage", "damage_rate", "rdamage", "rdamage_rate")
                               if key in payload.get("visible_columns", ("damage", "damage_rate", "rdamage", "rdamage_rate")))
         if isinstance(payload.get("visible_columns", []), (list, tuple)) else ("damage", "damage_rate", "rdamage", "rdamage_rate"),
-        overlay_theme=payload.get("overlay_theme") if payload.get("overlay_theme") in ("dark", "transparent") else "light",
+        overlay_theme=payload.get("overlay_theme") if payload.get("overlay_theme") in ("dark", "transparent", "endfield") else "light",
     )
 
 
@@ -280,7 +305,7 @@ def _ensure_builtin_entries(entries: list[OverlayEntry]) -> list[OverlayEntry]:
     for entry in entries:
         if entry.source_type != OverlaySourceType.BUILTIN:
             from endfield_pcap.overlays.templates import template_for
-            if {'input_snapshot', 'buff_snapshot'} & set(template_for(entry).subscriptions):
+            if template_for(entry).error:
                 continue
             normalized.append(entry)
             continue
@@ -299,7 +324,7 @@ def _ensure_builtin_entries(entries: list[OverlayEntry]) -> list[OverlayEntry]:
             uid_mask_present = True
             normalized.append(replace(entry, source_value="uid_mask", name=entry.name or _BUILTIN_UID_MASK_NAME))
             continue
-        normalized.append(entry)
+        # Unknown built-in entries have no native renderer.
     defaults = default_overlay_entries()
     if not damage_present:
         normalized.insert(0, defaults[0])

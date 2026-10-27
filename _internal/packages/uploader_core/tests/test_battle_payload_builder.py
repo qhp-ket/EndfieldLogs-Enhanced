@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uploader_core.battle_payload_builder as builder
+from uploader_core.payload import projection
 from uploader_core.battle_payload_builder import (
     _canonical_character_keys,
     _split_trace_into_battles,
@@ -353,7 +354,7 @@ def test_build_payload_preserves_contract_tags(monkeypatch) -> None:
         "loadout": [],
     }
 
-    monkeypatch.setattr(builder, "parse_upload_battle_log_text", lambda *_args, **_kwargs: parsed)
+    monkeypatch.setattr(projection, "parse_upload_battle_log_text", lambda *_args, **_kwargs: parsed)
 
     payload = builder._build_payload_from_segment(
         segment={"content": "raw"},
@@ -440,7 +441,7 @@ def test_build_payload_preserves_timeline_poise_damage(monkeypatch) -> None:
         "loadout": [],
     }
 
-    monkeypatch.setattr(builder, "parse_upload_battle_log_text", lambda *_args, **_kwargs: parsed)
+    monkeypatch.setattr(projection, "parse_upload_battle_log_text", lambda *_args, **_kwargs: parsed)
 
     payload = builder._build_payload_from_segment(
         segment={"content": "raw"},

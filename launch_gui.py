@@ -155,7 +155,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.detach and not args.check:
             return launch_detached([arg for arg in arguments if arg != '--detach'])
         bootstrap()
-        for name in ("PySide6.QtWebEngineWidgets", "qfluentwidgets", "dpkt", "Crypto", "google.protobuf", "websockets", "psutil"):
+        for name in ("PySide6.QtWidgets", "qfluentwidgets", "dpkt", "Crypto", "google.protobuf", "websockets", "psutil"):
             importlib.import_module(name)
         from endfield_pcap.gui.pages.settings.paths import _is_valid_game_dir
         from endfield_pcap.gui.main import run_gui

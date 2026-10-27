@@ -46,27 +46,20 @@ class AnalysisStreams:
         await run_snapshot_updates(wait, publish)
 
     def _analysis_required(self, stream):
-        if stream == 'combo_snapshot':
+        if stream != 'analysis_summary':
             return False
         if stream == 'analysis_summary':
             remote = bool(self._summary_clients or self._summary_handshakes)
-        else:
-            # Both WS modes continue to include observed BUFF state.
-            remote = bool(self.clients or self._full_handshakes or self._summary_handshakes)
         return self._analysis_streams is None or stream in self._analysis_streams or remote
 
     def set_analysis_streams(self, streams):
-        streams = frozenset(streams) - {'combo_snapshot'}
+        streams = frozenset(streams) & {'analysis_summary'}
         if streams == self._analysis_streams:
             return
         self._analysis_streams = streams
         self.summary_publisher.request_current()
         self._analysis_demand_changed.set()
 
-    async def _catch_up_display_inputs(self):
-        while self._buff_inputs.pending:
-            self._buff_inputs.drain()
-            await asyncio.sleep(0)
 
     async def _publish_analysis_summary(self):
         payload = await self.summary_publisher.publish_pending(copy_result=False)
@@ -74,23 +67,7 @@ class AnalysisStreams:
                 and self._analysis_required('analysis_summary')):
             await self._deliver_snapshot(payload, 'on_analysis_summary')
 
-    async def _buff_snapshot_loop(self) -> None:
-        while True:
-            await asyncio.sleep(0.05)
-            if self._analysis_required('buff_snapshot') and self._buff_inputs.drain():
-                await self._publish_buff_snapshot()
 
-    async def _publish_buff_snapshot(self) -> None:
-        payload = self.buff_publisher.current_message()
-        if payload == self._last_buff_message:
-            return
-        self._last_buff_message = payload
-        callback = getattr(self.observer, "on_buff_snapshot", None)
-        if callback is not None:
-            callback(copy.deepcopy(payload))
-        async with self._analysis_delivery_lock:
-            if payload == self._last_buff_message:
-                await self._deliver_snapshot(payload, None)
 
     async def _publish_analysis_snapshot(self) -> None:
         payload = await self.snapshot_publisher.publish_pending(copy_result=False)

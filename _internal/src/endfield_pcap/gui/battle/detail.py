@@ -1,52 +1,14 @@
 """Native, lazy history detail window using the existing canonical snapshot."""
 from __future__ import annotations
-from PySide6.QtCore import Qt, QRectF, QSignalBlocker, QSize
-from PySide6.QtGui import QGuiApplication, QIcon
-from endfield_pcap.gui.shared.avatars import avatar_pixmap
-from PySide6.QtWidgets import (
-    QDialog,
-    QWidget,
-    QVBoxLayout,
-    QHBoxLayout,
-    QTabWidget,
-    QHeaderView,
-    QTableWidgetItem,
-    QLayout,
-    QSizePolicy,
-    QScrollArea,
-    QFrame,
-    QStackedWidget,
-)
-from qfluentwidgets import (
-    CaptionLabel,
-    StrongBodyLabel,
-    ComboBox,
-    Slider,
-    PushButton,
-    CheckBox,
-    TableWidget,
-    isDarkTheme,
-    qconfig,
-)
-from endfield_pcap.analysis.battle.detail import skill_rows
-from endfield_pcap.data.skill_names import character_name
-from endfield_pcap.gui.battle.timeline.view import BattleTimeline
+from PySide6.QtCore import Qt, QRectF, QSignalBlocker
+from PySide6.QtGui import QGuiApplication
+from PySide6.QtWidgets import QDialog, QWidget, QVBoxLayout, QHBoxLayout, QTabWidget, QLayout, QSizePolicy, QScrollArea, QFrame
+from qfluentwidgets import CaptionLabel, StrongBodyLabel, Slider, PushButton, CheckBox, isDarkTheme, qconfig
+from endfield_pcap.gui.battle.pages import TimelinePage, SkillCompositionPage
 from endfield_pcap.gui.shared.placement import schedule_initial_placement
-from endfield_pcap.gui.battle.inspector import BlockInspector, EnemyEvidencePage
-from endfield_pcap.gui.battle.panel import BattleDetailSplitter
-
-
-SKILL_AVATAR_PIXELS = 32
-
-
-class _NumberItem(QTableWidgetItem):
-    def __init__(self, value, text):
-        super().__init__(text)
-        self.value = value
-        self.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-
-    def __lt__(self, other):
-        return self.value < other.value if isinstance(other, _NumberItem) else super().__lt__(other)
+from endfield_pcap.gui.battle.inspector import EnemyEvidencePage
+from endfield_pcap.gui.battle.controls import popup
+from endfield_pcap.gui.battle.tables import remember_columns
 
 
 class _DetailBody(QWidget):
@@ -65,9 +27,6 @@ class BattleDetailDialog(QDialog):
                             | Qt.WindowType.WindowCloseButtonHint)
         self.snapshot = snapshot
         self._record_label = label
-        self.web_analysis = None
-        self._web_extra_state = {}
-        self._web_pending_state = None
         self.setObjectName('battleDetailDialog')
         from endfield_pcap._version import APP_NAME
         self.setWindowTitle(f'{APP_NAME} · 战斗分析 · {label}')
@@ -81,18 +40,14 @@ class BattleDetailDialog(QDialog):
         # negotiation from growing the whole dialog beyond a small work area.
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
-        mode_bar = QHBoxLayout()
-        mode_bar.setContentsMargins(16, 8, 16, 0)
-        mode_bar.addWidget(CaptionLabel('界面风格', self))
-        self.view_mode_combo = ComboBox(self)
-        self.view_mode_combo.addItem('现有 Qt 界面', userData='native')
-        self.view_mode_combo.addItem('官网风格（本地）', userData='web')
-        self.view_mode_combo.setToolTip('两个界面使用同一份本地分析结果；切换不重新解析日志。')
-        mode_bar.addWidget(self.view_mode_combo)
+        settings_panel = QWidget(self)
+        settings_layout = QVBoxLayout(settings_panel)
+        settings_layout.setContentsMargins(12, 10, 12, 10)
         self.avatar_check = CheckBox('显示角色头像', self)
         self.avatar_check.setChecked(getattr(getattr(parent, 'app_config', None), 'show_character_avatars', True))
-        mode_bar.addWidget(self.avatar_check)
-        mode_bar.addWidget(CaptionLabel('头像大小', self))
+        avatar_row = QHBoxLayout()
+        avatar_row.addWidget(self.avatar_check)
+        avatar_row.addWidget(CaptionLabel('头像大小', self))
         self.avatar_size_slider = Slider(Qt.Orientation.Horizontal, self)
         self.avatar_size_slider.setRange(50, 300)
         self.avatar_size_slider.setValue(getattr(getattr(parent, 'app_config', None), 'character_avatar_percent', 100))
@@ -100,24 +55,24 @@ class BattleDetailDialog(QDialog):
         self.avatar_size_slider.setMaximumWidth(150)
         self.avatar_size_slider.setToolTip('独立调整头像比例，并随界面字号、时间轴图形缩放；不改变文字大小。')
         self.avatar_size_value = CaptionLabel(f'{self.avatar_size_slider.value()}%', self)
-        mode_bar.addWidget(self.avatar_size_slider, 1)
-        mode_bar.addWidget(self.avatar_size_value)
-        outer.addLayout(mode_bar)
+        avatar_row.addWidget(self.avatar_size_slider, 1)
+        avatar_row.addWidget(self.avatar_size_value)
+        settings_layout.addLayout(avatar_row)
+        self.summary_button = PushButton('角色统计与快照质量', settings_panel)
+        self.summary_button.clicked.connect(self._show_summary)
+        settings_layout.addWidget(self.summary_button)
         from endfield_pcap.gui.battle.input_history import InputHistoryBar
-        self.input_history = InputHistoryBar(self)
-        outer.addWidget(self.input_history)
-        self.view_stack = QStackedWidget(self)
-        outer.addWidget(self.view_stack, 1)
+        self.input_history = InputHistoryBar(self, compact=True)
         body = _DetailBody(self)
         body.setObjectName('battleDetailBody')
         self.body_scroll = QScrollArea(self)
         self.body_scroll.setFrameShape(QFrame.Shape.NoFrame)
         self.body_scroll.setWidgetResizable(True)
         self.body_scroll.setWidget(body)
-        self.view_stack.addWidget(self.body_scroll)
+        outer.addWidget(self.body_scroll, 1)
         layout = QVBoxLayout(body)
-        layout.setContentsMargins(20, 16, 20, 16)
-        layout.setSpacing(12)
+        layout.setContentsMargins(10, 6, 10, 8)
+        layout.setSpacing(4)
         layout.setSizeConstraint(QLayout.SizeConstraint.SetMinimumSize)
         heading = self.heading = StrongBodyLabel(label, self)
         heading.setWordWrap(False)
@@ -129,102 +84,47 @@ class BattleDetailDialog(QDialog):
         self.metrics_label = CaptionLabel(f"DMG {float(battle.get('total_damage') or 0):,.2f}  ·  DPS {float(battle.get('total_dps') or 0):,.2f}  ·  {float(battle.get('duration_ms') or 0)/1000:.2f} 秒", self)
         self.metrics_label.setToolTip(self._quality_text(snapshot))
         header.addWidget(self.metrics_label)
-        layout.addLayout(header)
+        self.display_settings = PushButton('显示设置', self)
+        header.addWidget(self.display_settings)
+        self.display_menu = popup(self.display_settings, settings_panel)
+        header.setContentsMargins(10, 4, 10, 0)
+        outer.insertLayout(0, header)
         self.tabs = QTabWidget(self)
         layout.addWidget(self.tabs, 1)
 
-        timeline_page = QWidget(self)
-        timeline_page.setObjectName('battleTimelinePage')
-        tl = QVBoxLayout(timeline_page)
-        filters = QHBoxLayout()
-        filters.addWidget(CaptionLabel('角色', timeline_page))
-        self.character_combo = self._character_selector(timeline_page)
-        filters.addWidget(self.character_combo)
-        self.buff_check = CheckBox('BUFF 轨道', timeline_page)
-        self.buff_check.setChecked(False)
-        filters.addWidget(self.buff_check)
-        self.skill_frames_check = CheckBox('固定起止配置回退', timeline_page)
-        self.skill_frames_check.setChecked(False)
-        self.skill_frames_check.setToolTip('完整技能起止始终直接采用日志。仅缺失起止时，虚线块使用首个实际命中点 + AKEData 固定配置时长（30F/s）；无命中或配置时保留日志区间。')
-        filters.addWidget(self.skill_frames_check)
-        filters.addStretch()
-        self.hover_time_label = CaptionLabel('时间 —', timeline_page)
-        filters.addWidget(self.hover_time_label)
-        self.details_toggle = PushButton('展开详情', timeline_page)
-        self.details_toggle.setCheckable(True)
-        self.details_toggle.setChecked(False)
-        self.details_toggle.setToolTip('收起/展开事件概况、贡献分配、逐击证据和原始证据')
-        filters.addWidget(self.details_toggle)
-        tl.addLayout(filters)
-        toolbar = QHBoxLayout()
-        toolbar.addWidget(CaptionLabel('时间范围', timeline_page))
-        self.zoom_slider = Slider(Qt.Orientation.Horizontal, timeline_page)
-        self.zoom_slider.setRange(100, 1000)
-        self.zoom_slider.setValue(100)
-        self.zoom_slider.setMaximumWidth(200)
-        self.zoom_slider.setMinimumWidth(60)
-        toolbar.addWidget(self.zoom_slider, 1)
-        fit = PushButton('适合窗口', timeline_page)
-        fit.clicked.connect(lambda: self.zoom_slider.setValue(100))
-        toolbar.addWidget(fit)
-        toolbar.addWidget(CaptionLabel('单位', timeline_page))
-        self.time_unit_combo = ComboBox(timeline_page)
-        self.time_unit_combo.addItem('秒', userData='seconds')
-        self.time_unit_combo.addItem('帧（30F/s）', userData='frames')
-        self.time_unit_combo.setToolTip('显示单位换算：1s = 30F；保留小数帧，不量化日志时间')
-        toolbar.addWidget(self.time_unit_combo)
-        toolbar.addSpacing(12)
-        toolbar.addWidget(CaptionLabel('图形大小', timeline_page))
-        self.graphics_zoom_slider = Slider(Qt.Orientation.Horizontal, timeline_page)
-        self.graphics_zoom_slider.setRange(75, 250)
-        self.graphics_zoom_slider.setValue(100)
-        self.graphics_zoom_slider.setMaximumWidth(200)
-        self.graphics_zoom_slider.setMinimumWidth(60)
-        self.graphics_zoom_value = CaptionLabel('100%', timeline_page)
-        toolbar.addWidget(self.graphics_zoom_slider, 1)
-        toolbar.addWidget(self.graphics_zoom_value)
-        toolbar.addStretch()
-        tl.addLayout(toolbar)
-        self.timeline = BattleTimeline(timeline_page)
-        self.timeline.show_character_avatars = self.avatar_check.isChecked()
-        self.timeline.avatar_scale = self.avatar_size_slider.value()/100
-        self.inspector = BlockInspector(timeline_page)
-        split = BattleDetailSplitter(self.timeline, self.inspector, timeline_page)
-        self.detail_split = split
-        self.event_detail = self.inspector.event_detail
-        tl.addWidget(split, 1)
-        self.timeline.setToolTip('红菱形：实际命中；蓝点：BUFF 层数变化。虚线块为固定配置回退。拖动左侧两条列分隔线调整角色名及轨道列宽。')
-        self.tabs.addTab(timeline_page, '战斗时间轴')
-
-        skill_page = QWidget(self)
-        skill_page.setObjectName('battleSkillPage')
-        sl = QVBoxLayout(skill_page)
-        skill_filters = QHBoxLayout()
-        skill_filters.addWidget(CaptionLabel('角色', skill_page))
-        self.skill_character_combo = self._character_selector(skill_page)
-        skill_filters.addWidget(self.skill_character_combo)
-        skill_filters.addStretch()
-        sl.addLayout(skill_filters)
-        self.skill_table = TableWidget(skill_page)
-        self.skill_table.setColumnCount(8)
-        self.skill_table.setHorizontalHeaderLabels(['角色', '分类', '技能', '次数', '总伤害', 'DMG rate', '平均单次', '最大单次'])
-        self.skill_table.verticalHeader().hide()
-        self.skill_table.setEditTriggers(TableWidget.EditTrigger.NoEditTriggers)
-        self.skill_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        self.skill_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
-        self.skill_table.setSelectionBehavior(TableWidget.SelectionBehavior.SelectRows)
-        self.skill_table.setSortingEnabled(True)
-        self.skill_table.setToolTip('DMG rate 为该角色总伤占比；次数、平均和最大按核心合并后的单次施放统计。点击表头排序。')
-        sl.addWidget(self.skill_table, 1)
-        self.skill_empty = CaptionLabel('此记录没有技能构成数据', skill_page)
-        sl.addWidget(self.skill_empty)
-        self.tabs.addTab(skill_page, '角色技能构成')
+        self.hover_time_label = CaptionLabel('时间 —', self)
+        header.insertWidget(2, self.hover_time_label)
+        config = getattr(parent, 'app_config', None)
+        self.timeline_page = TimelinePage(snapshot, self.input_history, settings_layout, config, self)
+        self.buff_check = self.timeline_page.buff_check
+        self.character_combo = self.timeline_page.character_combo
+        self.curve_combo = self.timeline_page.curve_combo
+        self.detail_split = self.timeline_page.detail_split
+        self.details_toggle = self.timeline_page.details_toggle
+        self.event_detail = self.timeline_page.event_detail
+        self.fallback_status = self.timeline_page.fallback_status
+        self.graphics_zoom_slider = self.timeline_page.graphics_zoom_slider
+        self.graphics_zoom_value = self.timeline_page.graphics_zoom_value
+        self.input_button = self.timeline_page.input_button
+        self.input_menu = self.timeline_page.input_menu
+        self.inspector = self.timeline_page.inspector
+        self.skill_frames_check = self.timeline_page.skill_frames_check
+        self.time_unit_combo = self.timeline_page.time_unit_combo
+        self.timeline = self.timeline_page.timeline
+        self.zoom_slider = self.timeline_page.zoom_slider
+        self.tabs.addTab(self.timeline_page, '战斗时间轴')
+        self.skill_page = SkillCompositionPage(snapshot, self)
+        self.skill_character_combo = self.skill_page.character_combo
+        self.skill_table, self.skill_empty = self.skill_page.table, self.skill_page.empty
+        self.tabs.addTab(self.skill_page, '角色技能构成')
         self.enemy_page = EnemyEvidencePage(snapshot, self)
         self.tabs.addTab(self.enemy_page, '敌方数据')
         self.timeline.set_skill_frames_visible(False)
         self.timeline.set_snapshot(snapshot)
+        self.curve_combo.currentIndexChanged.connect(lambda: self.timeline.set_damage_metric(self.curve_combo.currentData()))
         self.timeline.blockActivated.connect(self._inspect_block)
         self.timeline.timeHovered.connect(self._update_hover_time)
+        self.timeline.laneSettingsRequested.connect(self._open_role_lanes)
         self.zoom_slider.valueChanged.connect(self.timeline.set_zoom)
         self.graphics_zoom_slider.valueChanged.connect(self.timeline.set_graphics_zoom)
         self.timeline.graphicsZoomChanged.connect(self.graphics_zoom_slider.setValue)
@@ -247,107 +147,27 @@ class BattleDetailDialog(QDialog):
         from endfield_pcap.gui.shared.typography import apply_fonts
         scale = getattr(getattr(parent, 'app_config', None), 'gui_font_percent', 115)/100
         apply_fonts(self, scale)
-        self.view_mode_combo.currentIndexChanged.connect(self._set_view_mode)
-        if getattr(getattr(parent, 'app_config', None), 'battle_analysis_view', 'native') == 'web':
-            self.view_mode_combo.setCurrentIndex(1)
+        self._table_timers = [remember_columns(self, table, key) for table, key in (
+            (self.skill_table, 'skills'), (self.inspector.contributions, 'contributions'),
+            (self.inspector.hits, 'hits'), (self.enemy_page.stats, 'enemy_stats'),
+            (self.enemy_page.poise, 'enemy_poise'))]
 
     def set_record_label(self, label):
         self._record_label = label
         self.heading.setText(label)
         self.heading.setToolTip(label)
-        self.setWindowTitle(f'战斗分析 · {label}')
-        if self.web_analysis is not None:
-            self.web_analysis.set_record_label(label)
+        from endfield_pcap._version import APP_NAME
+        self.setWindowTitle(f'{APP_NAME} · 战斗分析 · {label}')
 
-    def _native_view_state(self):
-        import json
-        selected = self.inspector._block
-        selected_id = next((i for i, block in enumerate(self.timeline._blocks) if block is selected), None)
-        return dict(self._web_extra_state, character=self.character_combo.currentData() or '',
-            avatars=self.avatar_check.isChecked(),
-            avatarPercent=self.avatar_size_slider.value(),
-            buffs=self.buff_check.isChecked(), fallback=self.skill_frames_check.isChecked(),
-            zoom=self.zoom_slider.value(), graphics=self.graphics_zoom_slider.value(),
-            unit=self.time_unit_combo.currentData(), details=self.detail_split.details_expanded(),
-            detailsMaximized=self.detail_split.details_maximized(),
-            expanded=[json.dumps(list(k), ensure_ascii=False, separators=(',', ':')) for k in self.timeline._expanded_lanes],
-            roleWidth=self.timeline._role_column_width, trackWidth=self.timeline._track_column_width,
-            tab=('timeline', 'skills', 'enemy')[self.tabs.currentIndex()], selectedBlock=selected_id,
-            selectedHit=self.inspector.hits.currentRow() if self.inspector.hits.currentRow() >= 0 else None,
-            detailTab=('overview', 'allocation', 'hits', 'raw')[self.inspector.currentIndex()])
-
-    def _read_web_state(self, raw):
-        import json
-        self._web_pending_state = json.loads(raw)
-
-    def _apply_web_state(self):
-        import json
-        state = self._web_pending_state
-        if state is None:
-            return
-        self._web_pending_state = None
-        self._web_extra_state = {k: state[k] for k in ('curve',) if k in state}
-        self.character_combo.setCurrentIndex(max(0, self.character_combo.findData(state.get('character', ''))))
-        self.buff_check.setChecked(bool(state.get('buffs')))
-        self.skill_frames_check.setChecked(state.get('fallback', False))
-        self.zoom_slider.setValue(int(state.get('zoom', 100)))
-        self.graphics_zoom_slider.setValue(int(state.get('graphics', 100)))
-        self.time_unit_combo.setCurrentIndex(max(0, self.time_unit_combo.findData(state.get('unit', 'seconds'))))
-        self._set_details_expanded(state.get('details', False))
-        if state.get('details') and state.get('detailsMaximized'):
-            self.detail_split.setSizes([0, max(1, sum(self.detail_split.sizes()))])
-        self.timeline._expanded_lanes = {tuple(json.loads(k)) for k in state.get('expanded', [])}
-        self.timeline._role_column_width = float(state.get('roleWidth', 82))
-        self.timeline._track_column_width = float(state.get('trackWidth', 180))
-        self.tabs.setCurrentIndex({'timeline': 0, 'skills': 1, 'enemy': 2}.get(state.get('tab'), 0))
-        selected = state.get('selectedBlock')
-        if isinstance(selected, int) and 0 <= selected < len(self.timeline._blocks):
-            self.inspector.set_block(self.timeline._blocks[selected])
-            hit = state.get('selectedHit')
-            if isinstance(hit, int) and 0 <= hit < self.inspector.hits.rowCount():
-                self.inspector.hits.selectRow(hit)
-            self.inspector.setCurrentIndex({'overview': 0, 'allocation': 1, 'hits': 2, 'raw': 3}.get(state.get('detailTab'), 0))
-
-    def _set_view_mode(self, *args):
-        web_mode = self.view_mode_combo.currentData() == 'web'
-        if web_mode:
-            if self.web_analysis is None:
-                from endfield_pcap.gui.battle.web import WebBattleView
-                self.web_analysis = WebBattleView(self.snapshot, self._record_label, self)
-                self.input_history.publish()
-                self.web_analysis.set_gui_font_scale(self.property('gui_font_scale') or 1.15)
-                self.web_analysis.bridge.stateEdited.connect(self._read_web_state)
-                self.view_stack.addWidget(self.web_analysis)
-            self.web_analysis.set_view_state(self._native_view_state())
-            self.view_stack.setCurrentWidget(self.web_analysis)
-        else:
-            self._apply_web_state()
-            self.view_stack.setCurrentWidget(self.body_scroll)
-            self.timeline.render_timeline()
-        parent = self.parentWidget()
-        config = getattr(parent, 'app_config', None)
-        if config is not None:
-            config.battle_analysis_view = 'web' if web_mode else 'native'
-            if getattr(parent, 'config_path', None):
-                from endfield_pcap.gui.config import save_app_config
-                save_app_config(config, parent.config_path)
-
-    def _character_selector(self, parent):
-        combo = ComboBox(parent)
-        combo.setMaximumWidth(200)
-        combo.addItem('全部角色', userData='')
-        for participant in self.snapshot.get('participants') or []:
-            key = str(participant['character_key'])
-            combo.addItem(character_name(key, participant.get('character_name', '')), userData=key)
-        return combo
+    def _show_summary(self):
+        from endfield_pcap.gui.battle.summary import BattleSummaryDialog
+        self._summary_dialog = BattleSummaryDialog(self.snapshot, self)
+        self._summary_dialog.open()
 
     def _set_character_avatars(self, visible):
         self.timeline.show_character_avatars = bool(visible)
         self.timeline.fit_columns()
         self._refresh_filter()
-        if self.web_analysis is not None:
-            state = dict(self._web_pending_state or self._native_view_state(), avatars=bool(visible))
-            self.web_analysis.set_view_state(state)
         parent = self.parentWidget()
         if getattr(parent, 'app_config', None) is not None:
             from endfield_pcap.gui.config import save_app_config
@@ -359,9 +179,6 @@ class BattleDetailDialog(QDialog):
         self.timeline.avatar_scale = percent/100
         self.timeline.fit_columns()
         self._scale_skill_avatars(self.property('gui_font_scale') or 1.15)
-        if self.web_analysis is not None:
-            state = dict(self._web_pending_state or self._native_view_state(), avatarPercent=percent)
-            self.web_analysis.set_view_state(state)
         parent = self.parentWidget()
         if getattr(parent, 'app_config', None) is not None:
             from endfield_pcap.gui.config import save_app_config
@@ -374,6 +191,24 @@ class BattleDetailDialog(QDialog):
 
     def _inspect_block(self, block):
         self.inspector.set_block(block)
+
+    def _open_role_lanes(self, owner):
+        from endfield_pcap.gui.battle.lane_settings import RoleLanesDialog
+        dialog = RoleLanesDialog(self.timeline._blocks, owner, self.timeline.lane_configs.get(owner), self)
+        self._lane_dialog = dialog
+        def apply():
+            configs = dict(self.timeline.lane_configs)
+            configs[owner] = dialog.value()
+            self.timeline.set_lane_configs(configs)
+            parent = self.parentWidget()
+            config = getattr(parent, 'app_config', None)
+            if config is not None:
+                from endfield_pcap.gui.config import save_app_config
+                config.battle_lane_configs = self.timeline.lane_configs
+                if getattr(parent, 'config_path', None):
+                    save_app_config(config, parent.config_path)
+        dialog.accepted.connect(apply)
+        dialog.open()
 
     def _set_details_expanded(self, expanded):
         self.detail_split.set_details_expanded(expanded)
@@ -394,8 +229,6 @@ class BattleDetailDialog(QDialog):
         self.inspector.set_time_unit(unit)
 
     def _apply_theme(self, *args):
-        if self.web_analysis is not None:
-            self.web_analysis.set_environment()
         dark = isDarkTheme()
         background, panel, text, border = ('#202020', '#272727', '#f3f3f3', '#444444') if dark else ('#f3f3f3', '#fafafa', '#202020', '#d6d6d6')
         self.setStyleSheet(f'''
@@ -403,14 +236,14 @@ class BattleDetailDialog(QDialog):
             QWidget#battleDetailBody, QScrollArea {{ background: {background}; }}
             QWidget#battleTimelinePage, QWidget#battleSkillPage, QWidget#battleEnemyPage, QWidget#battleEnergyPage {{ background: {panel}; }}
             QTabWidget::pane {{ border: 1px solid {border}; background: {panel}; }}
-            QTabBar::tab {{ background: {background}; color: {text}; padding: 9px 18px; border: 1px solid {border}; }}
+            QTabBar::tab {{ background: {background}; color: {text}; padding: 5px 12px; border: 1px solid {border}; }}
             QTabBar::tab:selected {{ background: {panel}; border-bottom: 2px solid #009faa; }}
             QPlainTextEdit {{ background: {panel}; color: {text}; border: 1px solid {border}; border-radius: 5px; }}
             QTableView {{ background: {panel}; color: {text}; alternate-background-color: {background}; }}
-            QHeaderView::section {{ background: {panel}; color: {text}; border: none; padding: 8px; }}
+            QHeaderView::section {{ background: {panel}; color: {text}; border: none; padding: 4px; }}
         ''')
         self.event_detail.setStyleSheet(f'QPlainTextEdit {{ background: {panel}; color: {text}; border: 1px solid {border}; border-radius: 5px; }}')
-        self.skill_table.setStyleSheet(f'QTableView {{ background: {panel}; color: {text}; alternate-background-color: {background}; }} QHeaderView::section {{ background: {panel}; color: {text}; border: none; padding: 8px; }}')
+        self.skill_table.setStyleSheet(f'QTableView {{ background: {panel}; color: {text}; alternate-background-color: {background}; }} QHeaderView::section {{ background: {panel}; color: {text}; border: none; padding: 4px; }}')
         self.timeline.render_timeline()
 
     @staticmethod
@@ -429,40 +262,9 @@ class BattleDetailDialog(QDialog):
                 other.setCurrentIndex(other.findData(source.currentData()))
         character = self.character_combo.currentData() or ''
         self.timeline.set_filter(character, self.buff_check.isChecked())
-        rows = skill_rows(self.snapshot, character)
-        table = self.skill_table
-        table.setSortingEnabled(False)
-        table.setRowCount(len(rows))
-        icon_size = round(SKILL_AVATAR_PIXELS*(self.property('gui_font_scale') or 1.15)*self.avatar_size_slider.value()/100)
-        table.setIconSize(QSize(icon_size, icon_size))
-        table.verticalHeader().setDefaultSectionSize(max((icon_size+8) if self.avatar_check.isChecked() else 0, table.fontMetrics().height()+8))
-        for i, row in enumerate(rows):
-            for j, value in enumerate([row['display_character'], row['category'], row['display_skill']]):
-                item = QTableWidgetItem(value)
-                if j == 0:
-                    item.setData(Qt.ItemDataRole.UserRole, row.get('character_key'))
-                if j == 0 and self.avatar_check.isChecked():
-                    item.setIcon(QIcon(avatar_pixmap(row.get('character_key'), icon_size, self.devicePixelRatioF())))
-                item.setToolTip(str(row['display_character']) if j == 0 else str(row.get('skill_key') or ''))
-                table.setItem(i, j, item)
-            for j, field in enumerate(['cast_count', 'total_damage', 'damage_percent', 'avg_damage', 'max_damage'], 3):
-                value = float(row.get(field) or 0)
-                text = f'{int(value)}' if field == 'cast_count' else (f'{value:.2f}%' if field == 'damage_percent' else f'{value:,.2f}')
-                table.setItem(i, j, _NumberItem(value, text))
-        table.setSortingEnabled(True)
-        table.sortItems(4, Qt.SortOrder.DescendingOrder)
-        self.skill_empty.setVisible(not rows)
+        self.skill_page.refresh(character, avatars=self.avatar_check.isChecked(),
+                                avatar_percent=self.avatar_size_slider.value(),
+                                font_scale=self.property('gui_font_scale') or 1.15)
 
     def _scale_skill_avatars(self, scale):
-        size = round(SKILL_AVATAR_PIXELS*scale*self.avatar_size_slider.value()/100)
-        table = self.skill_table
-        changed = table.iconSize().width() != size
-        table.setIconSize(QSize(size, size))
-        table.verticalHeader().setDefaultSectionSize(max((size+8) if self.avatar_check.isChecked() else 0, table.fontMetrics().height()+8))
-        if changed and self.avatar_check.isChecked():
-            for i in range(table.rowCount()):
-                item = table.item(i, 0)
-                if item:
-                    item.setIcon(QIcon(avatar_pixmap(item.data(Qt.ItemDataRole.UserRole), size, self.devicePixelRatioF())))
-        for column in (0, 1):
-            table.resizeColumnToContents(column)
+        self.skill_page.set_avatar_scale(scale, self.avatar_size_slider.value(), self.avatar_check.isChecked())

@@ -662,7 +662,7 @@ def test_damage_core_uses_school_for_physical_and_spell_effects() -> None:
     )
 
 def test_live_overlay_parser_throttles_reparse_and_forces_final_on_timer_end(monkeypatch) -> None:
-    import parser_core.live as live_module
+    import parser_core.realtime.live as live_module
 
     clock = {"now": 100.0}
     monkeypatch.setattr(live_module.time, "monotonic", lambda: clock["now"])
@@ -697,7 +697,7 @@ def test_live_overlay_parser_throttles_reparse_and_forces_final_on_timer_end(mon
     assert final["battle"]["total_damage"] == 300
 
 def test_live_overlay_parser_does_not_repeat_same_failed_parse(monkeypatch) -> None:
-    import parser_core.live as live_module
+    import parser_core.realtime.live as live_module
 
     calls = 0
 

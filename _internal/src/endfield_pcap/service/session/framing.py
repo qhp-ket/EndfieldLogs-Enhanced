@@ -107,24 +107,7 @@ class FramingEvents:
             )
         if "parse_error" in head:
             return
-        if self.on_debug_record is not None:
-            msg_id = int(head.get("msgid", 0) or 0)
-            self.on_debug_record(
-                {
-                    "type": "debug_session_head",
-                    "session_id": self.session_id,
-                    "timestamp_ms": timestamp_ms,
-                    "direction": direction,
-                    "msg_id": msg_id,
-                    "class_name": self.registry.resolve_class_name(direction, msg_id),
-                    "head": head,
-                    "head_len": head_len,
-                    "plain_head_hex": plain_head.hex(),
-                    "plain_body_len": len(plain_body),
-                    "plain_body_prefix_hex": plain_body[:64].hex(),
-                    "plain_body_hex": plain_body.hex() if len(plain_body) <= 4096 else None,
-                }
-            )
+        self._record_session_head(direction, head_len, plain_head, plain_body, head, timestamp_ms)
         try:
             assembled = self._assemble_multi_pack_message(direction, head, plain_body, timestamp_ms)
         except SessionBodyDecompressionError as exc:
@@ -151,42 +134,91 @@ class FramingEvents:
         head, body, is_already_decompressed = assembled
         msg_id = int(head.get("msgid", 0) or 0)
         if not self.registry.should_decode_message(direction, msg_id):
-            if self.on_debug_record is not None:
-                try:
-                    debug_body = body if is_already_decompressed else maybe_decompress_session_body(head, body)
-                except SessionBodyDecompressionError as exc:
-                    debug_body = body
-                    self.metrics.decompression_errors += 1
-                    self.reliability_flags.add("session_body_decompression_failed")
-                    LOGGER.error("ignored session frame decompression failed", exc_info=True)
-                    self.on_debug_record(
-                        {
-                            "type": "debug_decompression_error",
-                            "session_id": self.session_id,
-                            "timestamp_ms": timestamp_ms,
-                            "direction": direction,
-                            "msg_id": msg_id,
-                            "error": str(exc),
-                            "head": head,
-                            "body_len": len(body),
-                            "body_prefix_hex": body[:128].hex(),
-                        }
-                    )
+            self._record_ignored_frame(direction, head, body, is_already_decompressed, timestamp_ms)
+            return
+        decoded = self._decode_frame_body(direction, head, body, is_already_decompressed, timestamp_ms)
+        if decoded is None:
+            return
+        decoded_messages, body = decoded
+        self.metrics.frames_decoded += 1
+        if self.on_debug_record is not None and not decoded_messages:
+            self.on_debug_record(
+                {
+                    "type": "debug_undecoded_frame",
+                    "session_id": self.session_id,
+                    "timestamp_ms": timestamp_ms,
+                    "direction": direction,
+                    "head": head,
+                    "head_len": head_len,
+                    "plain_head_hex": plain_head.hex(),
+                    "plain_body_prefix_hex": body[:128].hex(),
+                }
+            )
+        for decoded in decoded_messages:
+            self.metrics.messages_decoded += 1
+            self._handle_message(decoded, timestamp_ms)
+
+    def _record_session_head(self, direction, head_len, plain_head, plain_body, head, timestamp_ms):
+        if self.on_debug_record is not None:
+            msg_id = int(head.get("msgid", 0) or 0)
+            self.on_debug_record(
+                {
+                    "type": "debug_session_head",
+                    "session_id": self.session_id,
+                    "timestamp_ms": timestamp_ms,
+                    "direction": direction,
+                    "msg_id": msg_id,
+                    "class_name": self.registry.resolve_class_name(direction, msg_id),
+                    "head": head,
+                    "head_len": head_len,
+                    "plain_head_hex": plain_head.hex(),
+                    "plain_body_len": len(plain_body),
+                    "plain_body_prefix_hex": plain_body[:64].hex(),
+                    "plain_body_hex": plain_body.hex() if len(plain_body) <= 4096 else None,
+                }
+            )
+
+    def _record_ignored_frame(self, direction, head, body, is_already_decompressed, timestamp_ms):
+        if self.on_debug_record is not None:
+            msg_id = int(head.get("msgid", 0) or 0)
+            try:
+                debug_body = body if is_already_decompressed else maybe_decompress_session_body(head, body)
+            except SessionBodyDecompressionError as exc:
+                debug_body = body
+                self.metrics.decompression_errors += 1
+                self.reliability_flags.add("session_body_decompression_failed")
+                LOGGER.error("ignored session frame decompression failed", exc_info=True)
                 self.on_debug_record(
                     {
-                        "type": "debug_ignored_frame",
+                        "type": "debug_decompression_error",
                         "session_id": self.session_id,
                         "timestamp_ms": timestamp_ms,
                         "direction": direction,
                         "msg_id": msg_id,
-                        "class_name": self.registry.resolve_class_name(direction, msg_id),
+                        "error": str(exc),
                         "head": head,
-                        "body_len": len(debug_body),
-                        "body_prefix_hex": debug_body[:128].hex(),
-                        "body_hex": debug_body.hex() if len(debug_body) <= 8192 else None,
+                        "body_len": len(body),
+                        "body_prefix_hex": body[:128].hex(),
                     }
                 )
-            return
+            self.on_debug_record(
+                {
+                    "type": "debug_ignored_frame",
+                    "session_id": self.session_id,
+                    "timestamp_ms": timestamp_ms,
+                    "direction": direction,
+                    "msg_id": msg_id,
+                    "class_name": self.registry.resolve_class_name(direction, msg_id),
+                    "head": head,
+                    "body_len": len(debug_body),
+                    "body_prefix_hex": debug_body[:128].hex(),
+                    "body_hex": debug_body.hex() if len(debug_body) <= 8192 else None,
+                }
+            )
+        return
+
+    def _decode_frame_body(self, direction, head, body, is_already_decompressed, timestamp_ms):
+        msg_id = int(head.get("msgid", 0) or 0)
         if not is_already_decompressed:
             try:
                 body = maybe_decompress_session_body(head, body)
@@ -251,23 +283,8 @@ class FramingEvents:
                     }
                 )
             return
-        self.metrics.frames_decoded += 1
-        if self.on_debug_record is not None and not decoded_messages:
-            self.on_debug_record(
-                {
-                    "type": "debug_undecoded_frame",
-                    "session_id": self.session_id,
-                    "timestamp_ms": timestamp_ms,
-                    "direction": direction,
-                    "head": head,
-                    "head_len": head_len,
-                    "plain_head_hex": plain_head.hex(),
-                    "plain_body_prefix_hex": body[:128].hex(),
-                }
-            )
-        for decoded in decoded_messages:
-            self.metrics.messages_decoded += 1
-            self._handle_message(decoded, timestamp_ms)
+        return decoded_messages, body
+
 
     def _assemble_multi_pack_message(
         self,

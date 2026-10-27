@@ -3,6 +3,8 @@ import pytest
 from parser_core.live_frozen import FrozenHitEvidence, FrozenBuffEvidence, FrozenMutation
 from parser_core.incremental import IncrementalBattleParser
 from parser_test_support.hits import hit
+import parser_core.reporting.battle as parser_battle
+import parser_core.parser as parser_parser
 
 
 def test_frozen_evidence_is_detached_and_reuses_only_exact_unchanged_contents():
@@ -26,7 +28,12 @@ def test_unexpected_evidence_write_falls_back_to_independent_copy(monkeypatch):
     def write_evidence(state,*args,**kwargs):
         state['hits'][0]['packet_modifier_uids']['attacker'].append('test')
         return original(state,*args,**kwargs)
-    monkeypatch.setattr(core,'_build_raw_battle_report',write_evidence)
+    for patched_consumer in (
+        core,
+        parser_parser,
+        parser_battle,
+    ):
+        monkeypatch.setattr(patched_consumer, '_build_raw_battle_report', write_evidence)
     engine=IncrementalBattleParser()
     result=engine.snapshot([hit(1)],summary=True)
     assert result['battle']['total_damage']==120

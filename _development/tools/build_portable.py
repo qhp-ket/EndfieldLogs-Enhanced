@@ -87,6 +87,12 @@ def dependencies():
         if requirement.marker and not requirement.marker.evaluate({'extra': ''}):
             continue
         name = requirement.name.lower().replace('_', '-')
+        if name == 'pyside6':
+            # PySide6 is a convenience metapackage including browser/PDF wheels.
+            # The native application uses bindings from these two distributions.
+            pending.extend(('PySide6-Essentials'+str(requirement.specifier),
+                            'PySide6-Addons'+str(requirement.specifier)))
+            continue
         dist = resolved.get(name) or metadata.distribution(requirement.name)
         if requirement.specifier and not requirement.specifier.contains(dist.version):
             raise ValueError(f'Installed dependency does not satisfy {requirement}: {dist.version}')

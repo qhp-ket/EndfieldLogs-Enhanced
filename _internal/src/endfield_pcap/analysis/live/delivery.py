@@ -4,7 +4,7 @@ import queue
 from collections import deque
 
 
-STATE_TYPES = {'analysis_summary', 'analysis_snapshot', 'combo_snapshot', 'buff_snapshot'}
+STATE_TYPES = {'analysis_summary', 'analysis_snapshot', 'combo_snapshot'}
 MAX_PENDING_MESSAGES = 1024
 
 

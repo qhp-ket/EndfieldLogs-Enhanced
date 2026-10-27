@@ -6,6 +6,8 @@ conceal a broken Tangtang parent-to-main approval mapping.
 from copy import deepcopy
 import pytest
 from parser_core import battle_log_parser as parser
+import parser_core.catalog.packet_semantics as parser_packet_semantics
+import parser_core.effects.approval as parser_approval
 
 
 PARENT = 'buff_chr_0027_tangtang_normalskill_spellvulnerable'
@@ -17,7 +19,12 @@ def record(monkeypatch):
     registry = deepcopy(parser._load_rdps_semantics_registry())
     registry['verified_effects'] = {PARENT: registry['verified_effects'][PARENT]}
     registry['verified_prefixes'] = []
-    monkeypatch.setattr(parser, '_load_rdps_semantics_registry', lambda: registry)
+    for patched_consumer in (
+        parser,
+        parser_approval,
+        parser_packet_semantics,
+    ):
+        monkeypatch.setattr(patched_consumer, '_load_rdps_semantics_registry', lambda: registry)
     return {'event_key': MAIN, 'raw_event_key': MAIN, 'uid': '7001',
             'source_character_key': 'chr_0027_tangtang', 'source_actor_id': '2001',
             'target_character_key': 'eny_0051_rodin', 'target_actor_id': '3001',

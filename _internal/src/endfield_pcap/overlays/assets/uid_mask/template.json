@@ -1,6 +1,36 @@
 {
-  "schema_version":1, "name":"UID 黑色遮挡", "entry": "index.html",
-  "subscriptions":[], "font_mode":"css",
-  "window":{"min_width":20,"min_height":12,"default_width":220,"default_height":32},
-  "settings":[{"key":"shape","label":"遮挡形状","type":"select","default":"rectangle","options":[{"value":"rectangle","label":"矩形（完整遮挡）"},{"value":"rounded","label":"圆角矩形"}]}]
+  "schema_version": 2,
+  "name": "UID 黑色遮挡",
+  "window": {
+    "min_width": 20,
+    "min_height": 12,
+    "default_width": 220,
+    "default_height": 32
+  },
+  "settings": [
+    {
+      "key": "shape",
+      "label": "遮挡形状",
+      "type": "select",
+      "default": "rectangle",
+      "options": [
+        {
+          "value": "rectangle",
+          "label": "矩形（完整遮挡）"
+        },
+        {
+          "value": "rounded",
+          "label": "圆角矩形"
+        }
+      ]
+    }
+  ],
+  "modules": [
+    {
+      "type": "uid_mask"
+    }
+  ],
+  "layout": {
+    "direction": "single"
+  }
 }

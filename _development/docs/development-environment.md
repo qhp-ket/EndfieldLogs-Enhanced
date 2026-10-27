@@ -9,7 +9,7 @@ Windows x64 项目根目录执行 `Setup-Dev.cmd`，完成后用 `Start-GUI.cmd`
 | 系统环境部分可用 | 建立项目 `.venv` 并补齐 |
 | 缺少 Python | 下载并校验官方 CPython 3.14.2 NuGet 包，再建立 `.venv` |
 
-依赖按实际导入检查，已有版本可继续使用。PySide6 自带 Qt/WebEngine。
+依赖按实际导入检查，已有版本可继续使用。界面使用 PySide6 Widgets，视觉识别使用 Qt Multimedia。
 运行数据由源码附带的精简包离线恢复，恢复包和文件逐项核对 SHA-256，开发规则取当前源码。
 
 ```powershell

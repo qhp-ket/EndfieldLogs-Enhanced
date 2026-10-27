@@ -10,23 +10,10 @@ import endfield_pcap.gui.config as gui_config
 from endfield_pcap.history.analysis import load_record_snapshot
 from endfield_pcap.history.importer import load_trace_records
 from app_test_support.ui.window import main_window
-from app_test_support.ui.qt import EVIDENCE, snapshot_message, read_dom
+from app_test_support.ui.qt import EVIDENCE, snapshot_message
 
 def wait_for_damage(overlay, expected):
-    # A newly enabled window may finish loading before the history-completion
-    # queue has returned. Verify the rendered state without awaiting a past
-    # loadFinished signal or reloading to manufacture another one.
-    loop=QEventLoop()
-    poll=QTimer(); poll.setInterval(50)
-    observed=[]
-    def received(value):
-        observed.append(value)
-        if value==expected: loop.quit()
-    poll.timeout.connect(lambda: overlay.webview.page().runJavaScript(
-        "document.getElementById('totalDamage')?.textContent || ''", received))
-    timeout=QTimer(); timeout.setSingleShot(True); timeout.timeout.connect(loop.quit)
-    poll.start(); timeout.start(15000); loop.exec(); poll.stop(); timeout.stop()
-    assert expected in observed
+    wait_for(lambda: str(int(overlay.canvas.modules[0].snapshot.get('battle',{}).get('total_damage',0))) == expected, __import__('PySide6.QtWidgets',fromlist=['QApplication']).QApplication.instance())
 
 def test_trace_import_indexes_then_loads_selected_snapshot_and_keeps_quality(tmp_path, monkeypatch):
     from parser_core import unified
@@ -97,8 +84,7 @@ def test_gui_import_repeat_failure_history_and_return_live(main_window, app, mon
     assert window.grab().save(str(EVIDENCE/f'gui-trace-imported-{platform}.png'))
     overlay = window.overlay_manager._windows['controls']
     wait_for_damage(overlay,'860')
-    dom=read_dom(overlay)
-    assert dom['damage'] == '860' and dom['rows']==2
+    assert len(overlay.canvas.modules[0].snapshot['participants']) == 2
     loop=QEventLoop(); QTimer.singleShot(250,loop.quit); loop.exec()
     assert overlay.grab().save(str(EVIDENCE/f'overlay-trace-imported-{platform}.png'))
     window.overlay_manager.apply_analysis_snapshot(snapshot_message(2))
@@ -107,7 +93,7 @@ def test_gui_import_repeat_failure_history_and_return_live(main_window, app, mon
     assert not window.overlay_manager._history_mode
     assert window.overlay_manager._analysis_snapshot['source']['mode'] == 'live'
     wait_for_damage(overlay,'760')
-    assert read_dom(overlay)['damage']=='760'
+    assert overlay.canvas.modules[0].snapshot['battle']['total_damage']==760
     before = window.overlay_manager._analysis_snapshot
     monkeypatch.setattr(QFileDialog, 'getOpenFileNames', lambda *a: ([str(tmp_path/'missing.log')], ''))
     window.records_page.import_trace_btn.click()

@@ -1,6 +1,13 @@
 from copy import deepcopy
 import pytest
 from parser_core import battle_log_parser as parser
+import parser_core.catalog.packet_semantics as parser_packet_semantics
+import parser_core.effects.approval as parser_approval
+import parser_core.effects.labels as parser_labels
+import parser_core.effects.registry as parser_registry
+import parser_core.effects.semantic_conditions as parser_semantic_conditions
+import parser_core.effects.specifications as parser_specifications
+import parser_core.allocation.preflight as parser_preflight
 
 
 @pytest.mark.parametrize('source,expected', [
@@ -8,10 +15,27 @@ from parser_core import battle_log_parser as parser
     ('chr_0004_pelica', {'chr_0004_pelica': 175}),
 ])
 def test_typed_effect_outside_whitelist_cannot_transfer_credit(monkeypatch, source, expected):
-    monkeypatch.setattr(parser, '_load_rdps_semantics_registry', lambda: {})
-    monkeypatch.setattr(parser, '_rdps_registry_known_non_rdps_entry', lambda record: None)
-    monkeypatch.setattr(parser, '_collect_semantic_condition_zone_effects', lambda record, root_lookup_cache=None: [
-        {'zone': 'atk', 'element': 'all', 'rate': 0.5, 'bb_key': 'rate'}])
+    for patched_consumer in (
+        parser,
+        parser_approval,
+        parser_packet_semantics,
+    ):
+        monkeypatch.setattr(patched_consumer, '_load_rdps_semantics_registry', lambda: {})
+    for patched_consumer in (
+        parser,
+        parser_preflight,
+        parser_registry,
+        parser_specifications,
+    ):
+        monkeypatch.setattr(patched_consumer, '_rdps_registry_known_non_rdps_entry', lambda record: None)
+    for patched_consumer in (
+        parser,
+        parser_labels,
+        parser_semantic_conditions,
+        parser_specifications,
+    ):
+        monkeypatch.setattr(patched_consumer, '_collect_semantic_condition_zone_effects', lambda record, root_lookup_cache=None: [
+            {'zone': 'atk', 'element': 'all', 'rate': 0.5, 'bb_key': 'rate'}])
     record = {'event_key': 'buff_not_approved', 'source_character_key': source,
               'target_character_key': 'chr_0004_pelica', 'bb_values': {'rate': 0.5}}
     effects = parser._collect_zone_effects(record)
@@ -37,9 +61,20 @@ def test_typed_effect_outside_whitelist_cannot_transfer_credit(monkeypatch, sour
 def test_typed_branch_keeps_whitelist_element_union_without_duplicate_credit(monkeypatch, elements, hit_element, credit):
     registry = {'verified_effects': {'buff_approved': {'effects': [
         {'zone': 'dmg_inc', 'element': element, 'bb_key': 'rate'} for element in elements]}}}
-    monkeypatch.setattr(parser, '_load_rdps_semantics_registry', lambda: registry)
-    monkeypatch.setattr(parser, '_collect_semantic_condition_zone_effects', lambda record, root_lookup_cache=None: [
-        {'zone': 'dmg_inc', 'element': 'all', 'rate': 0.2, 'bb_key': 'rate'}])
+    for patched_consumer in (
+        parser,
+        parser_approval,
+        parser_packet_semantics,
+    ):
+        monkeypatch.setattr(patched_consumer, '_load_rdps_semantics_registry', lambda: registry)
+    for patched_consumer in (
+        parser,
+        parser_labels,
+        parser_semantic_conditions,
+        parser_specifications,
+    ):
+        monkeypatch.setattr(patched_consumer, '_collect_semantic_condition_zone_effects', lambda record, root_lookup_cache=None: [
+            {'zone': 'dmg_inc', 'element': 'all', 'rate': 0.2, 'bb_key': 'rate'}])
     record = {'event_key': 'buff_approved', 'source_character_key': 'chr_0023_antal',
               'target_character_key': 'chr_0004_pelica', 'bb_values': {'rate': 0.2}}
     effects = parser._collect_zone_effects(record)
@@ -59,10 +94,21 @@ def test_whitelist_condition_and_typed_condition_both_apply(monkeypatch, mask, c
     registry = {'verified_effects': {'buff_approved': {'effects': [
         {'zone': 'atk', 'element': 'all', 'bb_key': 'rate',
          'condition': {'type': 'damage_decorate_mask', 'mask': 128, 'check': 'HasAll'}}]}}}
-    monkeypatch.setattr(parser, '_load_rdps_semantics_registry', lambda: registry)
-    monkeypatch.setattr(parser, '_collect_semantic_condition_zone_effects', lambda record, root_lookup_cache=None: [
-        {'zone': 'atk', 'element': 'all', 'rate': 0.2, 'bb_key': 'rate',
-         'condition': {'type': 'damage_decorate_mask', 'mask': 64, 'check': 'HasAll'}}])
+    for patched_consumer in (
+        parser,
+        parser_approval,
+        parser_packet_semantics,
+    ):
+        monkeypatch.setattr(patched_consumer, '_load_rdps_semantics_registry', lambda: registry)
+    for patched_consumer in (
+        parser,
+        parser_labels,
+        parser_semantic_conditions,
+        parser_specifications,
+    ):
+        monkeypatch.setattr(patched_consumer, '_collect_semantic_condition_zone_effects', lambda record, root_lookup_cache=None: [
+            {'zone': 'atk', 'element': 'all', 'rate': 0.2, 'bb_key': 'rate',
+             'condition': {'type': 'damage_decorate_mask', 'mask': 64, 'check': 'HasAll'}}])
     record = {'event_key': 'buff_approved', 'source_character_key': 'chr_0023_antal',
               'target_character_key': 'chr_0004_pelica', 'bb_values': {'rate': 0.2}}
     window = {**record, 'uid': 'one', 'start_ts_ms': 0, 'end_ts_ms': 1000,
@@ -77,7 +123,12 @@ def test_whitelist_condition_and_typed_condition_both_apply(monkeypatch, mask, c
 def test_packet_dynamic_hint_cannot_expand_whitelist_zone(monkeypatch, zone, operand, allowed):
     registry = {'verified_effects': {'buff_dynamic': {'dynamic': True,
         'dynamic_effects': [{'zone': 'atk', 'element': 'all', 'base_bb_key': 'base'}]}}}
-    monkeypatch.setattr(parser, '_load_rdps_semantics_registry', lambda: registry)
+    for patched_consumer in (
+        parser,
+        parser_approval,
+        parser_packet_semantics,
+    ):
+        monkeypatch.setattr(patched_consumer, '_load_rdps_semantics_registry', lambda: registry)
     record = {'event_key': 'buff_dynamic', 'bb_values': {operand: 0.2},
               'packet_mapping': {'dynamic_effects': [{'zone': zone, 'element': 'all', 'base_bb_key': operand}]}}
     effects = parser._extract_dynamic_effect_specs(record)

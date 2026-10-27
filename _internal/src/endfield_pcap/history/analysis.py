@@ -23,7 +23,7 @@ def load_record_snapshot(record: CombatRecord) -> dict:
     # battle-state event. Let the live parser select the active prefix context;
     # analyze the bounded text with the canonical overlay batch entry point.
     parser = _new_live_parser()
-    from parser_core.live import _preserved_context_lines
+    from parser_core.realtime.live import _preserved_context_lines
     from parser_core.unified import parse_overlay_battle_snapshot_text
 
     context: list[str] = []

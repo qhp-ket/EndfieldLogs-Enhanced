@@ -3,19 +3,18 @@ from __future__ import annotations
 
 import math
 from pathlib import Path
-from PySide6.QtCore import QObject, QTimer, Slot
-from PySide6.QtWebChannel import QWebChannel
+from PySide6.QtCore import QObject, QTimer
 from endfield_pcap.models import OverlaySourceType
 
 SCALE_SETTING = '_damage_window_scale'
 
 
-class ContentSizeBridge(QObject):
+class ContentFitter(QObject):
     def __init__(self, window):
         super().__init__(window)
         self.window = window
         self.source = window.entry.source_value
-        self.scale_setting = SCALE_SETTING if self.source == 'damage' else '_combo_window_scale'
+        self.scale_setting = {'damage': SCALE_SETTING, 'combo_skill': '_combo_window_scale'}.get(self.source, '_native_window_scale')
         self.reference = None
         stored = window.entry.template_settings.get(self.scale_setting)
         self.scale = (float(stored) if window.entry.geometry is not None
@@ -25,55 +24,42 @@ class ContentSizeBridge(QObject):
         self.pending = None
         self.reset_position = window.entry.geometry is None
         self.default_anchor = self.reset_position
-        self.layout_style = window.entry.template_settings.get('display_style', 'circles')
-        self.bar_width = (window.width() if self.source == 'combo_skill'
-                          and self.layout_style == 'bars' and window.entry.geometry else None)
+        self.layout_style = 'bars' if window.canvas.bars else 'circles'
+        self.bar_width = (window.width() if self.layout_style == 'bars' and window.entry.geometry else None)
         self.timer = QTimer(self)
         self.timer.setSingleShot(True)
         self.timer.timeout.connect(self._apply)
-        self.channel = QWebChannel(self)
-        self.channel.registerObject('damageContent' if self.source == 'damage' else 'comboContent', self)
-        window.webview.page().setWebChannel(self.channel)
-
     def window_resized(self):
         window = self.window
         if self.resizing or self.reset_position or self.reference is None or window._drag_size is not None:
             return
         width, height = self.reference
-        if self.source == 'combo_skill' and self.layout_style == 'bars':
+        if self.window.canvas.bars:
             self.scale = window.height()/height
             self.bar_width = window.width()
         else:
             self.scale = min(window.width()/width, window.height()/height)
         self.default_anchor = False
+        self.pending = None
+        self.timer.stop()
 
     def window_moved(self):
         if not self.resizing and not self.reset_position:
             self.default_anchor = False
 
-    @Slot(float, float)
-    def fit(self, width, height):
-        window = self.window
-        # The channel is a sizing capability for this local renderer only.
-        from endfield_pcap.overlays.templates import ASSETS
-        if (window.entry.source_type != OverlaySourceType.BUILTIN
-                or self.source not in ('damage', 'combo_skill')
-                or window.entry.source_value != self.source
-                or Path(window.webview.url().toLocalFile()).resolve() != (ASSETS / ('damage' if self.source == 'damage' else 'combo') / 'index.html').resolve()
-                or not all(math.isfinite(v) and 0 < v <= 32768 for v in (width, height))):
+    def fit(self, width, height, style='circles'):
+        if not all(math.isfinite(v) and 0 < v <= 32768 for v in (width, height)):
             return
-        self.pending = (width, height)
-        self.timer.start(0)
-        return True
-
-    @Slot(float, float, str)
-    def fitLayout(self, width, height, style):
-        if (self.source != 'combo_skill' or style not in ('bars', 'circles')
-                or style != self.window.entry.template_settings.get('display_style', 'circles')):
+        style_changed = self.window.canvas.bars != (self.layout_style == 'bars')
+        if not self.reset_position and not style_changed and self.reference == (width,height):
             return
-        if self.fit(width, height) and style != self.layout_style:
+        if style_changed:
             self.bar_width = None
-            self.layout_style = style
+        self.layout_style = 'bars' if self.window.canvas.bars else 'circles'
+        self.pending = (width, height)
+        if self.reference is None:
+            self.reference = self.pending
+        self.timer.start(0)
 
     def _apply(self):
         window = self.window
@@ -98,7 +84,7 @@ class ContentSizeBridge(QObject):
         # Clamp the common scale first; independently clamping dimensions leaves
         # empty space below the table and changes height again on the next open.
         target_width = max(window.minimumWidth(), math.ceil(width*self.scale))
-        if self.source == 'combo_skill' and self.layout_style == 'bars' and self.bar_width:
+        if self.window.canvas.bars and self.bar_width:
             target_width = max(window.minimumWidth(), self.bar_width)
             if area:
                 target_width = min(target_width, max(window.minimumWidth(), area.width()))

@@ -7,7 +7,6 @@ from PySide6.QtCore import QUrl
 from PySide6.QtGui import QImage
 from endfield_pcap.data import avatars
 from endfield_pcap.gui.shared import avatars as qt_avatars
-from endfield_pcap.gui.battle.web import _LocalAssetsOnly, ASSETS
 
 
 def test_portrait_manifest_hashes_dimensions_and_transparency():
@@ -54,22 +53,6 @@ def test_qt_cache_reuses_decode_and_scales_for_size_and_dpi(app):
     assert qt_avatars.avatar_pixmap('public', 24).isNull()
 
 
-def test_web_allowlist_adds_only_shared_portrait_pngs():
-    class Request:
-        blocked = False
-        def __init__(self, url): self.url = QUrl(url)
-        def requestUrl(self): return self.url
-        def block(self, value): self.blocked = value
-    interceptor = _LocalAssetsOnly()
-    for path, allowed in [(avatars.ROOT/'chr_0002_endminm.png', True),
-        (ASSETS/'app.js', True), (avatars.ROOT/'manifest.json', False),
-        (avatars.ROOT.parent/'other.png', False), (avatars.ROOT/'nested/private.png', False)]:
-        request = Request(QUrl.fromLocalFile(str(path)).toString())
-        interceptor.interceptRequest(request)
-        assert request.blocked == (not allowed)
-    remote = Request('https://example.invalid/avatar.png')
-    interceptor.interceptRequest(remote)
-    assert remote.blocked
 
 
 def test_ui_manifest_is_audited_separately_and_rejects_corruption(tmp_path, monkeypatch):

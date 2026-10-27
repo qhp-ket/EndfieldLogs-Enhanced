@@ -9,6 +9,11 @@ from parser_core.live import LiveOverlayBattleParser
 from parser_core.unified import parse_overlay_battle_snapshot_text
 from parser_core.ink_provenance import _ink_provenance_ingestion, EXPLOSION
 from parser_test_support.ink import Trace, ATTACKER, SUPPORT
+import parser_core.allocation.hit as parser_hit
+import parser_core.allocation.ledger as parser_ledger
+import parser_core.reporting.hit_details as parser_hit_details
+import parser_core.hit_context as parser_hit_context
+import parser_core.hit_debug as parser_hit_debug
 
 def test_every_prefix_matches_offline_and_old_hits_are_not_reallocated():
     engine, lines = IncrementalBattleParser(), []
@@ -46,7 +51,15 @@ def test_pending_damage_is_one_suffix_but_can_reuse_unchanged_computations(monke
         if hit['seq'] == 2:
             hit['rdps_unresolved_effect_conditions'] = True
         return result
-    monkeypatch.setattr(core, '_allocate_rdps_for_hit', unresolved_second)
+    for patched_consumer in (
+        core,
+        parser_hit_context,
+        parser_hit_debug,
+        parser_hit_details,
+        parser_hit,
+        parser_ledger,
+    ):
+        monkeypatch.setattr(patched_consumer, '_allocate_rdps_for_hit', unresolved_second)
     engine = IncrementalBattleParser()
     lines = [hit(i) for i in range(1, 5)]
     engine.snapshot(lines)

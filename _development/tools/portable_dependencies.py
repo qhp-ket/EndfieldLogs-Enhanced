@@ -7,14 +7,9 @@ from pathlib import Path, PurePosixPath
 import struct
 
 QT_BINDINGS = frozenset({'QtCore', 'QtGui', 'QtWidgets', 'QtNetwork', 'QtPrintSupport',
-                         'QtSvg', 'QtSvgWidgets', 'QtXml', 'QtWebChannel', 'QtMultimedia',
-                         'QtWebEngineCore', 'QtWebEngineWidgets'})
+                         'QtSvg', 'QtSvgWidgets', 'QtXml', 'QtMultimedia'})
 QT_PLUGIN_GROUPS = frozenset({'platforms', 'styles', 'imageformats', 'iconengines',
                              'networkinformation', 'tls', 'platforminputcontexts', 'multimedia'})
-QT_RESOURCES = frozenset({'icudtl.dat', 'qtwebengine_resources.pak',
-                         'qtwebengine_resources_100p.pak', 'qtwebengine_resources_200p.pak',
-                         'v8_context_snapshot.bin'})
-LOCALES = frozenset({'en-US', 'zh-CN', 'zh-TW'})
 
 
 def pe_imports(path):
@@ -75,7 +70,7 @@ def qt_runtime_files(root):
     for relative in files:
         p = PurePosixPath(relative)
         if len(p.parts) == 1:
-            if p.name in {'__init__.py', '_config.py', 'py.typed', 'QtWebEngineProcess.exe',
+            if p.name in {'__init__.py', '_config.py', 'py.typed',
                           'opengl32sw.dll', 'd3dcompiler_47.dll', 'libEGL.dll', 'libGLESv2.dll',
                           'vk_swiftshader.dll', 'vk_swiftshader_icd.json', 'vulkan-1.dll'}:
                 selected.add(relative)
@@ -88,16 +83,10 @@ def qt_runtime_files(root):
                 continue
             if p.parts[1] != 'platforms' or p.name in {'qwindows.dll', 'qoffscreen.dll'}:
                 selected.add(relative)
-        elif p.parts[0] == 'resources' and len(p.parts) == 2 and p.name in QT_RESOURCES:
-            selected.add(relative)
-        elif p.parts[:2] == ('translations', 'qtwebengine_locales') and p.stem in LOCALES and p.suffix == '.pak':
-            selected.add(relative)
         elif (p.parts[0] == 'translations' and len(p.parts) == 2 and
-              p.name.startswith(('qtbase_', 'qtwebengine_')) and
-              p.name.endswith(('_en.qm', '_zh_CN.qm', '_zh_TW.qm'))):
+              p.name.startswith('qtbase_') and p.name.endswith(('_en.qm', '_zh_CN.qm', '_zh_TW.qm'))):
             selected.add(relative)
-    required = {name+'.pyd' for name in QT_BINDINGS} | {'QtWebEngineProcess.exe'}
-    required |= {'resources/'+name for name in QT_RESOURCES}
+    required = {name+'.pyd' for name in QT_BINDINGS}
     if missing := required-selected:
         raise ValueError('Missing Qt runtime inputs: '+', '.join(sorted(missing)))
     native = {PurePosixPath(n).name.lower(): n for n in files if PurePosixPath(n).suffix.lower() == '.dll'}
@@ -118,6 +107,8 @@ def dependency_file_allowed(relative, qt_files):
     path = PurePosixPath(str(relative).replace('\\', '/'))
     if path.parts[0] == 'PySide6':
         return PurePosixPath(*path.parts[1:]).as_posix() in qt_files
+    if path.parts[:2] == ('qframelesswindow', 'webengine'):
+        return False
     # Build interfaces, stubs and help files are not runtime inputs.
     if path.suffix.lower() in {'.h', '.hpp', '.lib', '.pyi', '.chm', '.pdb'}:
         return False

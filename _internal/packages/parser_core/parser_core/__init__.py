@@ -1,12 +1,7 @@
 from parser_core.schemas.battle import BattleCandidate, BattleSummary
-from parser_core.battle_log_parser import parse_raw_battle_log_text
-from parser_core.hit_context import (
-    build_character_states,
-    build_hit_context,
-    explain_hit_context,
-    rdps_contribution_map,
-)
-from parser_core.hit_debug import parse_hit_debug_log_text
+from parser_core.parser import parse_raw_battle_log_text
+from parser_core.diagnostics.hit_context import build_character_states, build_hit_context, explain_hit_context, rdps_contribution_map
+from parser_core.diagnostics.hit_debug import parse_hit_debug_log_text
 from parser_core.unified import (
     parse_hit_viewer_log_text,
     parse_overlay_battle_snapshot_text,
@@ -15,7 +10,7 @@ from parser_core.unified import (
     rdps_totals_from_hit_debug,
     rdps_totals_from_raw_report,
 )
-from parser_core.live import LiveOverlayBattleParser
+from parser_core.realtime.live import LiveOverlayBattleParser
 from parser_core.integrity import (
     INTEGRITY_VERSION,
     build_canonical_json,

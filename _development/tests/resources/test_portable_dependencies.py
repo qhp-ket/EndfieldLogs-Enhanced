@@ -11,15 +11,21 @@ from portable_dependencies import QT_BINDINGS, dependency_file_allowed, pe_impor
 from portable_uploader import extract_uploader, PREFIX
 
 
+def test_release_distribution_closure_uses_native_qt_wheels():
+    from app_test_support.runtime.packaging import builder
+    resolved = builder.dependencies()
+    assert {'pyside6-essentials', 'pyside6-addons', 'shiboken6'} <= resolved.keys()
+    assert not {'pyside6', 'pyside6-webengine', 'pyside6-pdf'} & resolved.keys()
+
+
 def test_qt_closure_keeps_runtime_dependencies_and_excludes_development_assets():
     if sys.platform != 'win32':
         pytest.skip('Windows Qt PE dependency check')
     root = Path(distribution('PySide6-Essentials').locate_file('PySide6'))
     assert root.is_dir(), f'Installed Qt runtime is missing: {root}'
     selected = qt_runtime_files(root)
-    for required in ('Qt6WebEngineCore.dll', 'Qt6Quick.dll', 'Qt6Core.dll',
-                     'plugins/platforms/qwindows.dll', 'opengl32sw.dll',
-                     'translations/qtwebengine_locales/zh-CN.pak'):
+    for required in ('Qt6Core.dll',
+                     'plugins/platforms/qwindows.dll', 'opengl32sw.dll'):
         assert required in selected
     assert 'QtMultimedia.pyd' in selected
     assert 'plugins/multimedia/ffmpegmediaplugin.dll' in selected
@@ -28,7 +34,7 @@ def test_qt_closure_keeps_runtime_dependencies_and_excludes_development_assets()
     assert not any('.debug.' in name or name.startswith(('qml/', 'include/', 'metatypes/')) for name in selected)
     assert 'QtDesigner.pyd' not in selected
     assert 'QtTest.pyd' not in selected
-    assert 'qtwebengine_devtools_resources.pak' not in selected
+    assert not any('webengine' in name.lower() or 'webchannel' in name.lower() for name in selected)
     native = {p.name.lower() for p in root.rglob('*.dll')}
     retained = {Path(n).name.lower() for n in selected}
     for name in selected:
@@ -54,6 +60,8 @@ def test_all_application_qt_imports_are_packaged():
     ('win32/win32print.pyd', True), ('win32/lib/pywintypes.py', True),
     ('win32/win32service.pyd', False), ('numpy/_core/include/array.h', False),
     ('numpy.libs/blas.dll', True), ('certifi/cacert.pem', True),
+    ('qframelesswindow/webengine/__init__.py', False),
+    ('qframelesswindow/windows/__init__.py', True),
 ])
 def test_dependency_surface(relative, keep):
     assert dependency_file_allowed(relative, set()) is keep

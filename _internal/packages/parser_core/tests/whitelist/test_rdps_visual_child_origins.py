@@ -6,6 +6,30 @@ approvals cannot conceal a missing projection. No game rates are reconstructed.
 from copy import deepcopy
 import pytest
 from parser_core import battle_log_parser as parser
+import parser_core.catalog.buff_templates as parser_buff_templates
+import parser_core.catalog.packet_semantics as parser_packet_semantics
+import parser_core.catalog.skill_damage as parser_skill_damage
+import parser_core.effects.window_identity as parser_window_identity
+import parser_core.effects.approval as parser_approval
+import parser_core.ingestion.buff_observations as parser_buff_observations
+import parser_core.ingestion.dynamic_evidence as parser_dynamic_evidence
+import parser_core.effects.enemy_status as parser_enemy_status
+import parser_core.ingestion.hits as parser_hits
+import parser_core.reporting.timeline as parser_timeline
+import parser_core.effects.conditions as parser_conditions
+import parser_core.effects.registry as parser_registry
+import parser_core.effects.semantic_conditions as parser_semantic_conditions
+import parser_core.effects.specifications as parser_specifications
+import parser_core.effects.stacking_rules as parser_stacking_rules
+import parser_core.allocation.hit as parser_hit
+import parser_core.allocation.ledger as parser_ledger
+import parser_core.effects.imbue as parser_imbue
+import parser_core.effects.lifecycle as parser_lifecycle
+import parser_core.effects.windows as parser_windows
+import parser_core.allocation.resistance as parser_resistance
+import parser_core.allocation.stack_selection as parser_stack_selection
+import parser_core.reporting.critical as parser_critical
+import parser_core.reporting.effect_windows as parser_effect_windows
 
 
 CASES = [
@@ -37,7 +61,12 @@ def isolate_approval(monkeypatch):
             # only in this test isolates the new fallback without expanding
             # the remaining declaration, its effect or either source guard.
             registry['verified_effects'][key].pop('aliases', None)
-        monkeypatch.setattr(parser, '_load_rdps_semantics_registry', lambda: registry)
+        for patched_consumer in (
+            parser,
+            parser_approval,
+            parser_packet_semantics,
+        ):
+            monkeypatch.setattr(patched_consumer, '_load_rdps_semantics_registry', lambda: registry)
         return registry
 
     return apply
@@ -234,7 +263,32 @@ def test_projection_requires_unique_enabled_action_and_ancestors(isolate_approva
                       'succeedActions': {'actionData': [action]}}
     else:
         actions.append(deepcopy(action))
-    monkeypatch.setattr(parser, '_load_current_buff_roots', lambda: roots)
+    for patched_consumer in (
+        parser,
+        parser_critical,
+        parser_effect_windows,
+        parser_resistance,
+        parser_stack_selection,
+        parser_imbue,
+        parser_ledger,
+        parser_lifecycle,
+        parser_windows,
+        parser_conditions,
+        parser_registry,
+        parser_semantic_conditions,
+        parser_specifications,
+        parser_stacking_rules,
+        parser_timeline,
+        parser_hits,
+        parser_enemy_status,
+        parser_approval,
+        parser_buff_observations,
+        parser_dynamic_evidence,
+        parser_window_identity,
+        parser_buff_templates,
+        parser_skill_damage,
+    ):
+        monkeypatch.setattr(patched_consumer, '_load_current_buff_roots', lambda: roots)
     assert parser._rdps_registry_matching_effect_entry(record_for(case), require_guard=True,
                 root_lookup_cache={} if use_parse_cache else None) is None
 
@@ -258,7 +312,32 @@ def test_projection_requires_exact_unambiguous_visual_child_reference(isolate_ap
         else:
             action['childBuffId']['useBlackboardKey'] = True
             action['childBuffId']['blackboardKey'] = 'unknown_runtime_child'
-    monkeypatch.setattr(parser, '_load_current_buff_roots', lambda: roots)
+    for patched_consumer in (
+        parser,
+        parser_critical,
+        parser_effect_windows,
+        parser_resistance,
+        parser_stack_selection,
+        parser_imbue,
+        parser_ledger,
+        parser_lifecycle,
+        parser_windows,
+        parser_conditions,
+        parser_registry,
+        parser_semantic_conditions,
+        parser_specifications,
+        parser_stacking_rules,
+        parser_timeline,
+        parser_hits,
+        parser_enemy_status,
+        parser_approval,
+        parser_buff_observations,
+        parser_dynamic_evidence,
+        parser_window_identity,
+        parser_buff_templates,
+        parser_skill_damage,
+    ):
+        monkeypatch.setattr(patched_consumer, '_load_current_buff_roots', lambda: roots)
     assert parser._rdps_registry_matching_effect_entry(record_for(case), require_guard=True) is None
 
 
@@ -340,7 +419,32 @@ def test_visual_projection_requires_valid_main_to_child_forwarding(isolate_appro
         rate_assignment['inputValueKey'] = 'another_rate'
     elif change == 'missing_forward':
         actions.clear()
-    monkeypatch.setattr(parser, '_load_current_buff_roots', lambda: roots)
+    for patched_consumer in (
+        parser,
+        parser_critical,
+        parser_effect_windows,
+        parser_resistance,
+        parser_stack_selection,
+        parser_imbue,
+        parser_ledger,
+        parser_lifecycle,
+        parser_windows,
+        parser_conditions,
+        parser_registry,
+        parser_semantic_conditions,
+        parser_specifications,
+        parser_stacking_rules,
+        parser_timeline,
+        parser_hits,
+        parser_enemy_status,
+        parser_approval,
+        parser_buff_observations,
+        parser_dynamic_evidence,
+        parser_window_identity,
+        parser_buff_templates,
+        parser_skill_damage,
+    ):
+        monkeypatch.setattr(patched_consumer, '_load_current_buff_roots', lambda: roots)
     assert parser._rdps_registry_matching_effect_entry(record_for(case), require_guard=True,
                 root_lookup_cache={} if use_parse_cache else None) is None
 
@@ -353,7 +457,32 @@ def test_forward_cache_keeps_create_nodes_without_an_integer_action_index(isolat
     action = roots[case[3]]['buffEventAction'][0]['actions'][0]['actionData'][0]
     assert action['$type'] == 'Beyond.Gameplay.Core.CreateBuffAction.Data'
     action.pop('serverActionIndex')
-    monkeypatch.setattr(parser, '_load_current_buff_roots', lambda: roots)
+    for patched_consumer in (
+        parser,
+        parser_critical,
+        parser_effect_windows,
+        parser_resistance,
+        parser_stack_selection,
+        parser_imbue,
+        parser_ledger,
+        parser_lifecycle,
+        parser_windows,
+        parser_conditions,
+        parser_registry,
+        parser_semantic_conditions,
+        parser_specifications,
+        parser_stacking_rules,
+        parser_timeline,
+        parser_hits,
+        parser_enemy_status,
+        parser_approval,
+        parser_buff_observations,
+        parser_dynamic_evidence,
+        parser_window_identity,
+        parser_buff_templates,
+        parser_skill_damage,
+    ):
+        monkeypatch.setattr(patched_consumer, '_load_current_buff_roots', lambda: roots)
     record = record_for(case)
     expected = parser._rdps_registry_matching_effect_entry(record, require_guard=True)
     assert expected is not None

@@ -34,7 +34,7 @@ def load_trace_records(path: Path) -> list[TraceCombatRecord]:
     package = bundle_root() / 'packages/uploader_core'
     if str(package) not in sys.path:
         sys.path.insert(0, str(package))
-    from uploader_core.battle_payload_builder import _split_trace_into_battles
+    from parser_core.battle_splitter import split_trace_battles
 
     match = re.search(r'(20\d{6})', path.name)
     try:
@@ -45,7 +45,7 @@ def load_trace_records(path: Path) -> list[TraceCombatRecord]:
     for line in text.splitlines(keepends=True):
         offsets.append(offsets[-1] + len(line.encode('utf-8')))
     records = []
-    for segment in _split_trace_into_battles(text):
+    for segment in split_trace_battles(text):
         stamp = datetime.combine(reference, datetime.strptime(segment['first_hit_hint'], '%H-%M-%S-%f').time())
         start = int(segment['start_line_index'])
         end = start + len(segment['content'].splitlines())

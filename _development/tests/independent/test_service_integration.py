@@ -6,7 +6,7 @@ from types import SimpleNamespace
 from PySide6.QtTest import QTest
 from PySide6.QtCore import Qt
 from app_test_support.ui.window import main_window
-from app_test_support.ui.qt import page_value, wait_for_page, EVIDENCE
+from app_test_support.ui.qt import EVIDENCE
 from app_test_support.scenarios.trace import wait_for
 from app_test_support.scenarios.compact import sample
 from endfield_pcap.gui.battle.detail import BattleDetailDialog
@@ -86,29 +86,9 @@ def test_home_input_and_combo_subscriptions_are_independent_of_capture(main_wind
     assert not load_app_config(window.config_path).input_recording_enabled
 
 
-def test_input_overlay_replays_latest_without_starting_recorder(app):
-    entry=OverlayEntry('inputs','最近输入',OverlaySourceType.BUILTIN,'input',True,False,False)
-    window=OverlayWindow(OverlayWindowConfig(entry=entry,ws_port=1,use_in_process_snapshots=True))
-    message=dict(type='input_snapshot',schema_version=1,stream_id='inputs',sequence=1,
-                 snapshot=dict(status='recording',recent=[dict(seq=1,code='K:49',device='keyboard')]))
-    try:
-        window.apply_input_snapshot(message)
-        wait_for_page(window,window.show)
-        assert '1' in page_value(window,'document.body.textContent')
-        wait_for_page(window,window.webview.reload)
-        assert page_value(window,'window.endfieldOverlay.snapshots.input_snapshot.sequence')==1
-        restarted=dict(message,stream_id='next-recording',sequence=0,
-            snapshot=dict(status='recording',recent=[dict(seq=1,code='K:69',device='keyboard')]))
-        window.apply_input_snapshot(restarted)
-        assert page_value(window,'document.querySelector("kbd").textContent')=='E'
-        window.apply_input_snapshot(dict(restarted,sequence=1,snapshot=dict(status='stopped',recent=[])))
-        assert '未开启' in page_value(window,'document.body.textContent')
-        window.grab().save(str(EVIDENCE/'input-overlay.png'))
-    finally:
-        window.close();app.processEvents()
 
 
-def test_both_analysis_styles_share_evidence_filter_and_preserve_canonical_snapshot(app):
+def test_native_analysis_evidence_filter_preserves_canonical_snapshot(app):
     snapshot=sample();original=deepcopy(snapshot)
     owner=snapshot['participants'][0]['character_key']
     evidence=dict(settings={},raw=[],warnings=[],actions=[
@@ -121,22 +101,11 @@ def test_both_analysis_styles_share_evidence_filter_and_preserve_canonical_snaps
         assert dialog.timeline.input_markers==3
         tips=[item.toolTip() for item in dialog.timeline.scene().items()]
         assert '蓝色战技输入' in tips and '中断终结技' in tips
-        dialog.view_mode_combo.setCurrentIndex(1)
-        view=dialog.web_analysis
-        wait_for(lambda:view.bridge.ready or bool(view.page.console_errors),app)
-        assert not view.page.console_errors
-        view.set_input_evidence(evidence)
-        def js(source):
-            results=[];view.page.runJavaScript(source,results.append)
-            wait_for(lambda:bool(results),app)
-            return results[0]
-        wait_for(lambda:js('document.querySelectorAll(".input-evidence").length')>=3,app)
-        assert js('Analysis.data.inputs.actions[0].tooltip')=='蓝色战技输入'
-        js("Analysis.state.character='unselected';Analysis.renderTimeline()")
-        assert js('[...document.querySelectorAll(".plot-row")].flatMap(r=>r.inputEvidence||[]).every(a=>a.action==="combo")')
-        view.set_input_evidence(dict(actions=[],raw=[],settings={}))
-        wait_for(lambda:js('document.querySelectorAll(".input-evidence").length')==0,app)
+        dialog.timeline.set_filter('unselected',False)
+        assert not dialog.timeline._role_cells
+        assert dialog.timeline.input_markers == 0
+        dialog.timeline.set_input_evidence(dict(actions=[],raw=[],settings={}))
+        assert dialog.timeline.input_markers == 0
         assert snapshot==original
-        assert not view.page.console_errors
     finally:
         dialog.close();dialog.deleteLater();app.processEvents()

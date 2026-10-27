@@ -6,19 +6,18 @@
 
 `live` 运行整个应用测试集。以下目录相对本文件：
 
-| 目录 | 通过数 | 主要覆盖 |
-| --- | ---: | --- |
-| `battle/` | 69 | Qt/Web 分析、时间轴与技能、BUFF/技力/失衡、详情、头像及列宽 |
-| `gui/` | 78 | 启动选项、路径/配置迁移与恢复、字号滑条、浮窗排序、日志、凭据与正式版更新 |
-| `history/` | 30 | 索引、缓存、选择竞态、重命名回滚、文件引用和上传证明 |
-| `overlays/` | 78 | 启停/显隐、几何/DPI、Qt/JS、头像、伤害适配、连携样式、模板与 WS 凭据 |
-| `service/` | 121 | 摘要/完整发布、WS 认证/慢消费者、抓包句柄生命周期与故障传播、reset/退出隔离、订阅及 trace |
-| `resources/` | 85 | 数据投影、缺角色回退、头像访问边界、依赖锁/闭包、打包、版本及 ignore |
-| `independent/` | 98 | 输入后端/去重/前台/溢出、管道压力/退出兜底、JSONL、绑定与对齐、视觉像素/状态机、独立服务生命周期 |
-| `integration/` | 单独执行 | 可选外部资源的发行约束，默认跳过 |
+| 目录 | 主要覆盖 |
+| --- | --- |
+| `battle/` | 原生分析、角色轨道与“其他”兜底、伤害/技力/失衡、详情、角色统计、质量字段及列宽保存 |
+| `gui/` | 启动、配置迁移与恢复、字号、浮窗排序、日志、凭据与更新 |
+| `history/` | 索引、缓存、选择竞态、重命名回滚、文件引用和上传证明 |
+| `overlays/` | 显隐、几何/DPI、原生布局与绘制、连携状态、v2 组合皮肤、WS 重连及乱序 |
+| `service/` | 简报/完整发布、WS 认证/慢消费者、抓包故障传播、reset/退出隔离、订阅及 trace |
+| `resources/` | 数据、头像边界、依赖锁/闭包、打包、版本及 ignore |
+| `independent/` | 输入后端/去重/前台/溢出、管道退出、JSONL、绑定与对齐、视觉状态与生命周期 |
+| `integration/` | 可选外部资源的发行约束，单独执行 |
 
-`app_test_support/` 提供共享支持：`ui/` 为 Qt/DOM/主窗夹具，`scenarios/` 构造日志和战斗状态，`runtime/` 模拟服务并加载维护工具。
-两个 `.cjs` harness 随对应 Python 用例验证实际渲染脚本。
+`app_test_support/` 提供共享支持：`ui/` 为 Qt/主窗夹具，`scenarios/` 构造日志和战斗状态，`runtime/` 模拟服务并加载维护工具。
 
 ## 核心测试
 
@@ -55,7 +54,10 @@ python -B _development/run_tests.py legacy
 `app-目录名` / `core-目录名` 选择分类，可追加 pytest 参数如 `-k`。
 `legacy --runxfail --tb=short` 用于调查实际断言，该模式关闭 xfail，预期返回非零。
 
-三个可选桌面用例分别依赖 Windows HWND、混合 DPI 双屏、WGC DLL/桌面会话。
+CI 在 `main/python-qt` 与 `main` 的 push、PR 和手动触发时运行仓库审计、`live`、`parser_core`、`uploader_core`，依赖使用 `constraints-ci.txt` 固定版本。测试日志和 JUnit 结果保存为 Actions artifact。
+原生布局、绘制、皮肤迁移、输入绑定和角色轨道的自动测试纳入 `live`；桌面捕获及便携 ZIP 由本机发行验收覆盖。
+
+三个可选桌面用例分别依赖 Windows HWND、混合 DPI 双屏、WGC DLL/桌面会话。另有本地官网源码审计用例，仅在对应参考目录存在时运行。
 真实更新查询用例设置 `ENDFIELD_LIVE_UPDATE_TEST=1` 后运行 `app-integration -k live_updates`，验证正式 Release API 与 GUI 后台提示。
 外部资源检查按前提单独执行，跳过记录为未验证；实体手柄和实战画面另行实机验收。
 输出位于 `_development/verification/`，按改动选择测试见 [打包验证表](../docs/portable-packaging.md)。

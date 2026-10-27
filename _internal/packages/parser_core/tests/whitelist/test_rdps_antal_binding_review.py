@@ -2,6 +2,14 @@
 from copy import deepcopy
 import pytest
 from parser_core import battle_log_parser as parser
+import parser_core.catalog.packet_semantics as parser_packet_semantics
+import parser_core.effects.approval as parser_approval
+import parser_core.ingestion.buff_observations as parser_buff_observations
+import parser_core.ingestion.dynamic_evidence as parser_dynamic_evidence
+import parser_core.effects.packet_mapping as parser_packet_mapping
+import parser_core.ingestion.skill_identity as parser_skill_identity
+import parser_core.effects.imbue as parser_imbue
+import parser_core.reporting.critical as parser_critical
 
 APPROVAL = 'buff_chr_0023_antal_ultimate_enhance'
 CURRENT_PARENT = 'buff_chr_0023_antal_utimate_skill'
@@ -70,7 +78,12 @@ def test_conflicting_parent_alias_declarations_are_not_chosen_by_order(monkeypat
         if not first:
             pairs.reverse()
         isolated = {**registry, 'verified_effects': dict(pairs), 'verified_prefixes': []}
-        monkeypatch.setattr(parser, '_load_rdps_semantics_registry', lambda: isolated)
+        for patched_consumer in (
+            parser,
+            parser_approval,
+            parser_packet_semantics,
+        ):
+            monkeypatch.setattr(patched_consumer, '_load_rdps_semantics_registry', lambda: isolated)
         assert parser._rdps_registry_matching_effect_entry(antal_main_record(element), require_guard=True) is None
 
 
@@ -78,6 +91,22 @@ def test_current_official_numeric_parent_relation_is_required(monkeypatch):
     record = antal_main_record('pulse', 'numeric')
     # A stale internal canonical hint must not rescue an absent official
     # numeric relation, even though 1074 remains listed in the approval.
-    monkeypatch.setattr(parser, '_load_num_id_str_buff_map', lambda: {})
-    monkeypatch.setattr(parser, '_canonical_num_table_buff_number', lambda *args, **kwargs: CURRENT_PARENT)
+    for patched_consumer in (
+        parser,
+        parser_critical,
+        parser_imbue,
+        parser_packet_mapping,
+        parser_skill_identity,
+        parser_approval,
+        parser_buff_observations,
+        parser_dynamic_evidence,
+        parser_packet_semantics,
+    ):
+        monkeypatch.setattr(patched_consumer, '_load_num_id_str_buff_map', lambda: {})
+    for patched_consumer in (
+        parser,
+        parser_packet_mapping,
+        parser_skill_identity,
+    ):
+        monkeypatch.setattr(patched_consumer, '_canonical_num_table_buff_number', lambda *args, **kwargs: CURRENT_PARENT)
     assert parser._rdps_registry_matching_effect_entry(record, require_guard=True) is None

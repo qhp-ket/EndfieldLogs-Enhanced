@@ -29,9 +29,7 @@ def _overlay_source_type_label(source_type: OverlaySourceType) -> str:
     if source_type == OverlaySourceType.BUILTIN:
         return "内置悬浮窗"
     if source_type == OverlaySourceType.FILE:
-        return "本地 HTML"
-    if source_type == OverlaySourceType.URL:
-        return "URL"
+        return "原生皮肤"
     return source_type.value
 
 
@@ -40,16 +38,15 @@ class OverlayPage(InterfacePage):
     order_changed = Signal(object)
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        super().__init__("overlayInterface", "悬浮窗", "管理内置、本地与在线悬浮窗。", parent)
+        super().__init__("overlayInterface", "悬浮窗", "管理内置浮窗与 JSON 原生皮肤。", parent)
 
         actions = QWidget(self)
         self.add_actions = actions
         actions_layout = QGridLayout(actions)
         actions_layout.setContentsMargins(0, 0, 0, 0)
-        self.add_url_btn = PrimaryPushButton("新增 URL 悬浮窗", actions)
-        self.add_file_btn = PushButton("选择本地模板 / HTML", actions)
+        self.add_file_btn = PrimaryPushButton("导入原生皮肤", actions)
         self.remove_btn = PushButton("删除选中", actions)
-        for index, button in enumerate((self.add_url_btn, self.add_file_btn, self.remove_btn)):
+        for index, button in enumerate((self.add_file_btn, self.remove_btn)):
             actions_layout.addWidget(button, 0, index)
         actions_layout.setColumnStretch(3, 1)
         self.content_layout.addWidget(actions,alignment=Qt.AlignmentFlag.AlignTop)
@@ -254,7 +251,7 @@ class OverlayPage(InterfacePage):
             self.name_edit.setText(entry.name)
             self.source_type_label.setText(_overlay_source_type_label(entry.source_type))
             self.source_value_edit.setText(entry.source_value)
-            self.source_value_edit.setReadOnly(entry.source_type != OverlaySourceType.URL)
+            self.source_value_edit.setReadOnly(True)
             self._show_template(entry)
             self.width_edit.setEnabled(True)
             self.height_edit.setEnabled(True)
@@ -282,8 +279,8 @@ class OverlayPage(InterfacePage):
     def _show_template(self, entry: OverlayEntry) -> None:
         template = template_for(entry)
         self.template_label.setText(template.error or template.name)
-        labels = {"buff_snapshot": "BUFF 观测与时长（实时估算）", "analysis_summary": "战斗统计（跟随实时 / 历史选择）", "analysis_snapshot": "战斗统计（跟随实时 / 历史选择）", "combo_snapshot": "连携 CD：图像识别，无需 Npcap；抓包可识别角色", "input_snapshot": "最近输入队列：需在首页开启输入记录，无需 Npcap"}
-        self.subscription_label.setText(" / ".join(labels[key] for key in template.subscriptions) or "网页自行获取（保持实时）")
+        labels = {"analysis_summary": "????????? / ?????", "combo_snapshot": "?? CD???????? Npcap????????"}
+        self.subscription_label.setText(" / ".join(labels[key] for key in template.subscriptions) or "????????????")
         if entry.source_type == OverlaySourceType.BUILTIN and entry.source_value == "uid_mask":
             self.subscription_label.setText("无需战斗数据（本地遮挡）")
         self.subscription_label.setToolTip(" / ".join(template.subscriptions))

@@ -26,8 +26,8 @@ class OverlayManager:
         self._use_in_process_snapshots = use_in_process_snapshots
         self._analysis_snapshot: dict[str, object] | None = None
         self._combo_snapshot: dict[str, object] | None = None
-        self._buff_snapshot: dict[str, object] | None = None
-        self._input_snapshot = None
+        from endfield_pcap.overlays.native.model import SnapshotGate
+        self._combo_gate = SnapshotGate()
         self._live_snapshot: dict[str, object] | None = None
         self._history_mode = False
         self._presentation_stream = str(uuid4())
@@ -115,25 +115,13 @@ class OverlayManager:
                 self.remove_entry(entry_id)
 
     def apply_combo_snapshot(self, message: object) -> None:
-        if not isinstance(message, dict) or message.get("type") != "combo_snapshot":
+        if not self._combo_gate.accept(message, {"combo_snapshot"}, 2):
             return
         self._combo_snapshot = copy.deepcopy(message)
         for window in self._windows.values():
             window.apply_combo_snapshot(self._combo_snapshot)
 
-    def apply_buff_snapshot(self, message: object) -> None:
-        if not isinstance(message, dict) or message.get("type") != "buff_snapshot":
-            return
-        self._buff_snapshot = copy.deepcopy(message)
-        for window in self._windows.values():
-            window.apply_buff_snapshot(self._buff_snapshot)
 
-    def apply_input_snapshot(self, message):
-        if not isinstance(message,dict) or message.get('type') != 'input_snapshot':
-            return
-        self._input_snapshot = copy.deepcopy(message)
-        for window in self._windows.values():
-            window.apply_input_snapshot(self._input_snapshot)
 
     def apply_entry(self, entry: OverlayEntry) -> None:
         self._entries[entry.id] = replace(entry)
@@ -161,10 +149,6 @@ class OverlayManager:
                     window.apply_analysis_summary(self._summary_presentation)
                 if self._combo_snapshot is not None:
                     window.apply_combo_snapshot(self._combo_snapshot)
-                if self._buff_snapshot is not None:
-                    window.apply_buff_snapshot(self._buff_snapshot)
-                if self._input_snapshot is not None:
-                    window.apply_input_snapshot(self._input_snapshot)
                 window.show()
             else:
                 window.apply_entry(replace(entry))

@@ -4,8 +4,8 @@ from collections import defaultdict
 from datetime import date
 from typing import Any
 
-from parser_core.battle_log_parser import parse_raw_battle_log_text
-from parser_core.hit_debug import parse_hit_debug_log_text
+from parser_core.parser import parse_raw_battle_log_text
+from parser_core.diagnostics.hit_debug import parse_hit_debug_log_text
 
 
 def rdps_totals_from_hit_debug(report: dict[str, Any]) -> dict[str, float]:

@@ -1,5 +1,33 @@
 from parser_core.critical_context import build_critical_context, critical_buff_profile, update_critical_observation
 import pytest
+import parser_core.catalog.buff_templates as parser_buff_templates
+import parser_core.catalog.packet_semantics as parser_packet_semantics
+import parser_core.catalog.skill_damage as parser_skill_damage
+import parser_core.effects.window_identity as parser_window_identity
+import parser_core.effects.approval as parser_approval
+import parser_core.ingestion.buff_observations as parser_buff_observations
+import parser_core.ingestion.dynamic_evidence as parser_dynamic_evidence
+import parser_core.effects.enemy_status as parser_enemy_status
+import parser_core.effects.packet_mapping as parser_packet_mapping
+import parser_core.ingestion.skill_identity as parser_skill_identity
+import parser_core.ingestion.hits as parser_hits
+import parser_core.reporting.timeline as parser_timeline
+import parser_core.effects.conditions as parser_conditions
+import parser_core.effects.registry as parser_registry
+import parser_core.effects.semantic_conditions as parser_semantic_conditions
+import parser_core.effects.specifications as parser_specifications
+import parser_core.effects.stacking_rules as parser_stacking_rules
+import parser_core.allocation.hit as parser_hit
+import parser_core.allocation.ledger as parser_ledger
+import parser_core.effects.imbue as parser_imbue
+import parser_core.effects.lifecycle as parser_lifecycle
+import parser_core.effects.windows as parser_windows
+import parser_core.allocation.resistance as parser_resistance
+import parser_core.allocation.stack_selection as parser_stack_selection
+import parser_core.reporting.battle as parser_battle
+import parser_core.reporting.critical as parser_critical
+import parser_core.reporting.effect_windows as parser_effect_windows
+import parser_core.critical_context as parser_critical_context
 
 
 def make_hit(**updates):
@@ -103,22 +131,68 @@ def test_parser_resolves_numeric_buff_aliases_without_waiving_unknown_effects(mo
     root={'id':'buff_fixture_marker'}
     if kind=='critical':
         root['processor']={'$type':'Beyond.Gameplay.Core.AttackCriticalRateProcessor'}
-    monkeypatch.setattr(parser,'_load_num_id_str_buff_map',lambda:{'123456':'buff_fixture_marker'} if kind!='unknown' else {})
-    monkeypatch.setattr(parser,'_load_current_buff_roots',lambda:{'buff_fixture_marker':root})
+    for patched_consumer in (
+        parser,
+        parser_critical,
+        parser_imbue,
+        parser_packet_mapping,
+        parser_skill_identity,
+        parser_approval,
+        parser_buff_observations,
+        parser_dynamic_evidence,
+        parser_packet_semantics,
+    ):
+        monkeypatch.setattr(patched_consumer, '_load_num_id_str_buff_map', lambda:{'123456':'buff_fixture_marker'} if kind!='unknown' else {})
+    for patched_consumer in (
+        parser,
+        parser_critical,
+        parser_effect_windows,
+        parser_resistance,
+        parser_stack_selection,
+        parser_imbue,
+        parser_ledger,
+        parser_lifecycle,
+        parser_windows,
+        parser_conditions,
+        parser_registry,
+        parser_semantic_conditions,
+        parser_specifications,
+        parser_stacking_rules,
+        parser_timeline,
+        parser_hits,
+        parser_enemy_status,
+        parser_approval,
+        parser_buff_observations,
+        parser_dynamic_evidence,
+        parser_window_identity,
+        parser_buff_templates,
+        parser_skill_damage,
+    ):
+        monkeypatch.setattr(patched_consumer, '_load_current_buff_roots', lambda:{'buff_fixture_marker':root})
     original=parser._compute_rdps_damage_shares
     def add_retained_alias(hits, windows, condition_buff_records=None, **kwargs):
         result=original(hits,windows,condition_buff_records,**kwargs)
         for hit in hits:
             hit['_active_target_buff_ids']={'123456','buff_fixture_marker'}
         return result
-    monkeypatch.setattr(parser,'_compute_rdps_damage_shares',add_retained_alias)
+    for patched_consumer in (
+        parser,
+        parser_battle,
+        parser_ledger,
+    ):
+        monkeypatch.setattr(patched_consumer, '_compute_rdps_damage_shares', add_retained_alias)
     observed=[]
     original_context=parser.build_critical_context
     def capture(hit,stats,profiles,windows):
         context=original_context(hit,stats,profiles,windows)
         observed.append((profiles,context))
         return context
-    monkeypatch.setattr(parser,'build_critical_context',capture)
+    for patched_consumer in (
+        parser,
+        parser_critical_context,
+        parser_critical,
+    ):
+        monkeypatch.setattr(patched_consumer, 'build_critical_context', capture)
     parsed=parser.parse_raw_battle_log_text('\n'.join([
         '[10:00:00.000] ENTITY_STATS id=1001 template=chr_0004_pelica kind=character level=90 hp=1000 attrs=[9:0.2/0.2 10:0.5/0.5]',
         '[10:00:01.000] HP_V2 #1 hit=100 cum=100 raw=100 packetFinalValue=100 pHP=100 eHP=1000 skill="chr_0004_pelica_combo_skill_projhit" actionId=11 damageUnitIndex=0 src=chr_0004_pelica tgt=eny_0051_rodin atk=chr_0004_pelica atkId=1001 tgtId=3001 hits=1 critFlag=0']))

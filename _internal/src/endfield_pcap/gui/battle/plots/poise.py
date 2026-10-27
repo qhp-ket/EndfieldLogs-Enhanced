@@ -3,6 +3,7 @@ from bisect import bisect_right
 from PySide6.QtCore import Qt, QPointF
 from PySide6.QtGui import QColor, QBrush, QPen, QPainterPath
 from endfield_pcap.analysis.battle.time import format_time
+from endfield_pcap.gui.battle.style import stroke
 
 
 def draw_poise_tracks(view, y, scale, font, x_at):
@@ -16,13 +17,16 @@ def draw_poise_tracks(view, y, scale, font, x_at):
                                      stamps=[p['time_ms'] for p in samples]))
         if samples:
             peak = max(1., enemy['peak'])
-            base = y+height-16
-            py = lambda value: base-min(1., max(0., value/peak))*(height-36)
+            top, base = y+34*scale, y+height-18*scale
+            py = lambda value: base-min(1., max(0., value/peak))*(base-top)
+            view._poise_axes[-1].update(low=0., high=peak, top=top, bottom=base, ticks=[0., peak/2, peak])
+            for value in (0., peak/2, peak):
+                scene.addLine(view.LEFT, py(value), view._plot_right, py(value), stroke(view._grid, .7))
             path = QPainterPath(QPointF(x_at(samples[0]['time_ms']), py(samples[0]['value'])))
             for previous, point in zip(samples, samples[1:]):
                 path.lineTo(x_at(point['time_ms']), py(previous['value']))
                 path.lineTo(x_at(point['time_ms']), py(point['value']))
-            scene.addPath(path, QPen(QColor('#d79b28'), 1.8))
+            scene.addPath(path, stroke('#d79b28', 1.9))
             for point in samples:
                 dot = scene.addEllipse(x_at(point['time_ms'])-2.5, py(point['value'])-2.5, 5, 5,
                     QPen(Qt.PenStyle.NoPen), QBrush(QColor('#de4b55' if point['value'] <= 0 else '#d79b28')))

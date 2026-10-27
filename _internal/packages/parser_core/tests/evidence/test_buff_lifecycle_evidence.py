@@ -1,5 +1,28 @@
 from copy import deepcopy
 from parser_core import battle_log_parser as parser
+import parser_core.catalog.buff_templates as parser_buff_templates
+import parser_core.catalog.skill_damage as parser_skill_damage
+import parser_core.effects.window_identity as parser_window_identity
+import parser_core.effects.approval as parser_approval
+import parser_core.ingestion.buff_observations as parser_buff_observations
+import parser_core.ingestion.dynamic_evidence as parser_dynamic_evidence
+import parser_core.effects.enemy_status as parser_enemy_status
+import parser_core.ingestion.hits as parser_hits
+import parser_core.reporting.timeline as parser_timeline
+import parser_core.effects.conditions as parser_conditions
+import parser_core.effects.registry as parser_registry
+import parser_core.effects.semantic_conditions as parser_semantic_conditions
+import parser_core.effects.specifications as parser_specifications
+import parser_core.effects.stacking_rules as parser_stacking_rules
+import parser_core.allocation.hit as parser_hit
+import parser_core.allocation.ledger as parser_ledger
+import parser_core.effects.imbue as parser_imbue
+import parser_core.effects.lifecycle as parser_lifecycle
+import parser_core.effects.windows as parser_windows
+import parser_core.allocation.resistance as parser_resistance
+import parser_core.allocation.stack_selection as parser_stack_selection
+import parser_core.reporting.critical as parser_critical
+import parser_core.reporting.effect_windows as parser_effect_windows
 
 
 def test_missing_duration_does_not_extend_to_battle_end_or_one_second():
@@ -32,9 +55,34 @@ def test_unknown_action_phase_blocks_even_without_fabricated_buff_window():
 
 
 def test_duration_only_uses_official_exact_assignment(monkeypatch):
-    monkeypatch.setattr(parser, '_load_current_buff_roots', lambda: {
-        'buff_exact': {'lifeType': 'Limited', 'duration': {'useBlackboardKey': True, 'blackboardKey': 'timer'}},
-    })
+    for patched_consumer in (
+        parser,
+        parser_critical,
+        parser_effect_windows,
+        parser_resistance,
+        parser_stack_selection,
+        parser_imbue,
+        parser_ledger,
+        parser_lifecycle,
+        parser_windows,
+        parser_conditions,
+        parser_registry,
+        parser_semantic_conditions,
+        parser_specifications,
+        parser_stacking_rules,
+        parser_timeline,
+        parser_hits,
+        parser_enemy_status,
+        parser_approval,
+        parser_buff_observations,
+        parser_dynamic_evidence,
+        parser_window_identity,
+        parser_buff_templates,
+        parser_skill_damage,
+    ):
+        monkeypatch.setattr(patched_consumer, '_load_current_buff_roots', lambda: {
+            'buff_exact': {'lifeType': 'Limited', 'duration': {'useBlackboardKey': True, 'blackboardKey': 'timer'}},
+        })
     record = {'event_key': 'buff_exact', 'target_character_key': 'chr_0004_pelica',
               'bb_values': {'duration': 50, 'timer': 2}, 'raw_duration_ms': None}
     parser._apply_enemy_status_bb_overrides(record, context_enemy_hint='eny_0051_rodin')
@@ -47,9 +95,34 @@ def test_duration_only_uses_official_exact_assignment(monkeypatch):
 
 
 def test_infinity_uses_an_open_interval_and_ignores_duration_configuration(monkeypatch):
-    monkeypatch.setattr(parser, '_load_current_buff_roots', lambda: {
-        'buff_infinite': {'lifeType': 'Infinity', 'duration': {'useBlackboardKey': False, 'value': 11}},
-    })
+    for patched_consumer in (
+        parser,
+        parser_critical,
+        parser_effect_windows,
+        parser_resistance,
+        parser_stack_selection,
+        parser_imbue,
+        parser_ledger,
+        parser_lifecycle,
+        parser_windows,
+        parser_conditions,
+        parser_registry,
+        parser_semantic_conditions,
+        parser_specifications,
+        parser_stacking_rules,
+        parser_timeline,
+        parser_hits,
+        parser_enemy_status,
+        parser_approval,
+        parser_buff_observations,
+        parser_dynamic_evidence,
+        parser_window_identity,
+        parser_buff_templates,
+        parser_skill_damage,
+    ):
+        monkeypatch.setattr(patched_consumer, '_load_current_buff_roots', lambda: {
+            'buff_infinite': {'lifeType': 'Infinity', 'duration': {'useBlackboardKey': False, 'value': 11}},
+        })
     record = {'event_key': 'buff_infinite', 'raw_duration_ms': None, 'end_ts_ms': None,
               'bb_values': {'duration': 3}}
     parser._apply_enemy_status_bb_overrides(record, context_enemy_hint=None)

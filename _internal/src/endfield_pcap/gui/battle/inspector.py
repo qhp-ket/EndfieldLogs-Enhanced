@@ -28,6 +28,7 @@ from endfield_pcap.analysis.battle.enemy import (
 )
 from endfield_pcap.data.skill_names import character_name
 from endfield_pcap.analysis.battle.time import format_time
+from endfield_pcap.gui.battle.tables import EvidenceItem, style_table
 
 
 def display_number(value):
@@ -47,16 +48,20 @@ def table(parent, headers, stretch=0):
     view.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
     view.horizontalHeader().setSectionResizeMode(stretch, QHeaderView.ResizeMode.Stretch)
     view.setMinimumHeight(70)
+    style_table(view)
     return view
 
 
 def fill(view, rows):
+    sorting = view.isSortingEnabled()
+    view.setSortingEnabled(False)
     view.setRowCount(len(rows))
     for i, row in enumerate(rows):
         for j, value in enumerate(row):
-            item = QTableWidgetItem(str(value))
-            item.setToolTip(str(value))
+            item = EvidenceItem(value)
+            item.setData(Qt.ItemDataRole.UserRole, i)
             view.setItem(i, j, item)
+    view.setSortingEnabled(sorting)
 
 
 class _PanelSizeIcon(QIconEngine):
@@ -123,6 +128,8 @@ class BlockInspector(QTabWidget):
         self._events = []
         self._block = None
         self._time_unit = 'seconds'
+        self.contributions.setSortingEnabled(True)
+        self.hits.setSortingEnabled(True)
 
     def set_panel_maximized(self, maximized):
         self.maximize_button.setIcon(QIcon(_PanelSizeIcon(maximized)))
@@ -158,8 +165,10 @@ class BlockInspector(QTabWidget):
 
     def _select_hit(self):
         row = self.hits.currentRow()
-        if 0 <= row < len(self._events):
-            self.raw.setPlainText(json.dumps(self._events[row], ensure_ascii=False, indent=2))
+        item = self.hits.item(row, 0) if row >= 0 else None
+        index = item.data(Qt.ItemDataRole.UserRole) if item else None
+        if isinstance(index, int) and 0 <= index < len(self._events):
+            self.raw.setPlainText(json.dumps(self._events[index], ensure_ascii=False, indent=2))
 
 
 class EnemyEvidencePage(QWidget):
@@ -185,12 +194,14 @@ class EnemyEvidencePage(QWidget):
             if track['key'] not in observed:
                 rows.append([track['name'], *(['未知']*8), '缺少可绑定的 ENTITY_STATS'])
         fill(self.stats, rows)
+        self.stats.setSortingEnabled(True)
         layout.addWidget(self.stats, 2)
         layout.addWidget(CaptionLabel('失衡观测（曲线在时间轴下方；观测峰值不代表真实上限）', self))
         self.poise = table(self, ['敌人 / 实例', '采样数', '首个值', '最后值', '观测峰值', '零值采样数'], 0)
         fill(self.poise, [[t['name'], len(t['samples']), display_number(t['samples'][0]['value'] if t['samples'] else None),
                            display_number(t['samples'][-1]['value'] if t['samples'] else None), display_number(t['peak']),
                            sum(p['value'] <= 0 for p in t['samples']) if t['samples'] else '未知'] for t in self.tracks])
+        self.poise.setSortingEnabled(True)
         layout.addWidget(self.poise, 1)
         foot = CaptionLabel('POISE_V1 本身没有目标 ID，沿用核心的同刻技能匹配；同刻命中多个目标时放入「目标未绑定」，不强行归给某个敌人。零值采样不等于完整的失衡持续时间。抗性点数、受伤标量和减抗 BUFF 是不同证据；原始证据可在技能块中查看。', self)
         foot.setWordWrap(True)

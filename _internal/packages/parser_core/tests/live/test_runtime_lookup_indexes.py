@@ -2,12 +2,15 @@ from copy import deepcopy
 import threading
 from parser_core import battle_log_parser as parser
 from parser_core import live as live_module
+import parser_core.catalog.buff_templates as parser_buff_templates
+import parser_core.catalog.packet_semantics as parser_packet_semantics
+import parser_core.effects.approval as parser_approval
 
 
 def test_indexed_registry_matches_complete_scan_for_all_official_identities(monkeypatch):
     parser._load_rdps_semantics_registry.cache_clear()
     registry = parser._load_rdps_semantics_registry()
-    index = parser._RDPS_VERIFIED_INDEX
+    index = parser_packet_semantics._RDPS_VERIFIED_INDEX
     assert index is not None and index[0] is registry
     identities = {'buff_unapproved_lookup_fixture'}
     for key, entry in registry['verified_effects'].items():
@@ -20,7 +23,7 @@ def test_indexed_registry_matches_complete_scan_for_all_official_identities(monk
         for guarded in (False, True):
             actual = parser._rdps_registry_matching_effect_entry(record, require_guard=guarded)
             with monkeypatch.context() as patch:
-                patch.setattr(parser, '_RDPS_VERIFIED_INDEX', None)
+                patch.setattr(parser_packet_semantics, '_RDPS_VERIFIED_INDEX', None)
                 expected = parser._rdps_registry_matching_effect_entry(record, require_guard=guarded)
             assert actual == expected, (key, guarded)
     # A replacement registry must not inherit the current resource's index.
@@ -28,6 +31,8 @@ def test_indexed_registry_matches_complete_scan_for_all_official_identities(monk
     isolated['verified_effects'] = {}
     with monkeypatch.context() as patch:
         patch.setattr(parser, '_load_rdps_semantics_registry', lambda: isolated)
+        patch.setattr(parser_approval, '_load_rdps_semantics_registry', lambda: isolated)
+        patch.setattr(parser_packet_semantics, '_load_rdps_semantics_registry', lambda: isolated)
         assert parser._rdps_registry_matching_effect_entry(
             {'event_key': next(iter(registry['verified_effects']))}, require_guard=False
         ) is None
@@ -36,13 +41,13 @@ def test_indexed_registry_matches_complete_scan_for_all_official_identities(monk
 def test_cached_buff_types_match_complete_scan_and_keep_recipient_guards(monkeypatch):
     parser._load_current_buff_roots.cache_clear()
     roots = parser._load_current_buff_roots()
-    assert parser._BUFF_ACTION_TYPES_INDEX[0] is roots
+    assert parser_buff_templates._BUFF_ACTION_TYPES_INDEX[0] is roots
     for key in roots:
         for recipient in ('chr_0004_pelica', 'eny_0051_rodin'):
             record = {'event_key': key, 'target_character_key': recipient}
             actual = parser._rdps_registry_known_non_rdps_entry(record)
             with monkeypatch.context() as patch:
-                patch.setattr(parser, '_BUFF_ACTION_TYPES_INDEX', None)
+                patch.setattr(parser_buff_templates, '_BUFF_ACTION_TYPES_INDEX', None)
                 expected = parser._rdps_registry_known_non_rdps_entry(record)
             assert actual == expected, (key, recipient)
 

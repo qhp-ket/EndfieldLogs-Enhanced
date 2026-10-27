@@ -1,6 +1,9 @@
 from copy import deepcopy
 import pytest
 from parser_core import battle_log_parser as parser
+import parser_core.catalog.resources as parser_resources
+import parser_core.ingestion.loadout as parser_loadout
+import parser_core.allocation.static_loadout as parser_static_loadout
 
 
 @pytest.fixture
@@ -8,7 +11,13 @@ def equipment(monkeypatch):
     meta = {'item_name': 'display only', 'attribute_source_sha256': 'a' * 64,
             'attribute_modifiers': [{'attrIndex': 3, 'attrType': 52, 'modifierType': 5,
                                      'modifyAttributeType': 0, 'attrValues': [0.1, 0.2, 0.3, 0.4]}]}
-    monkeypatch.setattr(parser, '_load_equip_item_catalog', lambda: {'item_known': meta})
+    for patched_consumer in (
+        parser,
+        parser_static_loadout,
+        parser_loadout,
+        parser_resources,
+    ):
+        monkeypatch.setattr(patched_consumer, '_load_equip_item_catalog', lambda: {'item_known': meta})
     return {'slot': 2, 'item_id': 'item_known', 'enhance_levels': [{'index': 3, 'level': 3}],
             'stats': [{'slot': 'sub3', 'name': 'unrelated healing text', 'value': 999}]}
 
@@ -78,7 +87,13 @@ def test_complete_empty_enhance_map_is_exact_zero_level_baseline(monkeypatch):
                 {'attrIndex': 2, 'attrType': 87, 'modifierType': 5,
                  'modifyAttributeType': 0, 'attrValues': [30, 35, 40, 45]},
             ]}
-    monkeypatch.setattr(parser, '_load_equip_item_catalog', lambda: {'item_zero': meta})
+    for patched_consumer in (
+        parser,
+        parser_static_loadout,
+        parser_loadout,
+        parser_resources,
+    ):
+        monkeypatch.setattr(patched_consumer, '_load_equip_item_catalog', lambda: {'item_zero': meta})
     row = {'equipment_snapshot_complete': True,
            'equips': [{'slot': 0, 'item_id': 'item_zero', 'enhance_levels': [],
                        'stats': [{'slot': 'main', 'value': 42.0},
@@ -106,7 +121,13 @@ def test_complete_partial_enhance_map_defaults_each_missing_index_to_zero(monkey
                 {'attrIndex': 2, 'attrType': 40, 'modifierType': 5,
                  'modifyAttributeType': 0, 'attrValues': [43, 47, 51, 55]},
             ]}
-    monkeypatch.setattr(parser, '_load_equip_item_catalog', lambda: {'item_partial': meta})
+    for patched_consumer in (
+        parser,
+        parser_static_loadout,
+        parser_loadout,
+        parser_resources,
+    ):
+        monkeypatch.setattr(patched_consumer, '_load_equip_item_catalog', lambda: {'item_partial': meta})
     row = {'equipment_snapshot_complete': True,
            'equips': [{'slot': 0, 'item_id': 'item_partial',
                        'enhance_levels': [{'index': 1, 'level': 3}],
@@ -150,8 +171,13 @@ def test_small_positive_static_baseline_is_not_dropped_by_a_threshold():
 
 
 def test_character_base_stats_never_use_maximum_or_neighbor_level(monkeypatch):
-    monkeypatch.setattr(parser, '_load_character_base_stat_catalog', lambda: {'chr_fixture': {
-        1: {'level': 1, 'atk': 10}, 90: {'level': 90, 'atk': 100}}})
+    for patched_consumer in (
+        parser,
+        parser_static_loadout,
+        parser_resources,
+    ):
+        monkeypatch.setattr(patched_consumer, '_load_character_base_stat_catalog', lambda: {'chr_fixture': {
+            1: {'level': 1, 'atk': 10}, 90: {'level': 90, 'atk': 100}}})
     assert parser._character_base_stats('chr_fixture', 90)['atk'] == 100
     for value in (None, 0, 2, 89, 91, True, 90.0):
         assert parser._character_base_stats('chr_fixture', value) is None

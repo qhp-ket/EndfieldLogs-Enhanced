@@ -23,7 +23,7 @@ def _new_live_parser(*, summary=False):
     local_package = bundle_root() / "packages" / "parser_core"
     if local_package.is_dir() and str(local_package) not in sys.path:
         sys.path.insert(0, str(local_package))
-    from parser_core.live import LiveOverlayBattleParser
+    from parser_core.realtime.live import LiveOverlayBattleParser
 
     return LiveOverlayBattleParser(align_to_data_watermark=True, summary=summary)
 

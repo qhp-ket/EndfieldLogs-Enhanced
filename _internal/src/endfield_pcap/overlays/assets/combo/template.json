@@ -1,14 +1,85 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "name": "连携 CD（图像识别）",
-  "entry": "index.html",
-  "subscriptions": ["combo_snapshot"],
-  "font_mode": "css",
   "settings": [
-    {"key":"display_style","label":"显示样式","type":"select","default":"circles","options":[{"value":"circles","label":"四个圆形图标"},{"value":"bars","label":"四行进度条"}]},
-    {"key":"show_character_avatars","label":"显示角色头像","type":"select","default":"on","options":[{"value":"on","label":"开"},{"value":"off","label":"关"}]},
-    {"key":"avatar_size_percent","label":"头像大小","type":"slider","min":50,"max":300,"default":100},
-    {"key":"theme","label":"背景模式","type":"select","default":"light","options":[{"value":"light","label":"浅色"},{"value":"dark","label":"深色"},{"value":"transparent","label":"透明背景"}],"legacy_field":"overlay_theme"}
+    {
+      "key": "display_style",
+      "label": "显示样式",
+      "type": "select",
+      "default": "circles",
+      "options": [
+        {
+          "value": "circles",
+          "label": "四个圆形图标"
+        },
+        {
+          "value": "bars",
+          "label": "四行进度条"
+        }
+      ]
+    },
+    {
+      "key": "show_character_avatars",
+      "label": "显示角色头像",
+      "type": "select",
+      "default": "on",
+      "options": [
+        {
+          "value": "on",
+          "label": "开"
+        },
+        {
+          "value": "off",
+          "label": "关"
+        }
+      ]
+    },
+    {
+      "key": "avatar_size_percent",
+      "label": "头像大小",
+      "type": "slider",
+      "min": 50,
+      "max": 300,
+      "default": 100
+    },
+    {
+      "key": "theme",
+      "label": "背景模式",
+      "type": "select",
+      "default": "light",
+      "options": [
+        {
+          "value": "endfield",
+          "label": "终末地"
+        },
+        {
+          "value": "light",
+          "label": "浅色"
+        },
+        {
+          "value": "dark",
+          "label": "深色"
+        },
+        {
+          "value": "transparent",
+          "label": "透明背景"
+        }
+      ],
+      "legacy_field": "overlay_theme"
+    }
   ],
-  "window":{"min_width":180,"min_height":80,"default_width":420,"default_height":150}
+  "window": {
+    "min_width": 180,
+    "min_height": 80,
+    "default_width": 420,
+    "default_height": 150
+  },
+  "modules": [
+    {
+      "type": "combo_skill"
+    }
+  ],
+  "layout": {
+    "direction": "single"
+  }
 }

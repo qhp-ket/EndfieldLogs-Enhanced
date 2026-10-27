@@ -39,28 +39,8 @@ class OverlayActions:
         save_app_config(self.app_config, self.config_path)
         self._refresh_overlay_views()
 
-    def _add_url_overlay(self) -> None:
-        url, ok = QInputDialog.getText(self, "新增 URL 悬浮窗", "请输入悬浮窗 URL：")
-        if not ok or not url.strip():
-            return
-        entry = OverlayEntry(
-            id=str(uuid.uuid4()),
-            name="在线悬浮窗",
-            source_type=OverlaySourceType.URL,
-            source_value=url.strip(),
-            enabled=True,
-            locked=False,
-            click_through=False,
-            opacity=1.0,
-            scale=1.0,
-        )
-        self.app_config.overlays.append(entry)
-        save_app_config(self.app_config, self.config_path)
-        self.overlay_manager.apply_entry(entry)
-        self._refresh_overlay_views()
-
     def _add_file_overlay(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(self, "选择本地悬浮窗模板或 HTML", str(ROOT), "悬浮窗模板/HTML (*.json *.html *.htm)")
+        path, _ = QFileDialog.getOpenFileName(self, "导入原生皮肤", str(ROOT), "原生皮肤 (*.json)")
         if not path:
             return
         entry = OverlayEntry(
@@ -77,9 +57,6 @@ class OverlayActions:
         template = template_for(entry)
         if template.error:
             QMessageBox.warning(self, "模板无效", template.error)
-            return
-        if {'buff_snapshot', 'input_snapshot'} & set(template.subscriptions):
-            QMessageBox.information(self, '功能已停用', 'BUFF / 最近输入浮窗暂不维护，GUI 入口已关闭；输入日志仍可在首页记录。')
             return
         if template.path:
             entry = replace(entry, name=template.name)
@@ -119,16 +96,6 @@ class OverlayActions:
         name = self.overlay_page.name_edit.text().strip() or entry.name
         if name != entry.name:
             self._replace_overlay_entry(replace(entry, name=name))
-
-    def _apply_overlay_source_value(self) -> None:
-        if self.overlay_page._updating:
-            return
-        entry = self._selected_overlay()
-        if entry is None or entry.source_type != OverlaySourceType.URL:
-            return
-        value = self.overlay_page.source_value_edit.text().strip()
-        if value and value != entry.source_value:
-            self._replace_overlay_entry(replace(entry, source_value=value))
 
     def _apply_overlay_enabled(self, checked: bool) -> None:
         if self.overlay_page._updating:
@@ -229,14 +196,12 @@ class OverlayActions:
         self.overlay_page.order_changed.connect(self._apply_overlay_order)
         self.overlay_page.status_card.visibility_button.clicked.connect(self._toggle_overlay_visibility)
         self.overlay_page.overlay_list.currentItemChanged.connect(self._sync_overlay_selection)
-        self.overlay_page.add_url_btn.clicked.connect(self._add_url_overlay)
         self.overlay_page.add_file_btn.clicked.connect(self._add_file_overlay)
         self.overlay_page.remove_btn.clicked.connect(self._remove_selected_overlay)
         self.overlay_page.enable_all_btn.clicked.connect(self._enable_all_overlays)
         self.overlay_page.disable_all_btn.clicked.connect(self._disable_all_overlays)
         self.overlay_page.reset_layout_btn.clicked.connect(self._reset_selected_overlay_layout)
         self.overlay_page.name_edit.editingFinished.connect(self._apply_overlay_name)
-        self.overlay_page.source_value_edit.editingFinished.connect(self._apply_overlay_source_value)
         self.overlay_page.setting_changed.connect(self._apply_template_setting)
         self.overlay_page.enabled_switch.checkedChanged.connect(self._apply_overlay_enabled)
         self.overlay_page.visible_switch.checkedChanged.connect(self._apply_overlay_visible)

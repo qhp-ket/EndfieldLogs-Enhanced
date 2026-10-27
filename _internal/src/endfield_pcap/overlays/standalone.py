@@ -48,7 +48,7 @@ def run_with_overlay(service_config: ServiceConfig) -> int:
         )
     else:
         service = DamageLogService(
-            service_config, observer=ServiceObserver(on_analysis_summary=snapshots.put, on_buff_snapshot=snapshots.put),
+            service_config, observer=ServiceObserver(on_analysis_summary=snapshots.put),
         )
         service_thread = threading.Thread(target=service_main, name="damage-service", daemon=True)
         service_thread.start()
@@ -77,9 +77,7 @@ def run_with_overlay(service_config: ServiceConfig) -> int:
         while True:
             try:
                 message = snapshots.get_nowait()
-                if message.get("type") == "buff_snapshot":
-                    manager.apply_buff_snapshot(message)
-                elif message.get("type") == "analysis_summary":
+                if message.get("type") == "analysis_summary":
                     manager.apply_analysis_summary(message)
                 else:
                     manager.apply_analysis_snapshot(message)

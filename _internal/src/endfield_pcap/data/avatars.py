@@ -32,11 +32,3 @@ def avatar_path(character_key):
         _missing.add(key)
         LOGGER.info('Character portrait unavailable: %s', key)
     return ROOT/'placeholder.png'
-
-
-@lru_cache(maxsize=1)
-def avatar_catalog():
-    """Small URL map for local hosts, never part of a battle/WS snapshot."""
-    return dict(version=manifest().get('version', 'missing'),
-                portraits={key: avatar_path(key).as_uri() for key in manifest().get('portraits', {})},
-                aliases=manifest().get('aliases', {}), placeholder=(ROOT/'placeholder.png').as_uri())

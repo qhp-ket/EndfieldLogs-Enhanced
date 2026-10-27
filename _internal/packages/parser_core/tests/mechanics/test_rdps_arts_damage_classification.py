@@ -3,6 +3,10 @@ from copy import deepcopy
 from itertools import permutations
 import pytest
 from parser_core import battle_log_parser as parser
+import parser_core.catalog.skill_damage as parser_skill_damage
+import parser_core.effects.damage_types as parser_damage_types
+import parser_core.ingestion.hits as parser_hits
+import parser_core.allocation.attack_model as parser_attack_model
 
 
 STATIC_SOURCE = 'current_typed_skill_or_buff_exact_unit_generation_only'
@@ -104,7 +108,14 @@ def test_duplicate_unit_identity_does_not_select_first_anomaly_or_calculation(mo
     units = parser._load_skill_action_damage_units('buff_common_burning_status')
     modified = deepcopy(units)
     modified[0].append(deepcopy(modified[0][0]))
-    monkeypatch.setattr(parser, '_load_skill_action_damage_units', lambda key: modified)
+    for patched_consumer in (
+        parser,
+        parser_attack_model,
+        parser_hits,
+        parser_damage_types,
+        parser_skill_damage,
+    ):
+        monkeypatch.setattr(patched_consumer, '_load_skill_action_damage_units', lambda key: modified)
     hit = parser.parse_raw_battle_log_text(damage_log('buff_common_burning_status', 0), include_rdps_debug=True)['debug_hits'][0]
     assert hit['arts_strength_damage_observed'] is False
     assert hit['static_damage_decorate_mask'] is None

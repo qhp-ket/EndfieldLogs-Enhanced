@@ -1,0 +1,1 @@
+"""Parser diagnostics responsibilities."""

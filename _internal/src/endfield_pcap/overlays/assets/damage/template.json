@@ -1,18 +1,22 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "name": "伤害统计",
-  "entry": "index.html",
-  "subscriptions": [
-    "analysis_summary"
-  ],
-  "font_mode": "css",
   "settings": [
     {
       "key": "show_character_avatars",
       "label": "显示角色头像",
       "type": "select",
       "default": "on",
-      "options": [{"value": "on", "label": "开"}, {"value": "off", "label": "关"}]
+      "options": [
+        {
+          "value": "on",
+          "label": "开"
+        },
+        {
+          "value": "off",
+          "label": "关"
+        }
+      ]
     },
     {
       "key": "avatar_size_percent",
@@ -26,7 +30,7 @@
       "key": "bar_mode",
       "label": "伤害条与排序",
       "type": "select",
-      "default": "dps",
+      "default": "rdps",
       "options": [
         {
           "value": "dps",
@@ -76,6 +80,10 @@
       "default": "light",
       "options": [
         {
+          "value": "endfield",
+          "label": "终末地"
+        },
+        {
           "value": "light",
           "label": "浅色"
         },
@@ -96,5 +104,13 @@
     "min_height": 160,
     "default_width": 800,
     "default_height": 380
+  },
+  "modules": [
+    {
+      "type": "damage"
+    }
+  ],
+  "layout": {
+    "direction": "single"
   }
 }

@@ -160,6 +160,10 @@ def test_official_uploader_build_is_independent_of_app_python_data_and_key(tmp_p
     monkeypatch.setattr(builder, 'ROOT', source)
     monkeypatch.setattr(builder, 'RELEASES', tmp_path / 'releases')
     monkeypatch.setattr(builder, 'OFFICIAL_UPLOADER_SHA256', builder.digest(uploader))
+    # The fixture lives below the developer checkout. Give it its own clean
+    # Git boundary so provenance does not inherit unrelated worktree changes.
+    subprocess.run(['git', 'init', '-q', str(source)], check=True, capture_output=True)
+    (source / '.git/info/exclude').write_text('*\n', encoding='utf8')
     stage = builder.stage_uploader()
     assert stage.name == builder.UPLOADER_RELEASE_NAME
     assert not (stage / '_internal').exists()
@@ -168,8 +172,13 @@ def test_official_uploader_build_is_independent_of_app_python_data_and_key(tmp_p
     assert manifest['component'] == 'official_uploader'
     assert manifest['application']['version'] == builder.UPLOADER_VERSION
     assert 'capture_key' not in manifest
+    assert manifest['source_dirty'] is False
     archive = builder.zip_stage(stage)
     assert archive.name == builder.UPLOADER_RELEASE_NAME+'.zip'
+    manifest['source_dirty'] = True
+    (stage / 'BUILD-MANIFEST.json').write_text(json.dumps(manifest), encoding='utf8')
+    with pytest.raises(ValueError, match='Dirty development staging'):
+        builder.zip_stage(stage)
 
 def test_launcher_prefers_portable_runtime_over_system_python():
     script = (ROOT / 'Start-GUI.cmd').read_text(encoding='utf8')

@@ -4,17 +4,38 @@ import parser_core.battle_log_parser as parser
 from parser_core.battle_log_parser import _canonical_num_table_skill_id, _collect_buff_labels, _collect_zone_effects, _effect_condition_failure, _is_arts_strength_damage_hit, _infer_skill_action_damage_element, _infer_skill_damage_element, _packet_mapping_stack_limit, _packet_numeric_effects, _rdps_registry_known_non_rdps_entry, _merge_loadout_snapshot, _parse_loadout_slot_snapshot, _parse_loadout_stats_snapshot, _repair_weapon_puton_loadout_groups, parse_raw_battle_log_text
 
 def test_typed_empty_buff_root_is_exact_non_rdps_marker(monkeypatch) -> None:
-    monkeypatch.setattr(
+    for patched_consumer in (
         parser,
-        "_load_current_buff_roots",
-        lambda: {
-            "buff_test_marker": {
-                "abilityEventAction": [], "buffEventAction": [],
-                "attributeModifier": {"attributeModifiers": []},
-                "damageModifier": [], "globalModifier": [], "healModifier": [],
-            }
-        },
-    )
+        parser_critical,
+        parser_effect_windows,
+        parser_resistance,
+        parser_stack_selection,
+        parser_imbue,
+        parser_ledger,
+        parser_lifecycle,
+        parser_windows,
+        parser_conditions,
+        parser_registry,
+        parser_semantic_conditions,
+        parser_specifications,
+        parser_stacking_rules,
+        parser_timeline,
+        parser_hits,
+        parser_enemy_status,
+        parser_approval,
+        parser_buff_observations,
+        parser_dynamic_evidence,
+        parser_window_identity,
+        parser_buff_templates,
+        parser_skill_damage,
+    ):
+        monkeypatch.setattr(patched_consumer, '_load_current_buff_roots', lambda: {
+                "buff_test_marker": {
+                    "abilityEventAction": [], "buffEventAction": [],
+                    "attributeModifier": {"attributeModifiers": []},
+                    "damageModifier": [], "globalModifier": [], "healModifier": [],
+                }
+            })
     record = {"event_key": "buff_test_marker", "raw_event_key": "buff_test_marker", "bb_keys": [], "bb_values": {}}
     entry = _rdps_registry_known_non_rdps_entry(record)
     assert entry is not None
@@ -58,7 +79,30 @@ def test_dynamic_blackboard_modify_events_are_preserved_as_observations() -> Non
     assert parsed["debug_hits"][0]["dynamic_bb_values"] == {29: 1.0, 38: 1.0}
     assert parsed["debug_hits"][0]["calc_bb_values"] == {2: {"duration_corrupt_final": 7.0}}
     assert parser._load_skill_item_metadata("chr_0016_laevat_ult_attack2")["dynamic_action_keys"][29] == "stopped1"
+import parser_core.catalog.buff_templates as parser_buff_templates
+import parser_core.catalog.skill_damage as parser_skill_damage
+import parser_core.effects.approval as parser_approval
+import parser_core.ingestion.buff_observations as parser_buff_observations
+import parser_core.ingestion.dynamic_evidence as parser_dynamic_evidence
 
+import parser_core.effects.conditions as parser_conditions
+import parser_core.effects.registry as parser_registry
+import parser_core.effects.semantic_conditions as parser_semantic_conditions
+import parser_core.effects.specifications as parser_specifications
+import parser_core.effects.stacking_rules as parser_stacking_rules
+import parser_core.allocation.hit as parser_hit
+import parser_core.allocation.ledger as parser_ledger
+import parser_core.effects.imbue as parser_imbue
+import parser_core.effects.lifecycle as parser_lifecycle
+import parser_core.effects.windows as parser_windows
+import parser_core.effects.window_identity as parser_window_identity
+import parser_core.effects.enemy_status as parser_enemy_status
+import parser_core.ingestion.hits as parser_hits
+import parser_core.allocation.resistance as parser_resistance
+import parser_core.allocation.stack_selection as parser_stack_selection
+import parser_core.reporting.critical as parser_critical
+import parser_core.reporting.effect_windows as parser_effect_windows
+import parser_core.reporting.timeline as parser_timeline
 from parser_core.unified import rdps_totals_from_raw_report
 
 def test_official_skilldata_catalog_resolves_only_direct_damage_templates() -> None:

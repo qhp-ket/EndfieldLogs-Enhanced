@@ -17,7 +17,7 @@ import sys
 
 sys.dont_write_bytecode = True
 ROOT = Path(__file__).resolve().parents[2]
-MODULES = {'PySide6': ('PySide6.QtWidgets', 'PySide6.QtWebEngineWidgets'),
+MODULES = {'PySide6': ('PySide6.QtWidgets', 'PySide6.QtMultimedia'),
            'PySide6-Fluent-Widgets': ('qfluentwidgets',), 'pycryptodome': ('Crypto.PublicKey.RSA',),
            'dpkt': ('dpkt',), 'protobuf': ('google.protobuf',), 'pydantic': ('pydantic',),
            'httpx': ('httpx',), 'websockets': ('websockets',), 'numpy': ('numpy',),

@@ -1,3 +1,5 @@
+from .trace import split_trace_battles
+
 from parser_core.schemas.battle import BattleCandidate, BattleSummary
 
 

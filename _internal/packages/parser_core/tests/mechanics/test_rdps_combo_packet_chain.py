@@ -6,6 +6,8 @@ import hashlib
 import json
 import pytest
 from parser_core import battle_log_parser as parser
+import parser_core.catalog.packet_semantics as parser_packet_semantics
+import parser_core.effects.approval as parser_approval
 
 
 TRIGGER = 'buff_common_affixes_combo_trigger'
@@ -248,7 +250,12 @@ def test_incomplete_or_conflicting_combo_chain_never_guesses(change):
 def test_removed_whitelist_projection_cannot_transfer_combo_credit(monkeypatch):
     registry = deepcopy(parser._load_rdps_semantics_registry())
     registry['verified_prefixes'] = []
-    monkeypatch.setattr(parser, '_load_rdps_semantics_registry', lambda: registry)
+    for patched_consumer in (
+        parser,
+        parser_approval,
+        parser_packet_semantics,
+    ):
+        monkeypatch.setattr(patched_consumer, '_load_rdps_semantics_registry', lambda: registry)
     assert parser._build_special_combo_windows([combo_hit()], combo_chain(), battle_end_ms=2000) == []
 
 

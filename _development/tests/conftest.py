@@ -3,7 +3,6 @@ import os
 from pathlib import Path
 import pytest
 from PySide6.QtGui import QFont, QFontDatabase
-from PySide6.QtWebEngineCore import QWebEngineProfile
 from PySide6.QtWidgets import QApplication
 
 EVIDENCE = Path(os.environ.get("ENDFIELD_UI_EVIDENCE_DIR", str(Path(__file__).resolve().parents[2] / "_development/implementations/implementation-ui-20261021")))
@@ -53,8 +52,4 @@ def app():
         QFontDatabase.addApplicationFont(str(cjk_font))
     application.setStyle("Fusion")
     application.setFont(QFont("Microsoft YaHei UI", 10))
-    profile = QWebEngineProfile.defaultProfile()
-    root = EVIDENCE
-    profile.setCachePath(str(root / "qt-cache"))
-    profile.setPersistentStoragePath(str(root / "qt-storage"))
     return application

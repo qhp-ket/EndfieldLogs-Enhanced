@@ -4,41 +4,75 @@ import copy
 import json
 from dataclasses import dataclass, field, replace
 from pathlib import Path
+from functools import lru_cache
+import math
+import re
 from endfield_pcap.models import OverlayEntry, OverlaySourceType
 
 
 ASSETS = Path(__file__).resolve().parent / "assets"
 BUILTIN_DIRECTORIES = {"combo_skill": "combo"}
-SNAPSHOTS = {"analysis_snapshot", "analysis_summary", "combo_snapshot", "buff_snapshot", "input_snapshot"}
+MODULE_SUBSCRIPTIONS = {'damage': ('analysis_summary',), 'combo_skill': ('combo_snapshot',), 'uid_mask': ()}
+MODULE_SETTINGS = {
+    'damage': {'bar_mode', 'columns', 'theme', 'show_character_avatars', 'avatar_size_percent'},
+    'combo_skill': {'display_style', 'theme', 'show_character_avatars', 'avatar_size_percent'},
+    'uid_mask': {'shape'},
+}
+
+MODULE_OPTIONS = {
+    'bar_mode': {'dps', 'rdps'},
+    'columns': {'damage', 'damage_rate', 'rdamage', 'rdamage_rate'},
+    'theme': {'light', 'dark', 'transparent', 'endfield'},
+    'show_character_avatars': {'on', 'off'},
+    'display_style': {'circles', 'bars'},
+    'shape': {'rectangle', 'rounded'},
+}
+
+
+def valid_module_value(key, value):
+    if key == 'avatar_size_percent':
+        return type(value) is int and 50 <= value <= 300
+    if key == 'columns':
+        return isinstance(value, list) and all(isinstance(v, str) and v in MODULE_OPTIONS[key] for v in value)
+    return isinstance(value, str) and value in MODULE_OPTIONS[key]
 
 
 @dataclass(slots=True)
 class OverlayTemplate:
     path: Path | None = None
-    name: str = "网页自带配置"
-    entry: Path | None = None
+    name: str = "原生皮肤"
     subscriptions: tuple[str, ...] = ()
     settings: list[dict] = field(default_factory=list)
     window: dict[str, int] = field(default_factory=dict)
-    font_mode: str = "dom"
+    modules: list[dict] = field(default_factory=list)
+    layout: dict = field(default_factory=dict)
+    theme: dict = field(default_factory=dict)
     error: str = ""
 
 
 def read_template(path: Path) -> OverlayTemplate:
+    path = Path(path).resolve()
+    stat = path.stat()
+    if stat.st_size > 1024*1024:
+        raise ValueError('皮肤文件上限为 1 MiB')
+    return copy.deepcopy(_read_template(str(path), stat.st_mtime_ns, stat.st_size))
+
+
+@lru_cache(maxsize=128)
+def _read_template(filename, mtime, size):
+    path = Path(filename)
     data = json.loads(path.read_text(encoding="utf-8-sig"))
-    if data.get("schema_version") != 1:
-        raise ValueError("模板 schema_version 必须为 1")
-    entry = (path.parent / data["entry"]).resolve()
-    if entry.suffix.lower() not in {".html", ".htm"} or not entry.is_file():
-        raise ValueError("模板 entry 必须指向存在的 HTML 文件")
-    subscriptions = data.get("subscriptions", [])
-    if not isinstance(subscriptions, list) or any(s not in SNAPSHOTS for s in subscriptions):
-        raise ValueError("模板订阅仅支持 analysis_snapshot / analysis_summary / combo_snapshot / buff_snapshot / input_snapshot")
+    if not isinstance(data, dict) or data.get('schema_version') != 2:
+        raise ValueError('原生皮肤 schema_version 必须为 2')
+    if set(data)-{'schema_version', 'name', 'window', 'settings', 'modules', 'layout', 'theme'}:
+        raise ValueError('皮肤包含未支持的字段')
     settings = data.get("settings", [])
     keys = set()
-    if not isinstance(settings, list):
+    if not isinstance(settings, list) or len(settings) > 64:
         raise ValueError("模板 settings 必须为数组")
     for item in settings:
+        if not isinstance(item, dict):
+            raise ValueError('皮肤设置必须为对象')
         key = item.get("key")
         if not isinstance(key, str) or not key or key in keys:
             raise ValueError("模板设置 key 不能为空或重复")
@@ -63,12 +97,68 @@ def read_template(path: Path) -> OverlayTemplate:
         if item.get("legacy_field") not in {None, "bar_mode", "visible_columns", "overlay_theme"}:
             raise ValueError("未知 legacy_field")
     window = data.get("window", {})
-    if any(k not in {"min_width", "min_height", "default_width", "default_height"}
+    if not isinstance(window, dict) or any(k not in {"min_width", "min_height", "default_width", "default_height"}
            or not isinstance(v, int) or isinstance(v, bool) or v < 1 or v > 16384 for k, v in window.items()):
         raise ValueError("模板窗口尺寸无效")
-    return OverlayTemplate(path.resolve(), str(data.get("name", path.stem)), entry,
-                           tuple(subscriptions), settings, window,
-                           "css" if data.get("font_mode") == "css" else "dom")
+    modules = data.get('modules')
+    if not isinstance(modules, list) or not 1 <= len(modules) <= 16:
+        raise ValueError('皮肤需要 1–16 个原生模块')
+    subscriptions = set()
+    for module in modules:
+        if not isinstance(module, dict) or module.get('type') not in MODULE_SUBSCRIPTIONS:
+            raise ValueError('模块仅支持 damage / combo_skill / uid_mask')
+        if set(module)-{'type', 'settings', 'setting_bindings'}:
+            raise ValueError('模块包含未支持的字段')
+        for field in ('settings', 'setting_bindings'):
+            values = module.get(field, {})
+            if not isinstance(values, dict) or set(values)-MODULE_SETTINGS[module['type']]:
+                raise ValueError('模块设置无效')
+            if field == 'settings' and any(not valid_module_value(k, v) for k, v in values.items()):
+                raise ValueError('模块设置值无效')
+            if field == 'setting_bindings' and any(not isinstance(value, str) or value not in keys for value in values.values()):
+                raise ValueError('模块绑定必须引用已声明的设置')
+        declarations = {item['key']: item for item in settings}
+        bindings = {key: key for key in MODULE_SETTINGS[module['type']] if key in declarations}
+        bindings.update(module.get('setting_bindings', {}))
+        for key, target in bindings.items():
+            item = declarations[target]
+            expected = 'slider' if key == 'avatar_size_percent' else 'multiselect' if key == 'columns' else 'select'
+            if item['type'] != expected or not valid_module_value(key, item['default']):
+                raise ValueError('模块绑定与设置类型或默认值不匹配')
+            if expected == 'slider':
+                valid = 50 <= item['min'] <= item['max'] <= 300
+            else:
+                valid = all(option['value'] in MODULE_OPTIONS[key] for option in item['options'])
+            if not valid:
+                raise ValueError('模块绑定的选项或范围无效')
+        subscriptions.update(MODULE_SUBSCRIPTIONS[module['type']])
+    layout = data.get('layout', {})
+    if (not isinstance(layout, dict) or set(layout)-{'direction'}
+            or layout.get('direction', 'single') not in {'single', 'horizontal', 'vertical'}
+            or len(modules) > 1 and layout.get('direction', 'single') == 'single'):
+        raise ValueError('布局应为 single / horizontal / vertical；多个模块需要排列方向')
+    theme = data.get('theme', {})
+    if not isinstance(theme, dict) or set(theme)-{'font_family', 'background', 'foreground', 'muted',
+            'accent', 'ready', 'border', 'radius', 'spacing', 'padding', 'border_width', 'image'}:
+        raise ValueError('主题参数无效')
+    for key, value in theme.items():
+        if key in {'radius', 'spacing', 'padding', 'border_width'}:
+            if type(value) not in (int, float) or not math.isfinite(value) or not 0 <= value <= 128:
+                raise ValueError('主题尺寸参数必须为 0–128 的有限数值')
+        elif key == 'image':
+            if not isinstance(value, str) or Path(value).is_absolute():
+                raise ValueError('主题图片必须使用皮肤目录内的相对路径')
+            image = (path.parent/value).resolve()
+            if not image.is_relative_to(path.parent) or not image.is_file() or image.suffix.lower() not in {'.png', '.jpg', '.jpeg', '.bmp', '.webp'}:
+                raise ValueError('主题图片不存在或格式无效')
+        elif key == 'font_family':
+            if not isinstance(value, str) or len(value) > 120:
+                raise ValueError('主题字体名称无效')
+        elif not isinstance(value, str) or not re.fullmatch(r'#[\da-fA-F]{6}(?:[\da-fA-F]{2})?|transparent', value):
+            raise ValueError('主题颜色使用 #RRGGBB / #AARRGGBB / transparent')
+    return OverlayTemplate(path=path, name=str(data.get('name', path.stem))[:160],
+        subscriptions=tuple(sorted(subscriptions)), settings=settings, window=window,
+        modules=modules, layout=layout, theme=theme)
 
 
 def template_for(entry: OverlayEntry) -> OverlayTemplate:
@@ -79,13 +169,8 @@ def template_for(entry: OverlayEntry) -> OverlayTemplate:
         source = Path(entry.source_value)
         if source.suffix.lower() == ".json":
             path = source
-        else:
-            path = source.with_suffix(".template.json")
-            if not path.is_file():
-                path = source.parent / "template.json"
-    if path is None or (not path.is_file() and path.suffix.lower() == ".json"
-                        and not (entry.source_type == OverlaySourceType.FILE and Path(entry.source_value).suffix.lower() == ".json")):
-        return OverlayTemplate()
+    if path is None:
+        return OverlayTemplate(error='仅支持内置浮窗或 v2 JSON 原生皮肤')
     try:
         return read_template(path)
     except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
@@ -119,10 +204,9 @@ def with_template_value(entry: OverlayEntry, key: str, value: object) -> Overlay
     settings = {**template_values(entry, template), key: value}
     candidate = replace(entry, template_settings=settings)
     normalized = template_values(candidate, template)
-    if '_damage_window_scale' in entry.template_settings:
-        normalized['_damage_window_scale'] = entry.template_settings['_damage_window_scale']
-    if entry.source_value == 'combo_skill' and '_combo_window_scale' in entry.template_settings:
-        normalized['_combo_window_scale'] = entry.template_settings['_combo_window_scale']
+    for scale_key in ('_damage_window_scale', '_combo_window_scale', '_native_window_scale'):
+        if scale_key in entry.template_settings:
+            normalized[scale_key] = entry.template_settings[scale_key]
     changes = {"template_settings": normalized}
     # Keep the old serialized fields readable by older dev builds.
     if legacy := item.get("legacy_field"):

@@ -1,14 +1,68 @@
 import json
 import pytest
 from parser_core import battle_log_parser as parser
+import parser_core.catalog.buff_templates as parser_buff_templates
+import parser_core.catalog.skill_damage as parser_skill_damage
+import parser_core.effects.window_identity as parser_window_identity
+import parser_core.effects.approval as parser_approval
+import parser_core.ingestion.buff_observations as parser_buff_observations
+import parser_core.ingestion.dynamic_evidence as parser_dynamic_evidence
+import parser_core.effects.enemy_status as parser_enemy_status
+import parser_core.effects.packet_mapping as parser_packet_mapping
+import parser_core.ingestion.skill_identity as parser_skill_identity
+import parser_core.ingestion.hits as parser_hits
+import parser_core.reporting.timeline as parser_timeline
+import parser_core.effects.classification as parser_classification
+import parser_core.effects.conditions as parser_conditions
+import parser_core.effects.registry as parser_registry
+import parser_core.effects.semantic_conditions as parser_semantic_conditions
+import parser_core.effects.specifications as parser_specifications
+import parser_core.effects.stacking_rules as parser_stacking_rules
+import parser_core.allocation.hit as parser_hit
+import parser_core.allocation.ledger as parser_ledger
+import parser_core.allocation.preflight as parser_preflight
+import parser_core.effects.combo as parser_combo
+import parser_core.effects.imbue as parser_imbue
+import parser_core.effects.lifecycle as parser_lifecycle
+import parser_core.effects.windows as parser_windows
+import parser_core.allocation.resistance as parser_resistance
+import parser_core.allocation.stack_selection as parser_stack_selection
+import parser_core.reporting.critical as parser_critical
+import parser_core.reporting.effect_windows as parser_effect_windows
+import parser_core.hit_debug as parser_hit_debug
 
 
 @pytest.fixture
 def decoded_modifier(tmp_path, monkeypatch):
     path = tmp_path / 'buff.json'
-    monkeypatch.setattr(parser, '_load_current_buff_roots', lambda: {
-        'buff_fixture': json.loads(path.read_text(encoding='utf-8'))
-    } if path.exists() else {})
+    for patched_consumer in (
+        parser,
+        parser_critical,
+        parser_effect_windows,
+        parser_resistance,
+        parser_stack_selection,
+        parser_imbue,
+        parser_ledger,
+        parser_lifecycle,
+        parser_windows,
+        parser_conditions,
+        parser_registry,
+        parser_semantic_conditions,
+        parser_specifications,
+        parser_stacking_rules,
+        parser_timeline,
+        parser_hits,
+        parser_enemy_status,
+        parser_approval,
+        parser_buff_observations,
+        parser_dynamic_evidence,
+        parser_window_identity,
+        parser_buff_templates,
+        parser_skill_damage,
+    ):
+        monkeypatch.setattr(patched_consumer, '_load_current_buff_roots', lambda: {
+            'buff_fixture': json.loads(path.read_text(encoding='utf-8'))
+        } if path.exists() else {})
     parser._decoded_damage_modifier_condition_rows.cache_clear()
 
     def write(actions, **guards):
@@ -143,12 +197,37 @@ def test_skill_damage_attributes_are_element_independent_and_can_combine():
 
 
 def test_gate_validates_unresolved_self_attribute_without_ui_preprocessing(monkeypatch):
-    monkeypatch.setattr(parser, '_load_current_buff_roots', lambda: {'buff_fixture': {
-        'damageModifier': [], 'attributeModifier': {'isConvertedAttribute': False, 'attributeModifiers': [{
-            'attributeType': 'NormalAttackDamageIncrease', 'formulaItem': 'FinalMultiplier',
-            'modifyAttributeType': 'Specific', 'param': {'useBlackboardKey': False, 'value': 0.2},
-        }]},
-    }})
+    for patched_consumer in (
+        parser,
+        parser_critical,
+        parser_effect_windows,
+        parser_resistance,
+        parser_stack_selection,
+        parser_imbue,
+        parser_ledger,
+        parser_lifecycle,
+        parser_windows,
+        parser_conditions,
+        parser_registry,
+        parser_semantic_conditions,
+        parser_specifications,
+        parser_stacking_rules,
+        parser_timeline,
+        parser_hits,
+        parser_enemy_status,
+        parser_approval,
+        parser_buff_observations,
+        parser_dynamic_evidence,
+        parser_window_identity,
+        parser_buff_templates,
+        parser_skill_damage,
+    ):
+        monkeypatch.setattr(patched_consumer, '_load_current_buff_roots', lambda: {'buff_fixture': {
+            'damageModifier': [], 'attributeModifier': {'isConvertedAttribute': False, 'attributeModifiers': [{
+                'attributeType': 'NormalAttackDamageIncrease', 'formulaItem': 'FinalMultiplier',
+                'modifyAttributeType': 'Specific', 'param': {'useBlackboardKey': False, 'value': 0.2},
+            }]},
+        }})
     record = {'event_key': 'buff_fixture', 'uid': 'a', 'ts_ms': 0, 'end_ts_ms': 1000,
               'source_character_key': 'chr_0004_pelica', 'target_character_key': 'chr_0004_pelica'}
     gate = parser._build_rdps_preflight([record], [], battle_start_ms=0, battle_end_ms=1000)
@@ -157,14 +236,52 @@ def test_gate_validates_unresolved_self_attribute_without_ui_preprocessing(monke
 
 
 def test_legacy_registry_effect_without_current_typed_modifier_is_unknown(monkeypatch):
-    monkeypatch.setattr(parser, '_rdps_registry_verified_effect_entry', lambda record, root_lookup_cache=None: {
-        'effects': [{'zone': 'dmg_inc', 'element': 'all', 'bb_key': 'legacy_rate'}],
-    })
-    monkeypatch.setattr(parser, '_rdps_registry_zone_effects', lambda record, entry: [{
-        'zone': 'dmg_inc', 'element': 'all', 'rate': 0.2, '_registry_bb_key': 'legacy_rate'}])
-    monkeypatch.setattr(parser, '_load_current_buff_roots', lambda: {'buff_fixture': {
-        'damageModifier': [], 'attributeModifier': {'isConvertedAttribute': False, 'attributeModifiers': []},
-    }})
+    for patched_consumer in (
+        parser,
+        parser_combo,
+        parser_imbue,
+        parser_preflight,
+        parser_registry,
+        parser_specifications,
+    ):
+        monkeypatch.setattr(patched_consumer, '_rdps_registry_verified_effect_entry', lambda record, root_lookup_cache=None: {
+            'effects': [{'zone': 'dmg_inc', 'element': 'all', 'bb_key': 'legacy_rate'}],
+        })
+    for patched_consumer in (
+        parser,
+        parser_registry,
+        parser_specifications,
+    ):
+        monkeypatch.setattr(patched_consumer, '_rdps_registry_zone_effects', lambda record, entry: [{
+            'zone': 'dmg_inc', 'element': 'all', 'rate': 0.2, '_registry_bb_key': 'legacy_rate'}])
+    for patched_consumer in (
+        parser,
+        parser_critical,
+        parser_effect_windows,
+        parser_resistance,
+        parser_stack_selection,
+        parser_imbue,
+        parser_ledger,
+        parser_lifecycle,
+        parser_windows,
+        parser_conditions,
+        parser_registry,
+        parser_semantic_conditions,
+        parser_specifications,
+        parser_stacking_rules,
+        parser_timeline,
+        parser_hits,
+        parser_enemy_status,
+        parser_approval,
+        parser_buff_observations,
+        parser_dynamic_evidence,
+        parser_window_identity,
+        parser_buff_templates,
+        parser_skill_damage,
+    ):
+        monkeypatch.setattr(patched_consumer, '_load_current_buff_roots', lambda: {'buff_fixture': {
+            'damageModifier': [], 'attributeModifier': {'isConvertedAttribute': False, 'attributeModifiers': []},
+        }})
     record = {'event_key': 'buff_fixture', 'bb_values': {'legacy_rate': 0.2}}
     assert parser._collect_zone_effects(record) == []
     assert record['rdps_unresolved_semantic_condition'] == ['missing_current_semantic_effect']
@@ -287,7 +404,15 @@ def test_conflicting_rate_does_not_override_explicit_constant_and_can_be_revalid
 
 
 def test_dynamic_parameters_require_each_declared_value(monkeypatch):
-    monkeypatch.setattr(parser, '_rdps_registry_verified_effect_entry', lambda record, root_lookup_cache=None: {'dynamic': True})
+    for patched_consumer in (
+        parser,
+        parser_combo,
+        parser_imbue,
+        parser_preflight,
+        parser_registry,
+        parser_specifications,
+    ):
+        monkeypatch.setattr(patched_consumer, '_rdps_registry_verified_effect_entry', lambda record, root_lookup_cache=None: {'dynamic': True})
     spec = {'zone': 'vuln_taken', 'element': 'all', 'base_bb_keys': ['base', 'base_alias'],
             'tick_bb_keys': ['tick'], 'max_bb_key': 'cap', 'delay_bb_key': 'delay', 'add_bb_key': 'add',
             'condition': {'type': 'damage_type_in', 'elements': ['pulse']}}
@@ -310,8 +435,16 @@ def test_dynamic_parameters_require_each_declared_value(monkeypatch):
 
 
 def test_dynamic_literal_requires_declared_constant_source(monkeypatch):
-    monkeypatch.setattr(parser, '_rdps_registry_verified_effect_entry', lambda record, root_lookup_cache=None: {
-        'dynamic': True, 'dynamic_effects': [{'zone': 'atk', 'element': 'all', 'base_rate': 0.2}]})
+    for patched_consumer in (
+        parser,
+        parser_combo,
+        parser_imbue,
+        parser_preflight,
+        parser_registry,
+        parser_specifications,
+    ):
+        monkeypatch.setattr(patched_consumer, '_rdps_registry_verified_effect_entry', lambda record, root_lookup_cache=None: {
+            'dynamic': True, 'dynamic_effects': [{'zone': 'atk', 'element': 'all', 'base_rate': 0.2}]})
     record = {'packet_mapping': {'dynamic_effects': [{'zone': 'atk', 'element': 'all', 'base_rate': 0.2}]}, 'bb_values': {}}
     assert parser._extract_dynamic_effect_specs(record) == []
     record['packet_mapping']['value_source'] = 'constant'
@@ -356,10 +489,19 @@ def test_dungeon_context_never_supplies_enemy_identity():
 
 
 def test_numeric_buff_context_conflict_stays_raw(monkeypatch):
-    monkeypatch.setattr(parser, '_packet_numeric_buff_hint', lambda _value: {})
-    monkeypatch.setattr(
+    for patched_consumer in (
         parser,
-        '_canonical_num_table_buff_number',
-        lambda _value, character: {'chr_a': 'buff_a', 'chr_b': 'buff_b', None: None}.get(character),
-    )
+        parser_hit_debug,
+        parser_classification,
+        parser_specifications,
+        parser_hits,
+        parser_packet_mapping,
+    ):
+        monkeypatch.setattr(patched_consumer, '_packet_numeric_buff_hint', lambda _value: {})
+    for patched_consumer in (
+        parser,
+        parser_packet_mapping,
+        parser_skill_identity,
+    ):
+        monkeypatch.setattr(patched_consumer, '_canonical_num_table_buff_number', lambda _value, character: {'chr_a': 'buff_a', 'chr_b': 'buff_b', None: None}.get(character))
     assert parser._canonical_packet_buff_id('123', owner_key='chr_a', source_key='chr_b') == '123'

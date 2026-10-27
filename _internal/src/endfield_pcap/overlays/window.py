@@ -1,23 +1,18 @@
 from __future__ import annotations
 
-import copy
-import json
 from dataclasses import replace
-from pathlib import Path
-from PySide6.QtCore import QPoint, QPointF, QRect, QSize, QTimer, QUrl, QUrlQuery, Qt, Signal
+from PySide6.QtCore import QPoint, QPointF, QRect, QSize, QTimer, Qt, Signal
 from PySide6.QtGui import QColor, QGuiApplication, QPainter, QPen
-from PySide6.QtWebEngineCore import QWebEngineScript
-from PySide6.QtWebEngineWidgets import QWebEngineView
-from PySide6.QtWidgets import QWidget, QToolButton
+from PySide6.QtWidgets import QWidget, QToolButton, QToolTip
 from endfield_pcap.models import OverlayEntry, OverlayGeometry, OverlaySourceType
-from endfield_pcap.overlays.templates import ASSETS, template_for, template_values
-from endfield_pcap.overlays.presentation import overlay_config, table_snapshot
-from endfield_pcap.runtime.paths import bundle_root
-from endfield_pcap.overlays.config import OverlayWindowConfig, _builtin_overlay_index
+from endfield_pcap.overlays.templates import template_for
+from endfield_pcap.overlays.presentation import table_snapshot
+from endfield_pcap.overlays.config import OverlayWindowConfig
+from endfield_pcap.overlays.native.canvas import OverlayCanvas
 
 
 class OverlayCloseButton(QToolButton):
-    """Native hit target, with a paint fallback until the web mark is ready."""
+    """Native close hit target, independent of the content canvas."""
     hoverChanged = Signal(bool)
 
     def __init__(self, parent):
@@ -26,7 +21,6 @@ class OverlayCloseButton(QToolButton):
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setStyleSheet("background: transparent; border: none;")
         self._hovered = False
-        self.renderer_ready = False
 
     def enterEvent(self, event):
         self._hovered = True
@@ -41,8 +35,6 @@ class OverlayCloseButton(QToolButton):
         super().leaveEvent(event)
 
     def paintEvent(self, event):
-        if self.renderer_ready:
-            return
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         if self._hovered:
@@ -74,12 +66,9 @@ class OverlayWindow(QWidget):
         self._resize_geometry: QRect | None = None
         self._active_edges = Qt.Edge(0)
         self._suppress_geometry_callback = False
-        self._analysis_snapshot: dict[str, object] | None = None
-        self._combo_snapshot: dict[str, object] | None = None
-        self._buff_snapshot: dict[str, object] | None = None
-        self._input_snapshot = None
         self._close_hovered = False
         self._close_pressed = False
+        self._last_geometry_state = None
 
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
@@ -89,23 +78,10 @@ class OverlayWindow(QWidget):
         self.setWindowTitle(self.entry.name)
         self._apply_window_flags()
 
-        self.webview = QWebEngineView(self)
-        self.webview.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-        self.webview.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
-        self.webview.page().setBackgroundColor(QColor(0, 0, 0, 0))
-        self.webview.setStyleSheet("background: transparent; border: 0;")
-        self.webview.setMouseTracking(True)
-        self.webview.loadStarted.connect(self._handle_load_started)
-        self.webview.loadFinished.connect(self._handle_load_finished)
-
         self.content_size = None
+        self.canvas = OverlayCanvas(self.entry, self)
+        self._client = None
 
-        script = QWebEngineScript()
-        script.setName("endfield-host-bridge")
-        script.setInjectionPoint(QWebEngineScript.InjectionPoint.DocumentCreation)
-        script.setWorldId(QWebEngineScript.ScriptWorldId.MainWorld)
-        script.setSourceCode((ASSETS / "shared/host_bridge.js").read_text(encoding="utf-8"))
-        self.webview.page().scripts().insert(script)
         self.close_button = OverlayCloseButton(self)
         self.close_button.setObjectName("overlayCloseButton")
         self.close_button.setToolTip("隐藏此悬浮窗（分析继续运行）")
@@ -114,10 +90,19 @@ class OverlayWindow(QWidget):
         self.close_button.hoverChanged.connect(self._set_close_hover)
         self.close_button.setVisible(not self.entry.click_through)
         self._apply_initial_geometry()
-        self.webview.resize(self.size())
+        self.canvas.resize(self.size())
         self.setWindowOpacity(self.entry.opacity if self.desktop_visible else 0.0)
-        self.webview.setZoomFactor(1.0)
-        self._load_overlay()
+        if not self.canvas.uid_only:
+            from endfield_pcap.overlays.content_size import ContentFitter
+            self.content_size = ContentFitter(self)
+            self.canvas.naturalSizeChanged.connect(self.content_size.fit)
+            self.canvas.relayout()
+        if not config.use_in_process_snapshots and template_for(self.entry).subscriptions:
+            from endfield_pcap.overlays.client import SnapshotClient
+            self._client = SnapshotClient(config.ws_port, config.ws_browser_token, self)
+            self._client.snapshot.connect(self.canvas.receive)
+            self._client.connectedChanged.connect(self.canvas.set_connected)
+            self._client.start()
 
     def apply_entry(self, entry: OverlayEntry) -> None:
         previous = self.entry
@@ -131,6 +116,10 @@ class OverlayWindow(QWidget):
             self.content_size.pending = None
             self.content_size.timer.stop()
         if entry.geometry != previous.geometry:
+            if self.content_size is not None and entry.geometry is not None and not self.content_size.resizing:
+                self.content_size.reset_position = False
+                self.content_size.pending = None
+                self.content_size.timer.stop()
             self._suppress_geometry_callback = True
             try:
                 self._apply_initial_geometry()
@@ -142,18 +131,23 @@ class OverlayWindow(QWidget):
             self.setWindowOpacity(entry.opacity if self.desktop_visible else 0.0)
         self.close_button.setVisible(not entry.click_through)
         self.close_button.update()
-        self._push_overlay_state()
-        if (
-            previous.source_type != entry.source_type
-            or previous.source_value != entry.source_value
-        ):
-            self._load_overlay()
+        self.canvas.apply_entry(entry)
+        if self.canvas.uid_only and self.content_size is not None:
+            self.canvas.naturalSizeChanged.disconnect(self.content_size.fit)
+            self.content_size.timer.stop()
+            self.content_size.deleteLater()
+            self.content_size = None
+        elif not self.canvas.uid_only and self.content_size is None:
+            from endfield_pcap.overlays.content_size import ContentFitter
+            self.content_size = ContentFitter(self)
+            self.canvas.naturalSizeChanged.connect(self.content_size.fit)
+            self.canvas.relayout()
         if not self.isVisible():
             self.show()
         self._update_cursor(self._hit_test_edges(QPoint()))
 
     def resizeEvent(self, event) -> None:  # noqa: N802
-        self.webview.resize(self.size())
+        self.canvas.resize(self.size())
         if self.content_size is not None:
             self.content_size.window_resized()
         self.close_button.move(
@@ -176,17 +170,18 @@ class OverlayWindow(QWidget):
         super().moveEvent(event)
 
     def closeEvent(self, event) -> None:  # noqa: N802
+        self._handle_mouse_release(QPoint())
         if self.config.on_closed is not None:
             if self.config.hide_on_close:
                 event.ignore()
             self.config.on_closed(self.entry.id)
             if self.config.hide_on_close:
                 return
+        if self._client is not None:
+            self._client.stop()
         super().closeEvent(event)
 
     def mousePressEvent(self, event) -> None:  # noqa: N802
-        # WebEngine can cover native sibling widgets on Windows. The same hit
-        # target works at the host too, including when position is locked.
         if event.button() == Qt.MouseButton.LeftButton and self._over_close(event.position().toPoint()):
             self._close_pressed = True
             event.accept()
@@ -198,10 +193,19 @@ class OverlayWindow(QWidget):
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event) -> None:  # noqa: N802
+        if self._drag_origin is not None or self._resize_origin is not None:
+            self._handle_mouse_move(event.position().toPoint(), event.globalPosition().toPoint(), event.buttons())
+            event.accept()
+            return
         self._set_close_hover(self._over_close(event.position().toPoint()))
         if self._close_hovered:
             self.setCursor(Qt.CursorShape.PointingHandCursor)
             return
+        tip = self.canvas.tooltip(event.position())
+        if tip:
+            QToolTip.showText(event.globalPosition().toPoint(), tip, self)
+        else:
+            QToolTip.hideText()
         if self.entry.locked:
             self.unsetCursor()
             return
@@ -232,17 +236,10 @@ class OverlayWindow(QWidget):
         if self._close_hovered == hovered:
             return
         self._close_hovered = hovered
-        self.webview.page().runJavaScript(
-            "window.endfieldOverlay?.setCloseHover?.(" + ("true" if hovered else "false") + ");")
+        self.close_button.update()
 
-    def wheelEvent(self, event) -> None:  # noqa: N802
-        # Web content is mouse-transparent to support native window dragging.
-        # Forward the wheel to a template's explicitly declared scroll region.
-        delta = -event.angleDelta().y()
-        self.webview.page().runJavaScript(
-            f"document.querySelector('[data-overlay-scroll]')?.scrollBy(0, {delta});"
-        )
-        event.accept()
+    def wheelEvent(self, event):
+        event.ignore()
 
     def _apply_initial_geometry(self) -> None:
         if self.entry.geometry is not None:
@@ -277,7 +274,7 @@ class OverlayWindow(QWidget):
             self.show()
 
     def set_desktop_visible(self, visible: bool) -> None:
-        """Keep the native window and Chromium surface alive for WGC capture.
+        """Keep the native window and its backing surface alive for WGC capture.
 
         Zero desktop alpha affects composition on the monitor, while WGC keeps
         capturing the underlying surface. Never hide/minimize/move the HWND.
@@ -289,134 +286,16 @@ class OverlayWindow(QWidget):
         self.setWindowOpacity(self.entry.opacity if visible else 0.0)
         self._apply_window_flags()
 
-    def _load_overlay(self) -> None:
-        if (self.content_size is None and self.entry.source_type == OverlaySourceType.BUILTIN
-                and self.entry.source_value in ('damage', 'combo_skill')):
-            from endfield_pcap.overlays.content_size import ContentSizeBridge
-            self.content_size = ContentSizeBridge(self)
-        template = template_for(self.entry)
-        if template.entry is not None:
-            url = QUrl.fromLocalFile(str(template.entry))
-        elif self.entry.source_type == OverlaySourceType.BUILTIN:
-            url = QUrl.fromLocalFile(str(_builtin_overlay_index(self.entry.source_value).resolve()))
-        elif self.entry.source_type == OverlaySourceType.FILE:
-            url = QUrl.fromLocalFile(str(Path(self.entry.source_value).resolve()))
-        else:
-            url = QUrl.fromUserInput(self.entry.source_value)
-        if not url.isLocalFile():
-            self.webview.setUrl(url)
-            return
-        query = QUrlQuery(url)
-        query.addQueryItem("wsPort", str(self.config.ws_port))
-        # Never disclose the capability to an arbitrary remote template URL.
-        if url.isLocalFile() and not self.config.use_in_process_snapshots and self.config.ws_browser_token:
-            query.addQueryItem('wsToken', self.config.ws_browser_token)
-        query.addQueryItem("builtin", self.entry.source_value or "damage")
-        values = template_values(self.entry, template)
-        query.addQueryItem("barMode", str(values.get("bar_mode", self.entry.bar_mode)))
-        query.addQueryItem("columns", ",".join(values.get("columns", self.entry.visible_columns)))
-        query.addQueryItem("theme", str(values.get("theme", self.entry.overlay_theme)))
-        query.addQueryItem("fontScale", str(self.entry.font_scale))
-        query.addQueryItem("locked", "1" if self.entry.locked else "0")
-        query.addQueryItem("assetRoot", str(bundle_root()))
-        if self.config.use_in_process_snapshots and bool(template.subscriptions):
-            query.addQueryItem("snapshotTransport", "inprocess")
-        url.setQuery(query)
-        self.webview.setUrl(url)
-
-    def _handle_load_started(self) -> None:
-        self.close_button.renderer_ready = False
-        self.close_button.update()
-
-    def _handle_load_finished(self, ok: bool) -> None:
-        if ok:
-            self.close_button.renderer_ready = True
-            self.close_button.update()
-            self.close_button.raise_()
-            self._push_overlay_state()
-            self._push_analysis_snapshot()
-            self._push_combo_snapshot()
-            self._push_buff_snapshot()
-            self._push_snapshot('endfield-input-snapshot',self._input_snapshot)
-
-    def apply_analysis_snapshot(self, message: dict[str, object]) -> None:
-        if not {'analysis_snapshot', 'analysis_summary'}.intersection(template_for(self.entry).subscriptions):
-            return
-        message = table_snapshot(self.entry, message)
-        self._analysis_snapshot = copy.deepcopy(message)
-        self._push_analysis_snapshot()
+    def apply_analysis_snapshot(self, message):
+        if 'analysis_summary' in template_for(self.entry).subscriptions:
+            self.canvas.receive(table_snapshot(self.entry, message))
 
     def apply_analysis_summary(self, message):
-        if 'analysis_summary' not in template_for(self.entry).subscriptions:
-            return
-        self._analysis_snapshot = copy.deepcopy(message)
-        self._push_analysis_snapshot()
+        self.apply_analysis_snapshot(message)
 
-    def _push_analysis_snapshot(self) -> None:
-        self._push_snapshot("endfield-analysis-snapshot", self._analysis_snapshot)
-
-    def apply_combo_snapshot(self, message: dict[str, object]) -> None:
-        if "combo_snapshot" not in template_for(self.entry).subscriptions:
-            return
-        self._combo_snapshot = copy.deepcopy(message)
-        self._push_combo_snapshot()
-
-    def _push_combo_snapshot(self) -> None:
-        self._push_snapshot("endfield-combo-snapshot", self._combo_snapshot)
-
-    def apply_buff_snapshot(self, message: dict[str, object]) -> None:
-        if "buff_snapshot" not in template_for(self.entry).subscriptions:
-            return
-        self._buff_snapshot = copy.deepcopy(message)
-        self._push_buff_snapshot()
-
-    def _push_buff_snapshot(self) -> None:
-        self._push_snapshot("endfield-buff-snapshot", self._buff_snapshot)
-
-    def apply_input_snapshot(self,message):
-        if 'input_snapshot' not in template_for(self.entry).subscriptions:
-            return
-        self._input_snapshot = copy.deepcopy(message)
-        self._push_snapshot('endfield-input-snapshot',self._input_snapshot)
-
-    def _push_snapshot(self, event_name: str, message: dict[str, object] | None) -> None:
-        if (
-            not self.config.use_in_process_snapshots
-            or not ({event_name.replace("endfield-", "").replace("-snapshot", "_snapshot")}
-                    | ({'analysis_summary'} if event_name == 'endfield-analysis-snapshot' else set())).intersection(template_for(self.entry).subscriptions)
-            or message is None
-        ):
-            return
-        payload = json.dumps(message, ensure_ascii=True, allow_nan=False)
-        self.webview.page().runJavaScript(
-            "window.dispatchEvent(new CustomEvent('" + event_name + "', {detail: "
-            + payload + "}));"
-        )
-
-    def _push_overlay_state(self) -> None:
-        config = overlay_config(self.entry)
-        defaults = template_for(self.entry).window
-        config['referenceSize'] = dict(width=defaults.get('default_width', self.config.default_width),
-                                       height=defaults.get('default_height', self.config.default_height))
-        if self.entry.source_type == OverlaySourceType.BUILTIN and self.entry.source_value == 'combo_skill':
-            from endfield_pcap.data.avatars import avatar_catalog
-            config['characterAvatars'] = avatar_catalog()
-            config['fitReset'] = self.content_size.reset_position
-        if self.entry.source_type == OverlaySourceType.BUILTIN and self.entry.source_value == 'damage':
-            from endfield_pcap.data.avatars import avatar_catalog
-            config['characterAvatars'] = avatar_catalog()
-            config['waitForSnapshot'] = self._analysis_snapshot is not None
-            config['fitReset'] = self.content_size.reset_position
-        config['closeHovered'] = self._close_hovered and not self.entry.click_through
-        payload = json.dumps(
-            config,
-            ensure_ascii=False,
-        )
-        script = (
-            "window.dispatchEvent(new CustomEvent("
-            "'endfield-overlay-config', { detail: " + payload + " }));"
-        )
-        self.webview.page().runJavaScript(script)
+    def apply_combo_snapshot(self, message):
+        if 'combo_snapshot' in template_for(self.entry).subscriptions:
+            self.canvas.receive(message)
 
     def _emit_geometry_changed(self) -> None:
         if self._suppress_geometry_callback or self.config.on_geometry_changed is None:
@@ -434,9 +313,20 @@ class OverlayWindow(QWidget):
         if self.content_size is not None and self.content_size.scale is not None:
             self.entry = replace(self.entry, template_settings={
                 **self.entry.template_settings, self.content_size.scale_setting: self.content_size.scale})
+        # Persisting and refreshing the settings page on every mouse move
+        # blocks dragging. Publish the final geometry once on release.
+        if self._drag_origin is not None or self._resize_origin is not None:
+            return
+        state = (geometry_value.x,geometry_value.y,geometry_value.width,geometry_value.height,
+                 self.content_size.scale if self.content_size else None)
+        if state == self._last_geometry_state:
+            return
+        self._last_geometry_state = state
         self.config.on_geometry_changed(self.entry.id, geometry_value)
 
     def _handle_mouse_press(self, local_pos: QPoint, global_pos: QPoint) -> None:
+        QToolTip.hideText()
+        self._set_close_hover(False)
         edges = self._hit_test_edges(local_pos)
         if edges != Qt.Edge(0):
             self._resize_origin = global_pos
@@ -470,6 +360,7 @@ class OverlayWindow(QWidget):
         self._resize_origin = None
         self._resize_geometry = None
         self._active_edges = Qt.Edge(0)
+        self._emit_geometry_changed()
         self._update_cursor(self._hit_test_edges(local_pos))
 
     def _hit_test_edges(self, pos: QPoint):

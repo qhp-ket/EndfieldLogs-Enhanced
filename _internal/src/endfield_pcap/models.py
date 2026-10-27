@@ -15,7 +15,6 @@ class ServiceState(StrEnum):
 
 class OverlaySourceType(StrEnum):
     BUILTIN = "builtin"
-    URL = "url"
     FILE = "file"
 
 
@@ -51,7 +50,7 @@ class OverlayEntry:
     opacity: float = 1.0
     scale: float = 1.0
     geometry: OverlayGeometry | None = None
-    bar_mode: str = "dps"
+    bar_mode: str = "rdps"
     visible_columns: tuple[str, ...] = ("damage", "damage_rate", "rdamage", "rdamage_rate")
     overlay_theme: str = "light"
     font_scale: float = 1.0
@@ -218,6 +217,5 @@ class ServiceObserver:
     on_event: Callable[[dict[str, object]], None] | None = None
     on_analysis_snapshot: Callable[[dict[str, object]], None] | None = None
     on_combo_snapshot: Callable[[dict[str, object]], None] | None = None
-    on_buff_snapshot: Callable[[dict[str, object]], None] | None = None
     on_analysis_summary: Callable[[dict[str, object]], None] | None = None
 

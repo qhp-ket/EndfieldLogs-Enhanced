@@ -4,6 +4,11 @@ from copy import deepcopy
 from parser_core.condition_index import ConditionRecordIndex, EffectWindowIndex
 from parser_core import battle_log_parser as parser
 from parser_core.unified import parse_overlay_battle_snapshot_text
+import parser_core.allocation.hit as parser_hit
+import parser_core.allocation.ledger as parser_ledger
+import parser_core.reporting.hit_details as parser_hit_details
+import parser_core.hit_context as parser_hit_context
+import parser_core.hit_debug as parser_hit_debug
 
 
 def test_condition_candidates_preserve_predicate_for_both_sides_and_time_reversal():
@@ -49,5 +54,13 @@ def test_full_snapshot_identical_with_unindexed_reference(monkeypatch):
         kwargs.update(effect_window_indices=None, condition_records_by_target=None,
                       condition_records_by_uid=None, condition_records_by_actor=None)
         return original(hit, windows, **kwargs)
-    monkeypatch.setattr(parser, '_allocate_rdps_for_hit', full_scan)
+    for patched_consumer in (
+        parser,
+        parser_hit_context,
+        parser_hit_debug,
+        parser_hit_details,
+        parser_hit,
+        parser_ledger,
+    ):
+        monkeypatch.setattr(patched_consumer, '_allocate_rdps_for_hit', full_scan)
     assert parse_overlay_battle_snapshot_text(text) == actual

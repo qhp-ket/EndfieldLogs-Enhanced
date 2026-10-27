@@ -1,4 +1,4 @@
-from uploader_core import battle_payload_builder as builder
+from uploader_core.payload import files as builder
 
 
 def test_split_battles_inherit_only_prior_explicit_actor_attributes(monkeypatch, tmp_path):

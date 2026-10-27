@@ -22,8 +22,9 @@ def test_compact_rows_and_page_local_character_selectors(app):
         assert dialog.tabs.count() == 3
         assert '技力数据' not in [dialog.tabs.tabText(i) for i in range(dialog.tabs.count())]
         assert abs(pos(dialog.character_combo).y()-pos(dialog.buff_check).y()) < 8
-        assert abs(pos(dialog.character_combo).y()-pos(dialog.skill_frames_check).y()) < 8
-        assert abs(pos(dialog.zoom_slider).y()-pos(dialog.graphics_zoom_slider).y()) < 8
+        assert not dialog.skill_frames_check.isVisible()
+        assert not dialog.input_history.attach.isVisible()
+        assert dialog.input_history.visible.isVisible()
         assert abs(pos(dialog.zoom_slider).y()-pos(dialog.time_unit_combo).y()) < 8
         assert '回退' in dialog.skill_frames_check.text() and '兜底' not in dialog.skill_frames_check.text()
         assert dialog.tabs.widget(0).isAncestorOf(dialog.character_combo)
@@ -143,10 +144,11 @@ def test_poise_hover_anywhere_on_track_reports_last_observation_and_zero(app):
         app.sendEvent(view.viewport(), move)
         QTest.qWait(60)
         assert previews and '失衡观测值 90' in previews[-1]
-        assert dialog.hover_time_label.text() == '时间 0.525s'
+        # A mouse coordinate is rounded to logical pixels; allow half a pixel.
+        assert abs(float(dialog.hover_time_label.text()[3:-1])-.525) <= duration/width/1000/2+.001
         assert '失衡观测值 90' in QToolTip.text()
         view.set_time_unit('frames')
-        assert abs(float(dialog.hover_time_label.text()[3:-1])-15.75) < .03
+        assert abs(float(dialog.hover_time_label.text()[3:-1])-15.75) <= duration/width/1000*30/2+.03
         assert '15.75F' in poise_hover_text(view, 525, y)
     finally:
         QToolTip.hideText()

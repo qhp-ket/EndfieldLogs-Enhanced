@@ -6,7 +6,7 @@ from pathlib import Path
 import queue
 import threading
 from PySide6.QtCore import QTimer
-from PySide6.QtWidgets import QWidget,QHBoxLayout,QVBoxLayout,QDialog,QFormLayout,QFileDialog
+from PySide6.QtWidgets import QWidget,QHBoxLayout,QVBoxLayout,QDialog,QFormLayout,QFileDialog,QMenu
 from qfluentwidgets import CaptionLabel,PushButton,PrimaryPushButton,ComboBox,LineEdit,CheckBox
 from endfield_pcap.gui.shared.spinboxes import ReadableDoubleSpinBox
 from endfield_pcap.inputlog.history import discover,load_evidence,battle_start_wall_ms
@@ -16,7 +16,7 @@ from endfield_pcap.history.index import record_key
 
 
 class InputHistoryBar(QWidget):
-    def __init__(self,dialog):
+    def __init__(self,dialog,*,compact=False):
         super().__init__(dialog)
         self.dialog=dialog
         self.record=None
@@ -30,14 +30,17 @@ class InputHistoryBar(QWidget):
         self.evidence=dict(actions=[],raw=[],warnings=[])
         parent=dialog.parentWidget()
         self.settings=normalize_settings(getattr(getattr(parent,'app_config',None),'input_settings',{}))
-        layout=QHBoxLayout(self);layout.setContentsMargins(16,0,16,0)
+        layout=(QVBoxLayout if compact else QHBoxLayout)(self)
+        layout.setContentsMargins(12,10,12,10) if compact else layout.setContentsMargins(16,0,16,0)
         self.visible=CheckBox('显示输入',self);self.visible.setChecked(False)
         self.status=CaptionLabel('未绑定 input log',self);self.status.setWordWrap(True)
-        self.attach=PushButton('绑定 input log',self);self.attach.clicked.connect(self.choose)
+        self.attach=PushButton('绑定 input log',self);self.attach.clicked.connect(lambda:self.open_dialog(self.choose))
         self.detach=PushButton('解除绑定',self);self.detach.clicked.connect(self.unbind)
-        self.align=PushButton('对齐 / 槽位',self);self.align.clicked.connect(self.alignment)
-        self.options=PushButton('输入解释设置',self);self.options.clicked.connect(self.configure)
-        layout.addWidget(self.visible);layout.addWidget(self.status,1)
+        self.align=PushButton('对齐 / 槽位',self);self.align.clicked.connect(lambda:self.open_dialog(self.alignment))
+        self.options=PushButton('输入解释设置',self);self.options.clicked.connect(lambda:self.open_dialog(self.configure))
+        if not compact:
+            layout.addWidget(self.visible)
+        layout.addWidget(self.status,1)
         for button in (self.attach,self.detach,self.align,self.options): layout.addWidget(button)
         self.visible.toggled.connect(self.visibility_changed)
         self.timer=QTimer(self);self.timer.setInterval(50);self.timer.timeout.connect(self.drain)
@@ -60,8 +63,18 @@ class InputHistoryBar(QWidget):
         self.visible.blockSignals(False)
         self.reload()
 
+    def open_dialog(self,callback):
+        # Release the popup's mouse/focus grab before entering a modal dialog.
+        # The persistent battle window owns dialogs, never the menu widget.
+        popup=self.window()
+        if isinstance(popup,QMenu):
+            popup.close()
+            QTimer.singleShot(0,self.dialog,callback)
+        else:
+            callback()
+
     def choose(self):
-        path,_=QFileDialog.getOpenFileName(self,'绑定 input log（仅本地读取）',
+        path,_=QFileDialog.getOpenFileName(self.dialog,'绑定 input log（仅本地读取）',
                     str(self.record.file_path.parent) if self.record else '', '输入日志 (*.input.jsonl *.jsonl)')
         if path:
             self.paths=[Path(path)]
@@ -94,7 +107,7 @@ class InputHistoryBar(QWidget):
 
     def configure(self):
         from endfield_pcap.gui.independent.input_settings import InputSettingsDialog
-        dialog=InputSettingsDialog(self.settings,self)
+        dialog=InputSettingsDialog(self.settings,self.dialog)
         if dialog.exec():
             self.settings=dialog.value()
             parent=self.dialog.parentWidget()
@@ -105,7 +118,7 @@ class InputHistoryBar(QWidget):
             self.reload()
 
     def alignment(self):
-        dialog=QDialog(self);dialog.setWindowTitle('输入日志对齐与手动槽位')
+        dialog=QDialog(self.dialog);dialog.setWindowTitle('输入日志对齐与手动槽位')
         form=QFormLayout(dialog)
         note=CaptionLabel('只改变输入证据的显示；不补偿抓包延迟、不吸附技能点、不更改战斗结果。',dialog)
         note.setWordWrap(True);form.addRow(note)
@@ -179,5 +192,3 @@ class InputHistoryBar(QWidget):
     def publish(self,*_):
         evidence=self.evidence if self.visible.isChecked() else dict(actions=[],raw=[],warnings=[])
         self.dialog.timeline.set_input_evidence(evidence)
-        if self.dialog.web_analysis is not None:
-            self.dialog.web_analysis.set_input_evidence(evidence)

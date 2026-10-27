@@ -69,9 +69,6 @@ class MainWindow(
     def __init__(self, app_config: AppConfig, config_path: Path) -> None:
         super().__init__()
         self.app_config = app_config
-        self.app_config.overlays = [entry for entry in app_config.overlays
-            if entry.source_value != 'buff'
-            and 'buff_snapshot' not in template_for(entry).subscriptions]
         self.config_path = config_path
         self.service_controller = ServiceController(self.app_config.service)
         self._init_independent_services()
@@ -151,6 +148,14 @@ class MainWindow(
         self.queue_timer.timeout.connect(self._drain_queue)
         self.queue_timer.start()
         self._bind_independent_services()
+        if app_config.overlay_migration_count:
+            from endfield_pcap.gui.config import save_app_config
+            count = app_config.overlay_migration_count
+            app_config.overlay_migration_count = 0
+            save_app_config(app_config, config_path)
+            QTimer.singleShot(0, self, lambda: InfoBar.info(
+                '???????', f'??? {count} ???????????????????????',
+                duration=9000, parent=self))
 
     def _drain_queue(self) -> None:
         self._drain_independent_services()
@@ -190,8 +195,6 @@ class MainWindow(
                 self._complete_trace_import(payload)
             elif event_type == "history_index":
                 self._complete_record_index(payload)
-            elif event_type == "buff_snapshot":
-                self.overlay_manager.apply_buff_snapshot(payload)
             elif event_type == "error":
                 exc = payload if isinstance(payload, BaseException) else RuntimeError(str(payload))
                 LOGGER.error("service thread crashed", exc_info=(type(exc), exc, exc.__traceback__))

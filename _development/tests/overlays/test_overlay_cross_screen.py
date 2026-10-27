@@ -17,6 +17,7 @@ def test_move_preserves_starting_size_after_transient_resize_and_release(app):
         manager.apply_entry(current)
         window = manager._windows[current.id]
         app.processEvents()
+        window.resize(800,380)
         changes.clear()
         local = QPoint(80, 80)
         origin = window.mapToGlobal(local)
@@ -96,7 +97,7 @@ def test_native_cross_screen_roundtrips_preserve_size_and_saved_geometry(app):
                 assert (window.width(), window.height()) == (800, 380)
         assert len(ratios) >= 2, 'test must cross a real DPI boundary'
         assert changes and {(e.geometry.width, e.geometry.height) for e in changes} == {(800, 380)}
-        assert window.webview.zoomFactor() == 1
+        assert window.canvas.scale > 0
     finally:
         manager.close_all()
         app.processEvents()

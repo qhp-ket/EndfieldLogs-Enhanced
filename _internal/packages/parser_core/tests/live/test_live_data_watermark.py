@@ -9,7 +9,7 @@ Other clock and boundary inputs in this module are explicit synthetic controls.
 """
 from __future__ import annotations
 import pytest
-from parser_core import live as live_module
+from parser_core.realtime import live as live_module
 from parser_core.live import LiveOverlayBattleParser
 
 

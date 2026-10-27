@@ -22,7 +22,6 @@
 | 中文名称、技力与技能帧规则 | [AKEData 数据站](https://data.akedata.wiki/)、[网站](https://www.akedata.wiki/)及 [AKEDatabase 仓库](https://github.com/NagiYume/AKEDatabase)；版本、提交和原表哈希保留在数据的 `source` / `_source` 中 |
 | 圆形角色头像 | AKEData 数据站的 `charroundicon` 图片，缩放并圆形裁切为透明 PNG；角色 ID、原始链接和校验值见 `_internal/data/ui/characters/manifest.json`，维护方式见同目录 README |
 | 解析测试中的文案、公式与审核证据 | 固定 ZMDLogs 资源基线及 AKEData 文案快照；版本、表名与哈希见测试 JSON 和 fixtures 说明 |
-| 官网风格分析界面参考 | [Endfield Logs Suite](https://github.com/medps16000/endfield-suite-open)，参考提交 `4e65587b36feb4081eadf669391db64fd7469807`；MIT 原文保留在 `_internal/src/endfield_pcap/gui/battle/assets/THIRD_PARTY_NOTICE.txt` |
 
 运行包中沿用 `akedata` 目录的数据经固定 ZMDLogs 发行包取得；
 中文名称词典、技力和技能帧规则则各自记录对应的 AKEData 版本。

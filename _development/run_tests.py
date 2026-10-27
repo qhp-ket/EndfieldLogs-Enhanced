@@ -26,7 +26,6 @@ os.environ["ENDFIELD_UI_EVIDENCE_DIR"] = str(output)
 os.environ["QT_QPA_PLATFORM"] = os.environ.get("ENDFIELD_UI_TEST_PLATFORM", "offscreen")
 os.environ["LOCALAPPDATA"] = str(output / "test-profile/local")
 os.environ["APPDATA"] = str(output / "test-profile/roaming")
-os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--no-sandbox --disable-gpu --disable-dev-shm-usage"
 
 if __name__ == "__main__":
     import pytest

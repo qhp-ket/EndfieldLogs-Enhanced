@@ -66,7 +66,6 @@ class ServiceController:
             if str(event.get("type", "")) == "SC_SELF_SCENE_INFO"
             else None,
             on_analysis_summary=lambda message: self.queue.put(("analysis_summary", message)),
-            on_buff_snapshot=lambda message: self.queue.put(("buff_snapshot", message)),
         )
         def runner() -> None:
             try:

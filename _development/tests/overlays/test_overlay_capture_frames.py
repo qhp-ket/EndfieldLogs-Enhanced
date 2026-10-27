@@ -17,7 +17,7 @@ from PySide6.QtWidgets import QWidget
 import endfield_pcap.overlays.manager as overlay_host
 from endfield_pcap.models import OverlayGeometry
 from app_test_support.ui.window import entry
-from app_test_support.ui.qt import EVIDENCE, page_value, wait_for_page
+from app_test_support.ui.qt import EVIDENCE
 
 
 def test_wgc_receives_fresh_frames_while_desktop_overlay_is_invisible(app):
@@ -50,17 +50,15 @@ def test_wgc_receives_fresh_frames_while_desktop_overlay_is_invisible(app):
         return image.pixelColor(round(20*ratio), round(180*ratio)).getRgb()[:3]
 
     def color(value):
-        page_value(native, f'document.querySelector("#wgc-probe").style.background="rgb({value})"')
+        probe.setStyleSheet(f"background:rgb({value})")
         QTest.qWait(300)
 
     try:
-        wait_for_page(native, lambda: None)
-        page_value(native, '''(() => {const probe=document.createElement('div');probe.id='wgc-probe';
-            probe.style.cssText='position:fixed;left:8px;top:150px;width:80px;height:80px;z-index:2147483647;background:rgb(240,10,10)';
-            document.body.appendChild(probe);return true;})()''')
+        probe = QWidget(native.canvas)
+        probe.setGeometry(8, 150, 80, 80)
+        probe.setStyleSheet('background:rgb(240,10,10)')
+        probe.show()
         QTest.qWait(300)
-        # The damage page measures its content after loading. Visibility
-        # edits must reuse that saved geometry, as the GUI does.
         current = manager._entries[current.id]
         hwnd, geometry = int(native.winId()), native.geometry()
         assert capture('visible-red') == (240, 10, 10)

@@ -1,28 +1,22 @@
 """Native history timeline: sticky labels/ruler, cast blocks and hit markers."""
 from __future__ import annotations
 from html import escape
-from PySide6.QtCore import Qt, QRectF, QPointF, QSize, Signal
-from PySide6.QtGui import QColor, QBrush, QFont, QPainter, QPen, QPolygonF
-from PySide6.QtWidgets import (
-    QGraphicsView,
-    QGraphicsScene,
-    QGraphicsRectItem,
-    QGraphicsPolygonItem,
-    QToolTip,
-)
-from qfluentwidgets import isDarkTheme
-from endfield_pcap.analysis.battle.detail import TimelineBlock, timeline_blocks
+from PySide6.QtCore import Qt, QRectF, QSize, Signal
+from PySide6.QtGui import QColor, QBrush, QFont, QPainter
+from PySide6.QtWidgets import QGraphicsView, QGraphicsScene, QToolTip
+from qfluentwidgets import isDarkTheme, TransparentToolButton, FluentIcon
+from endfield_pcap.analysis.battle.detail import timeline_blocks
 from endfield_pcap.analysis.battle.enemy import enemy_observations
-from endfield_pcap.analysis.battle.buffs.states import buff_state_text
 from endfield_pcap.analysis.battle.energy import energy_tracks
-from endfield_pcap.analysis.battle.layout import skill_lanes, CATEGORY_NAMES
+from endfield_pcap.analysis.battle.lane_config import normalize_lane_configs
 from endfield_pcap.gui.battle.plots.energy import draw_energy_tracks, resource_hover_text
-from endfield_pcap.data.skill_names import character_name
 from endfield_pcap.gui.shared.scrolling import install_immediate_scrolling
 from endfield_pcap.analysis.battle.time import ruler_ticks, format_time
-from endfield_pcap.data.skill_frames import display_bounds
-from endfield_pcap.gui.battle.timeline.frames import draw_skill_reference
+from endfield_pcap.gui.battle.timeline.items import draw_block_items
+from endfield_pcap.gui.battle.timeline.layout import layout_role_tracks
 from endfield_pcap.gui.battle.plots.poise import draw_poise_tracks, poise_hover_text
+from endfield_pcap.gui.battle.plots.damage import draw_damage_track, damage_hover_text
+from endfield_pcap.gui.battle.style import CATEGORY_COLORS, stroke
 from endfield_pcap.gui.battle.timeline.labels import (
     layout_columns,
     column_handle,
@@ -32,53 +26,7 @@ from endfield_pcap.gui.battle.timeline.labels import (
 )
 
 
-COLORS = {'重击': '#68829d', '战技': '#168c7b', '大招': '#b97919', '连携': '#8060b4',
-          '其他': '#747e8b', 'BUFF': '#ad526a'}
-
-
-class _BlockItem(QGraphicsRectItem):
-    def __init__(self, rect: QRectF, block: TimelineBlock, selected, scale=1., unit='seconds', reference=False):
-        super().__init__(rect)
-        self.block, self.selected = block, selected
-        self.scale = scale
-        self.reference = reference
-        self.setPen(QPen(QColor('#ffffff'), .5))
-        self.setBrush(QColor(COLORS.get(block.category, COLORS['其他'])))
-        self.setFlag(self.GraphicsItemFlag.ItemIsSelectable)
-        self.setToolTip('<pre>' + escape(block.description(unit)) + '</pre>')
-
-    def paint(self, painter, option, widget=None):
-        rect = self.rect()
-        cut = min(5., rect.width()/3)
-        polygon = QPolygonF([rect.topLeft(), rect.topRight()-QPointF(cut, 0),
-                            rect.topRight()+QPointF(0, cut), rect.bottomRight(),
-                            rect.bottomLeft()+QPointF(cut, 0), rect.bottomLeft()-QPointF(0, cut)])
-        color = self.brush().color()
-        if self.reference:
-            color.setAlpha(155)
-        painter.setBrush(color)
-        pen = QPen(QColor('#ffe4a0' if self.isSelected() else '#ffffff'), 1.8 if self.isSelected() else .8)
-        if self.reference:
-            pen.setStyle(Qt.PenStyle.DashLine)
-        painter.setPen(pen)
-        if self.block.lane == 'buff':
-            painter.drawRect(rect)  # Adjacent states must not look severed by bevels.
-        else:
-            painter.drawPolygon(polygon)
-        if rect.width() > 24:
-            font = painter.font()
-            font.setPixelSize(round(13*self.scale))
-            painter.setFont(font)
-            painter.setPen(QColor('white'))
-            name = self.block.name if rect.width() > 100*self.scale else self.block.category
-            if self.block.buff_states:
-                name = buff_state_text(self.block.buff_states)
-            text = painter.fontMetrics().elidedText(name, Qt.TextElideMode.ElideRight, int(rect.width()-7))
-            painter.drawText(rect.adjusted(4, 0, -3, 0), Qt.AlignmentFlag.AlignVCenter, text)
-
-    def mouseReleaseEvent(self, event):
-        super().mouseReleaseEvent(event)
-        self.selected(self.block)
+COLORS = CATEGORY_COLORS
 
 
 class BattleTimeline(QGraphicsView):
@@ -86,6 +34,7 @@ class BattleTimeline(QGraphicsView):
     blockActivated = Signal(object)
     graphicsZoomChanged = Signal(int)
     timeHovered = Signal(str)
+    laneSettingsRequested = Signal(str)
     LEFT, TOP = 170, 32
 
     def __init__(self, parent=None):
@@ -109,6 +58,10 @@ class BattleTimeline(QGraphicsView):
         self._role_column_width, self._track_column_width = 82., 180.
         self._role_width = 82.
         self._column_drag = None
+        self._hover_handle = None
+        self._selected_block = None
+        self._damage_metric = 'rdmg'
+        self._damage_cache = {}
         self.setMouseTracking(True)
         self._labels, self._ticks = [], []
         self.drawn_blocks = self.hit_markers = 0
@@ -118,11 +71,16 @@ class BattleTimeline(QGraphicsView):
         self._expand_rows = []
         self.skill_lane_rows = {}
         self._role_cells = []
+        self.lane_configs = {}
+        self._role_buttons = {}
+        self._lane_categories = {}
         self.reference_blocks = self.reference_markers = 0
         self._buff_labels, self._poise_axes = [], []
 
     def set_snapshot(self, snapshot):
         self._snapshot = snapshot
+        self._damage_cache.clear()
+        self._selected_block = None
         self._blocks = timeline_blocks(snapshot)
         self.enemy_tracks, _ = enemy_observations(snapshot)
         fit_label_columns(self)
@@ -138,6 +96,47 @@ class BattleTimeline(QGraphicsView):
     def set_filter(self, character, show_buffs=True):
         self._character, self._show_buffs = character, show_buffs
         self.render_timeline()
+
+    def set_damage_metric(self, metric):
+        self._damage_metric = metric if metric in {'dmg', 'dps', 'rdmg', 'rdps'} else 'none'
+        self.render_timeline()
+
+    def set_lane_configs(self, configs):
+        self.lane_configs = normalize_lane_configs(configs)
+        fit_label_columns(self)
+        self.render_timeline()
+
+    def _sync_role_buttons(self):
+        if not hasattr(self, '_role_buttons'):
+            return
+        eligible = {block.character_key for block in self._blocks if block.lane == 'skill'}
+        for owner in list(self._role_buttons):
+            if owner not in eligible:
+                self._role_buttons.pop(owner).deleteLater()
+            else:
+                self._role_buttons[owner].hide()
+        size = round(20*self._graphics_zoom*self._font_scale)
+        for top, height, name, owner in self._role_cells:
+            if owner not in eligible:
+                continue
+            button = self._role_buttons.get(owner)
+            if button is None:
+                button = TransparentToolButton(FluentIcon.SETTING, self.viewport())
+                button.setToolTip(name+' · 时间轴设置')
+                button.setAccessibleName(name+'时间轴设置')
+                button.clicked.connect(lambda checked=False, key=owner: self.laneSettingsRequested.emit(key))
+                self._role_buttons[owner] = button
+            y = max(self.TOP+2, self.mapFromScene(0, top).y()+2)
+            bottom = min(self.viewport().height(), self.mapFromScene(0, top+height).y())
+            button.setFixedSize(size, size)
+            button.setIconSize(QSize(max(12, round(size*.7)), max(12, round(size*.7))))
+            button.move(max(2, round(self._role_width-size-6)), round(y))
+            button.setVisible(bottom-y >= size+2 and self._role_width >= size+10)
+            button.raise_()
+
+    def scrollContentsBy(self, dx, dy):
+        super().scrollContentsBy(dx, dy)
+        self._sync_role_buttons()
 
     def set_zoom(self, value):
         self._zoom = value / 100
@@ -196,6 +195,9 @@ class BattleTimeline(QGraphicsView):
             event.accept()
             return
         handle = column_handle(self, x)
+        if handle != self._hover_handle:
+            self._hover_handle = handle
+            self.viewport().update()
         self.viewport().setCursor(Qt.CursorShape.SplitHCursor if handle else Qt.CursorShape.ArrowCursor)
         if handle:
             QToolTip.hideText()
@@ -214,18 +216,26 @@ class BattleTimeline(QGraphicsView):
             start, duration, width = self._time_extent
             self._hover_ms = max(start, min(start+duration, start + (point.x()-self.LEFT)/width*duration))
             poise = poise_hover_text(self, self._hover_ms, point.y())
-            text = poise or self._hover_text(self._hover_ms)
+            damage = damage_hover_text(self, self._hover_ms, point.y())
+            text = damage or poise or self._hover_text(self._hover_ms)
             self.timeHovered.emit(text)
             axis = getattr(self, '_energy_axis', None)
-            if event.position().y() >= self.TOP and (poise or (axis and axis['y'] <= point.y() <= axis['y']+axis['height'])):
+            if event.position().y() >= self.TOP and (damage or poise or (axis and axis['y'] <= point.y() <= axis['y']+axis['height'])):
                 QToolTip.showText(event.globalPosition().toPoint(), text, self.viewport())
             else:
-                QToolTip.hideText()
+                nearby = self.scene().items(QRectF(point.x()-5, point.y()-5, 10, 10))
+                tips = list(dict.fromkeys(item.toolTip() for item in nearby if item.toolTip()))
+                if tips:
+                    html = [tip if tip.startswith('<pre>') else '<pre>'+escape(tip)+'</pre>' for tip in tips]
+                    QToolTip.showText(event.globalPosition().toPoint(), '<hr>'.join(html), self.viewport())
+                else:
+                    QToolTip.hideText()
             self.viewport().update()
         super().mouseMoveEvent(event)
 
     def leaveEvent(self, event):
         self._hover_ms = None
+        self._hover_handle = None
         QToolTip.hideText()
         self.timeHovered.emit('')
         self.viewport().unsetCursor()
@@ -237,6 +247,7 @@ class BattleTimeline(QGraphicsView):
         self.render_timeline()
 
     def _activate(self, block):
+        self._selected_block = block
         self.blockSelected.emit(block.description(self._time_unit))
         self.blockActivated.emit(block)
 
@@ -254,13 +265,14 @@ class BattleTimeline(QGraphicsView):
         scale = self._graphics_zoom*self._font_scale
         layout_columns(self, scale)
         self.TOP = round(34*scale)
-        skill_pitch, buff_pitch = 40*scale, 47*scale
+        skill_pitch, buff_pitch = 37*scale, 47*scale
         self._buff_pitch = buff_pitch
         scene_font = QFont(self.font())
         scene_font.setPixelSize(round(13*scale))
         self._buff_labels = []
         self._expand_rows = []
         self.skill_lane_rows = {}
+        self._lane_categories = {}
         self._labels, self._ticks = [], []
         self.drawn_blocks = self.hit_markers = 0
         self.buff_change_markers = 0
@@ -268,14 +280,13 @@ class BattleTimeline(QGraphicsView):
         dark = isDarkTheme()
         self._fg = QColor('#e7e9ed' if dark else '#252930')
         self._bg = QColor('#202226' if dark else '#fafbfc')
-        self._grid = QColor('#3c4149' if dark else '#dfe3e9')
-        self._row_border = QColor('#626a76' if dark else '#b6c0cc')
+        self._grid = QColor('#343940' if dark else '#e5e8ed')
+        self._row_border = QColor('#49515d' if dark else '#c7ced7')
         self._accent = QColor('#009faa')
         self.buff_row_borders = []
         self.setBackgroundBrush(QBrush(self._bg))
         blocks = self._display_blocks()
         energy = energy_tracks(self._snapshot, self._character)
-        bounds = lambda block: display_bounds(block, self._show_skill_frames)
         end_ms = max(1.,float(self._snapshot.get('battle', {}).get('duration_ms') or 0))
         start_ms = 0.
         duration = max(1., end_ms-start_ms)
@@ -284,84 +295,14 @@ class BattleTimeline(QGraphicsView):
         def x_at(stamp):
             return self.LEFT + (stamp-start_ms)/duration*plot_width
         self._plot_right = self.LEFT+plot_width
-        keys = [str(p['character_key']) for p in self._snapshot.get('participants') or []
-                if not self._character or p['character_key'] == self._character]
-        groups = skill_lanes(blocks, keys, self._expanded_lanes, x_at, 4*scale, bounds)
-        owners = list(dict.fromkeys([*keys, *(b.character_key for b in blocks)]))
-        placements = []
-        y = self.TOP+10
-        for owner in owners:
-            owner_groups = [group for group in groups if group.character == owner]
-            buffs = [b for b in blocks if b.lane == 'buff' and b.character_key == owner]
-            if not owner_groups and not buffs:
-                continue
-            role_top = y
-            for group in owner_groups:
-                lane_key = (owner, group.category)
-                height = group.rows*skill_pitch+7*scale
-                self.skill_lane_rows[lane_key] = group.rows
-                arrow = '▾' if lane_key in self._expanded_lanes else '▸'
-                name = f'{arrow} {CATEGORY_NAMES.get(group.category, group.category)}'
-                self._labels.append((y, height, name, 'skill', owner))
-                self._expand_rows.append((y, height, lane_key))
-                for block, row, left, right in group.placements:
-                    placements.append((block, left, right, y+row*skill_pitch))
-                scene.addLine(self.LEFT, y+height-4, self._plot_right, y+height-4, QPen(self._grid))
-                y += height
-            if buffs:
-                rows = {}
-                self._labels.append((y, max(1, len({b.buff_track for b in buffs}))*buff_pitch+10*scale, 'BUFF', 'buff', owner))
-                for block in sorted(buffs, key=lambda b: b.start_ms):
-                    row = rows.setdefault(block.buff_track, len(rows))
-                    left = x_at(block.start_ms)
-                    right = max(x_at(block.end_ms), left+.8)
-                    placements.append((block, left, right, y+row*buff_pitch))
-                for row in rows.values():
-                    rect = QRectF(self.LEFT, y+row*buff_pitch, plot_width, buff_pitch)
-                    border = scene.addRect(rect, QPen(self._row_border, 1), QBrush(Qt.BrushStyle.NoBrush))
-                    border.setZValue(-.5)
-                    border.setAcceptedMouseButtons(Qt.MouseButton.NoButton)
-                    self.buff_row_borders.append(rect)
-                y += len(rows)*buff_pitch+10*scale
-            self._role_cells.append((role_top, y-role_top, character_name(owner) if owner else '公共 BUFF', owner))
+        placements, y = layout_role_tracks(self, blocks, scale, x_at, plot_width, dark)
         if not blocks:
             item = scene.addText('此筛选没有技能 / BUFF 事件', scene_font)
             item.setDefaultTextColor(self._fg)
             item.setPos(self.LEFT+12, self.TOP+15)
             y = max(y, self.TOP+65)
-        for block, x, end, by in placements:
-            skill = block.lane == 'skill'
-            reference = bool(skill and self._show_skill_frames and block.frame_reference.get('end_ms') is not None)
-            scene.addItem(_BlockItem(QRectF(x, by, end-x, (25 if skill else 22)*scale), block,
-                                    self._activate, scale, self._time_unit, reference))
-            if not skill:
-                self._buff_labels.append((by, block))
-                previous = 0
-                for state in block.buff_states:
-                    stacks = state['stacks']
-                    if stacks is not None and previous is not None and stacks != previous:
-                        radius = 4*scale
-                        stamp = state['start_ms']
-                        point = scene.addEllipse(x_at(stamp)-radius, by+11*scale-radius, 2*radius, 2*radius,
-                            QPen(QColor('#e5f4ff'), .8), QBrush(QColor('#198cff')))
-                        point.setZValue(2)
-                        point.setToolTip(f"{stamp/1000:.3f}s · 层数 {previous} → {stacks}\n" + buff_state_text(block.buff_states, stamp))
-                        self.buff_change_markers += 1
-                    previous = stacks
-            self.drawn_blocks += 1
-            if skill:
-                draw_skill_reference(self, block, by, scale, x_at, COLORS.get(block.category, COLORS['其他']))
-                for e in block.events:
-                    if e.get('event_type') != 'damage':
-                        continue
-                    hx, hy = x_at(float(e.get('ts_ms_from_start') or 0)), by+32*scale
-                    radius = 4*scale
-                    marker = QGraphicsPolygonItem(QPolygonF([QPointF(hx, hy-radius), QPointF(hx+radius, hy), QPointF(hx, hy+radius), QPointF(hx-radius, hy)]))
-                    marker.setBrush(QColor('#db4c55'))
-                    marker.setPen(QPen(Qt.PenStyle.NoPen))
-                    marker.setToolTip(f"{format_time(float(e.get('ts_ms_from_start') or 0), self._time_unit)} · DMG {float(e.get('value') or 0):,.2f}\n点击上方技能块查看逐击贡献")
-                    scene.addItem(marker)
-                    self.hit_markers += 1
+        draw_block_items(self, placements, scale, x_at)
+        y = draw_damage_track(self, y, scale, scene_font, x_at)
         y = draw_energy_tracks(self, y, scale, scene_font, x_at)
         # Enemy observations stay global when filtering an attacker.
         y = draw_poise_tracks(self, y, scale, scene_font, x_at)
@@ -370,9 +311,16 @@ class BattleTimeline(QGraphicsView):
         scene.setSceneRect(0, 0, self._plot_right+22, max(200, y+8))
         for stamp, label in ruler_ticks(start_ms, end_ms, plot_width, scale, self._time_unit):
             x = x_at(stamp)
-            line = scene.addLine(x, self.TOP, x, y, QPen(self._grid, .7))
+            line = scene.addLine(x, self.TOP, x, y, stroke(self._grid, 1.))
             line.setZValue(-1)
             self._ticks.append((x, label))
+        for (a, _), (b, _) in zip(self._ticks, self._ticks[1:]):
+            if b-a >= 90*scale:
+                minor = QColor(self._grid)
+                minor.setAlpha(100)
+                line = scene.addLine((a+b)/2, self.TOP, (a+b)/2, y, stroke(minor, .7))
+                line.setZValue(-1)
+        self._sync_role_buttons()
 
     def drawForeground(self, painter, rect):
         super().drawForeground(painter, rect)

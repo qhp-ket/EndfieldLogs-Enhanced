@@ -1,102 +1,71 @@
-# 悬浮窗与模板
+# 原生悬浮窗与皮肤
+
+三类浮窗使用 PySide6 Widgets / QPainter。每窗一个内容画布，模块使用普通 Python 对象测量、绘制和命中查询。
 
 ## 窗口控制
 
-悬浮窗列表支持拖拽排序，顺序保存在便携配置中。每项模板选项与通用窗口选项放在同一表单。
+列表顺序、位置、尺寸、字号、锁定、穿透、透明度及独立皮肤设置保存在便携配置中。
+启用项创建窗口并合并必要订阅；停用项释放窗口。右上角 × 控制桌面显示，一键显隐与快捷键保存并恢复当前集合。
+隐藏到托盘控制 GUI；浮窗显隐由浮窗入口控制。
 
-| 控件 | 行为 |
-| --- | --- |
-| 启用 | 保存 `enabled`，按模板订阅启动功能；停用时关闭窗口 |
-| 显示浮窗 / 右上角 × | 保存 `hidden`，控制桌面可见性；隐藏期间继续绘制和分析 |
-| 一键显隐 / 快捷键 | 隐藏当前显示项并记录 ID；再次点击恢复记录。没有记录且全部隐藏时显示全部已启用项 |
-| 启用全部 / 停用全部 | 批量设置 `enabled`，保留各项显隐选择 |
-| 锁定位置 | 锁定拖动与边缘缩放；仍可在 GUI 修改几何尺寸 |
-| 鼠标穿透 | 整窗穿透并隐藏关闭键；通过 GUI 或快捷键恢复 |
-| 透明度 | 同时调整背景和文字透明度 |
-| 重置布局 | 恢复默认位置、100% 字体及窗口比例；伤害窗按当前内容测量尺寸 |
+## 数据与尺寸
 
-窗口存在条件为 `enabled`，桌面显示条件为 `enabled && !hidden`。
-`overlay_restore_ids` 保存一键显隐的待恢复集合；手动显示后，下次隐藏以当前显示集合替换记录。
+| 模块 | 数据 | 设置 |
+| --- | --- | --- |
+| `damage` | `analysis_summary`；历史使用报告表格投影 | `bar_mode`（`dps` / `rdps`）、`columns`、`theme`、头像开关与比例 |
+| `combo_skill` | 独立视觉服务的 `combo_snapshot` | `display_style`（`circles` / `bars`）、`theme`、头像开关与比例 |
+| `uid_mask` | 本地设置 | `shape`（`rectangle` / `rounded`） |
 
-启用项的订阅取并集，多个窗口共用一次分析。无消费者时释放相应计算；恢复订阅后按有序输入补算。
-UID 为本地遮挡，连携由独立视觉服务提供 `combo_snapshot`。WS 消费者也计入订阅，接口见 [实时摘要](live-summary-publisher.md)。
+多个窗口共用分析，独立浮窗使用 Python WebSocket 客户端连接本地服务并自动重连。
 
-## 尺寸、字体与头像
+宽高使用 Qt 逻辑像素。文字、列宽、头像和实际行数决定自然尺寸。布局与头像缓存复用，数据或设置变化时更新绘制。
 
-宽高使用 Qt 逻辑像素，拖动边缘后自动保存。网页 zoom 固定为 1，显示比例分开计算：
+- 窗口比例取宽高相对自然尺寸的较小值；连携横条按高度缩放，宽度独立拉伸。
+- 字体与头像分别支持 50%–300%；伤害头像基准为 40px。
+- 内容变化保持右边缘，尺寸受当前屏幕可用区域限制；跨屏拖动保持原始逻辑尺寸。
+- 重置布局恢复默认位置、字号和窗口比例。
 
-- 窗口比例：通常取 `min(宽 / 参考宽, 高 / 参考高)`；连携进度条只取高度比例，宽度独立拉伸。
-- 字体：窗口比例 × 字体百分比，滑条范围 50%–300%。
-- 头像：基准直径 × 窗口比例 × 头像百分比，滑条范围 50%–300%，默认 100%。伤害头像基准为 32px。
+窗口比例保存在 `template_settings` 的 `_damage_window_scale`、`_combo_window_scale` 或 `_native_window_scale`。
+合成负载基准可运行 `python -B _development/tools/benchmark_native_overlays.py --output _development/verification/overlays.json`，记录固定三窗口的进程树内存、CPU 和画布时延。
 
-内置模板使用 `font_mode: "css"`，文字以 `rem` 配合 `--overlay-font-scale`，图片使用 `--overlay-window-scale`。
-普通网页由宿主按 DOM 初始 computed 字号缩放；Canvas、图片内文字和 iframe 由模板处理。
+## JSON 皮肤
 
-伤害窗的 `damage/layout.js` 按以下规则测量：
-
-- 列宽下限容纳默认头像、四字名称、`100.00M`、`100.0%` 和表头，按 8px 档位取整；内容超限时加宽。
-- 团队数据和计时计入最小宽度；列数改变立即重算，表头与数据行共用列宽。
-- 高度匹配实际行数、字号与头像，底栏紧跟表格；数值刷新复用布局及头像节点。
-
-`overlays/content_size.py` 通过 Qt WebChannel 接收伤害/连携页的自然尺寸，更新原生窗口、GUI 数值和配置。
-自动调整保持右边缘，最大尺寸取当前屏幕可用区域，超出部分在表格内滚动。
-
-`template_settings._damage_window_scale` / `_combo_window_scale` 保存窗口比例：手动缩放时更新，列数、内容及独立滑条变化时复用。
-连携切换样式后重测尺寸；进度条样式内保留用户宽度。跨屏移动保持拖动开始时的逻辑宽高，DPI 临时尺寸仅用于显示。
-
-默认头像百分比见 `damage/template.json` 的 `avatar_size_percent.default`，基准直径见 `damage/style.css` 的 `--character-avatar-size`。
-
-## 模板声明
-
-内置模板位于 `_internal/src/endfield_pcap/overlays/assets/<类型>/`。
-Qt 宿主管理窗口，JSON 声明订阅和设置，HTML/CSS/JS 消费设置并绘制快照。
-
-「选择本地模板 / HTML」支持 JSON 或 HTML；选择 HTML 时依次查找同名 `xxx.template.json`、同目录 `template.json`。
-可参考 `_development/examples/overlay-template/`：
+点击「导入原生皮肤」选择 v2 JSON。完整示例见 [overlay-template](../examples/overlay-template/template.json)。
 
 ```json
 {
-  "schema_version": 1,
-  "name": "我的浮窗",
-  "entry": "index.html",
-  "subscriptions": ["analysis_summary"],
-  "font_mode": "css",
-  "window": {"min_width": 240, "min_height": 120, "default_width": 400, "default_height": 200},
-  "settings": [
-    {"key": "avatar_size_percent", "label": "头像大小", "type": "slider", "min": 50, "max": 300, "default": 100}
-  ]
+  "schema_version": 2,
+  "name": "伤害与连携",
+  "modules": [
+    {"type": "damage", "settings": {"bar_mode": "rdps"}},
+    {"type": "combo_skill", "settings": {"display_style": "bars"}}
+  ],
+  "layout": {"direction": "vertical"},
+  "theme": {"background": "#20252d", "spacing": 8, "padding": 4}
 }
 ```
 
 | 字段 | 约定 |
 | --- | --- |
-| `entry` | 相对 JSON 所在目录 |
-| `subscriptions` | `analysis_summary`、`analysis_snapshot`、`combo_snapshot`；本地静态内容用空数组 |
-| `settings.type` | `select`、`multiselect`、`slider` |
-| `settings.default` | 多选为字符串数组；滑条为 `min` / `max` 范围内整数 |
-| `template_settings` | 每个窗口实例保存自己的设置 |
+| `window` | `min_width`、`min_height`、`default_width`、`default_height`，逻辑像素整数 |
+| `layout.direction` | 单模块 `single`；组合使用 `horizontal` 或 `vertical` |
+| `theme` | `font_family`、背景/前景/次要色 `background` / `foreground` / `muted`、强调/就绪/边框色 `accent` / `ready` / `border`、`radius`、`spacing`、`padding`、`border_width`、`image` |
+| 颜色 | `#RRGGBB`、`#AARRGGBB`、`transparent` |
+| `theme.image` | 皮肤目录内的相对 PNG、JPEG、BMP 或 WebP |
+| `settings` | `select`、`multiselect` 或整数 `slider`；GUI 自动生成控件 |
+| `modules[].setting_bindings` | 模块设置名映射到已声明的 `settings[].key` |
 
-本地声明模板通过进程内桥接收配置和整份状态；页面重载后补发当前状态：
+模块 `theme` 预设为 `light`、`dark`、`transparent` 或 `endfield`。
+内置伤害与连携浮窗的「背景模式 → 终末地」使用浅色面板、黑色抬头和静态黄斜纹；伤害浮窗保留黄斜纹状态栏和等宽数字。
+导入皮肤也可在模块 `settings` 中设置 `"theme": "endfield"`，配色仍可通过顶层 `theme` 参数调整。
+`columns` 可选 `damage`、`damage_rate`、`rdamage`、`rdamage_rate`。
+`show_character_avatars` 为 `on` / `off`；`avatar_size_percent` 为 50–300 整数。
+同名设置直接应用，也可通过绑定为各模块分配独立设置。模块注册表汇总订阅，每个窗口独立保存配置。
 
-```js
-window.addEventListener("endfield-overlay-config", event => {
-  const {settings, fontScale, referenceSize} = event.detail;
-});
-window.addEventListener("endfield-analysis-snapshot", event => {
-  render(event.detail.snapshot); // null 表示清空
-});
-// 延迟安装的监听器可读取当前缓存：
-// window.endfieldOverlay.config
-// window.endfieldOverlay.snapshots.analysis_snapshot
-```
+## OBS 与迁移
 
-伤害模板跟随 GUI 的历史/实时选择。URL 和无声明 HTML 自行连接实时 WS，浏览器需携带服务的 `access_token`。
-WS 模式本地模板可将 URL 的 `wsToken` 转为该参数；远程 URL 的凭据由用户配置。认证规则见 [实时摘要](live-summary-publisher.md)。
-远程页面按用户填写的 URL 导航；本地页面接收宿主提供的端口、资源目录及模板参数。
+OBS 添加「窗口采集」，捕获方式选择 Windows 10（Windows Graphics Capture），按浮窗名称选择 Qt 窗口。
+桌面隐藏使用零透明度，保持 HWND、几何与绘制；停用或退出程序会结束窗口。
+UID 默认为主屏左下角 220×32 黑色矩形，可调整形状、尺寸、位置和穿透。
 
-## OBS 与 UID
-
-OBS 添加「窗口采集」，捕获方式选 Windows 10（Windows Graphics Capture），按浮窗名称选择同一个 Qt 窗口。
-桌面隐藏使用零透明度，保持 HWND、几何与绘制；恢复时还原透明度和穿透设置。停用该项或退出 GUI 后窗口结束。
-
-`uid_mask/template.json` 提供矩形/圆角黑色遮挡，默认 220×32、主屏左下角。拖到游戏 UID 位置后，使用矩形、100% 透明度及鼠标穿透。
+旧配置保留三类内置浮窗和 v2 皮肤的 ID、顺序及窗口设置。网页模板、URL、BUFF 和最近输入浮窗条目移除并提示一次；用户模板文件和日志留在原目录。

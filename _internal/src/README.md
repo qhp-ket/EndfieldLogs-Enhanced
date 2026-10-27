@@ -8,11 +8,11 @@
 | `crypto/` | 现有解密与游戏 DLL 桥接 |
 | `service/` | 服务配置、会话状态、事件转换和后台任务 |
 | `trace/` | 已解码事件转成统一 trace 文本，管理战斗上下文与来源证据 |
-| `analysis/` | 实时发布、BUFF 展示，以及完整报告的界面投影 |
+| `analysis/` | 实时简报与完整报告发布、战斗分析的界面投影 |
 | `history/` | 历史索引、记录文件操作、trace 导入导出与离线分析 |
 | `data/` | 数据读取、装备数值、技能名称/帧数与离线头像身份解析；小型映射在 `assets/` |
 | `gui/` | 主窗口、侧栏、战斗分析与共享 Qt 控件 |
-| `overlays/` | 浮窗管理、原生窗口、模板配置和各套网页资源 |
+| `overlays/` | 浮窗管理、原生窗口、QPainter 模块和 JSON 皮肤 |
 | `inputlog/` | 独立 Raw Input / SDL3 录制进程、JSONL、离线解释与按需历史索引 |
 | `vision/` | WGC 取帧、HUD 布局、小区域像素、跨帧状态和 GUI 侧生命周期 |
 | `runtime/` | 运行根目录、Python/DLL 路径、日志、游戏安装位置与正式版更新查询 |
@@ -37,7 +37,7 @@
 共享头像由 `data/avatars.py` 按 ID 解析，Qt 缓存在 `gui/shared/avatars.py`，图片在 `_internal/data/ui/characters/`。
 
 `gui/battle/` 是历史战斗分析：`timeline/` 管理原生时间轴，
-`plots/` 管理技力/失衡曲线，`assets/` 是本地 Web 页面。
+`plots/` 管理伤害、技力和失衡曲线。
 详细入口见 [战斗分析组件位置](../../_development/docs/battle-analysis-components.md)。
 
 ## 服务与 trace
@@ -46,24 +46,26 @@
 同目录的 `flow.py`、`websocket.py`、`analysis.py`、`debug.py` 负责对应后台任务。
 `service/session/pipeline.py` 组装单次游戏会话：拆帧、消息分派和事件转换分开，
 角色/装备/背包/技能状态更新在 `state/`。
+`session/operations/` 按技能、BUFF、实体及资源构造事件，`BattleOperation` 保存单次操作的身份和发送入口；`battle.py` 保持操作遍历及计时观测顺序。
 
 `trace/bridge.py` 是转换入口，其他模块按战斗上下文、角色、技能、伤害、BUFF 分工。
 `TraceBridge._append_line()` 仍是写盘与分析 sink 共用的唯一行出口。
+`observations.py` 负责时钟旁路、关键词及实体值观测，`blackboard.py` 分阶段处理动态身份、属性刷新和黑板计算；`resources.py` 管理技力、失衡及战斗状态，`damage_evidence.py` 保持逐击包证据的写出顺序。
 canonical 解析与分配位于 `_internal/packages/parser_core/`。
 
 ## Overlay 资源
 
-每套内置模板在 `overlays/assets/<类型>/` 下拥有自己的 `template.json` 和 `index.html`，
-需要时附带 `app.js`、`style.css`。GUI 支持的内置类型为 `damage`、`uid_mask`、`combo_skill`。
+内置皮肤声明在 `overlays/assets/<类型>/template.json`，绘制模块在 `overlays/native/`。
+GUI 支持的内置类型为 `damage`、`uid_mask`、`combo_skill`。
 配置 ID `combo_skill` 对应 `combo/` 目录。
-通用宿主桥和展示辅助脚本在 `shared/`。
+`overlays/client.py` 为独立浮窗提供本地 WebSocket 连接与重连。
 
 `overlays/templates.py` 解析模板，`config.py` 提供默认几何与内置入口，
 `window.py` 负责单窗绘制/拖动/缩放，`manager.py` 管理多窗及历史/实时状态切换。
 新增模板使用独立目录、稳定配置 ID 和相对资源路径。
 
 `gui/services.py` 组装输入与视觉服务，`gui/independent/` 是绑定配置、预览校准界面。
-`gui/battle/input_history.py` 为两种分析风格共享输入证据；原生绘制在 `timeline/inputs.py`，网页绘制在 `assets/inputs.js`。
+`gui/battle/input_history.py` 管理输入绑定和证据，原生绘制在 `timeline/inputs.py`。
 `inputlog/backends/windows.py` 隔离 Windows 消息线程，`windows_state.py` 提供带精度标记的状态采样兜底；`inputlog/bindings.py` 保存每场战斗的输入文件绑定。
 `inputlog/elevation.py` 仅为输入记录器申请管理员权限，通过认证的本机命名管道转发控制和状态，不提升主 GUI 权限。
 输入与视觉状态使用独立展示数据。

@@ -2,6 +2,7 @@
 import json
 import pytest
 from parser_core import battle_log_parser as parser
+from parser_core.catalog import names
 
 
 @pytest.mark.parametrize('key,expected', [
@@ -45,8 +46,8 @@ def test_official_display_catalog_validation_and_legacy_fallback(monkeypatch, tm
     path.parent.mkdir(parents=True)
     path.write_text(json.dumps(catalog), encoding='utf8')
     with monkeypatch.context() as patch:
-        patch.setattr(parser, '_repo_root', lambda: tmp_path)
-        patch.setattr(parser, '_load_skill_name_prefixes', lambda: [('fixture_skill', '旧名称')])
+        patch.setattr(names, '_repo_root', lambda: tmp_path)
+        patch.setattr(names, '_load_skill_name_prefixes', lambda: [('fixture_skill', '旧名称')])
         parser._load_skill_exact_names.cache_clear()
         expected = '官表名称' if mode == 'valid' else '' if mode == 'conflict' else '旧名称'
         assert parser._load_skill_exact_names()['fixture_skill'] == expected

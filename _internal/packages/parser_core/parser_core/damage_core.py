@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from parser_core.battle_log_parser import (
+from parser_core.effects.damage_types import (
     _attr_type_applies_to_skill,
     _BUFF_EFFECT_SKILL_FILTER,
     _BUFF_SKILL_FILTER,

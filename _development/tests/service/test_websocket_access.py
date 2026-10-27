@@ -57,8 +57,8 @@ def test_native_and_explicitly_authorized_browser_receive_current_state(service_
                                     process_request=service._ws_process_request) as server:
             port = server.sockets[0].getsockname()[1]
             async with websockets.connect(f'ws://127.0.0.1:{port}/ws?analysis=summary{query}', origin=origin) as socket:
-                frames = [json.loads(await asyncio.wait_for(socket.recv(), 3)) for _ in range(3)]
-                assert [f['type'] for f in frames] == ['hello', 'analysis_summary', 'buff_snapshot']
+                frames = [json.loads(await asyncio.wait_for(socket.recv(), 3)) for _ in range(2)]
+                assert [f['type'] for f in frames] == ['hello', 'analysis_summary']
                 assert frames[1] == expected
     asyncio.run(run())
 

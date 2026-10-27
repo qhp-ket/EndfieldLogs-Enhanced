@@ -1,4 +1,4 @@
-"""Run with the packaged interpreter to check relocation, GUI and WebEngine.
+"""Run with the packaged interpreter to check relocation, native GUI and process isolation.
 
 Automatic capture and the global hotkey are bypassed. No
 capture, upload or account login is started. Verification uses its own profile.
@@ -27,7 +27,7 @@ def main():
     launcher.PROFILE = root / '.dev-gui' if args.use_app_profile else output / 'profile'
     assert launcher.main(['--check']) == 0
 
-    from PySide6.QtCore import QCoreApplication, QEvent, QTimer, Qt, QUrl
+    from PySide6.QtCore import QCoreApplication, QEvent, QTimer, Qt
     from PySide6.QtGui import QFont, QKeyEvent
     from PySide6.QtWidgets import QApplication, QLabel, QMessageBox
     from qfluentwidgets import Slider, Theme, setTheme
@@ -44,14 +44,6 @@ def main():
                 return
             time.sleep(0.02)
         raise TimeoutError('Portable GUI smoke check timed out')
-
-
-    def js(view, source):
-        results=[]
-        page = view.page() if callable(view.page) else view.page
-        page.runJavaScript(source, lambda value: results.append(value))
-        wait(lambda: bool(results))
-        return results[0]
 
 
     app = QApplication([])
@@ -110,20 +102,20 @@ def main():
     wait(lambda: time.monotonic() >= wait_until)
     assert window.overlay_page.reset_layout_btn.isVisible()
     overlay = next(iter(window.overlay_manager._windows.values()))
-    wait(lambda: overlay.webview.url().isLocalFile())
+    assert overlay.canvas.modules and not overlay.canvas.grab().isNull()
     result = dict(python=sys.version.split()[0], isolated=bool(sys.flags.isolated),
                   executable_inside_package=Path(sys.executable).resolve().is_relative_to(root),
                   gui_visible=window.isVisible(), overlay_visible=overlay.isVisible(),
-                  web_console_errors=[], parsed_battle=None,
+                  parsed_battle=None,
                   default_game_exe=str(expected_game_exe), font_slider_verified=True,
                   missing_game_prompt_verified=True)
-    from endfield_pcap.data.avatars import ROOT as portraits_root, avatar_catalog
+    from endfield_pcap.data.avatars import ROOT as portraits_root, manifest, avatar_path
     from PySide6.QtGui import QImage
     assert portraits_root.is_relative_to(root)
-    portraits = avatar_catalog()
-    assert len(portraits['portraits']) >= 35
-    assert all(QImage(QUrl(url).toLocalFile()).width() == 128 for url in portraits['portraits'].values())
-    result['offline_portrait_count'] = len(portraits['portraits'])
+    portraits = manifest()['portraits']
+    assert len(portraits) >= 35
+    assert all(QImage(str(avatar_path(key))).width() == 128 for key in portraits)
+    result['offline_portrait_count'] = len(portraits)
     assert not window.app_config.start_capture_on_launch
     assert window.settings_page.update_status.text() == '未检测到新版'
     assert result['isolated'] and result['executable_inside_package']
@@ -143,24 +135,56 @@ def main():
         window.overlay_manager.show_history(snapshot, 'portable-smoke')
         wait_until = time.monotonic()+0.5
         wait(lambda: time.monotonic() >= wait_until)
-        wait(lambda: js(overlay.webview,
-            'window.endfieldOverlay?.snapshots?.analysis_snapshot?.snapshot?.battle?.total_damage')
-            == snapshot['battle']['total_damage'])
+        wait(lambda: overlay.canvas.modules[0].snapshot['battle']['total_damage'] == snapshot['battle']['total_damage'])
 
-    dialog = BattleDetailDialog(snapshot, '便携包离线验证', window)
+    from dataclasses import replace
+    for entry in window.app_config.overlays:
+        window.overlay_manager.apply_entry(replace(entry, enabled=True))
+    app.processEvents()
+    kinds = {host.canvas.template.modules[0]['type'] for host in window.overlay_manager._windows.values()}
+    assert kinds == {'damage', 'combo_skill', 'uid_mask'}, kinds
+    for host in window.overlay_manager._windows.values():
+        host.canvas.grab().save(str(output / ('overlay-'+host.canvas.template.modules[0]['type']+'.png')))
+        if host.canvas.template.modules[0]['type'] in {'damage', 'combo_skill'}:
+            from endfield_pcap.overlays.templates import with_template_value
+            host.apply_entry(with_template_value(host.entry, 'theme', 'endfield'))
+            app.processEvents()
+            assert host.canvas.modules[0].settings['theme'] == 'endfield'
+            assert host.canvas.grab().save(str(output / ('overlay-'+host.canvas.template.modules[0]['type']+'-endfield.png')))
+    result['native_overlays'] = sorted(kinds)
+    result['native_skin_verified'] = 'endfield'
+    dialog = BattleDetailDialog(snapshot, '合成战斗', window)
     dialog.show()
-    dialog.view_mode_combo.setCurrentIndex(1)
-    view = dialog.web_analysis
-    wait(lambda: view.bridge.ready or bool(view.page.console_errors))
-    assert not view.page.console_errors
-    assert js(view, 'document.body.dataset.ready') == 'true'
-    for tab in ('skills', 'enemy', 'timeline'):
-        js(view, f'document.querySelector("[data-tab={tab}]").click()')
-    wait_until = time.monotonic()+0.4
-    wait(lambda: time.monotonic() >= wait_until)
-    assert not view.page.console_errors
-    dialog.grab().save(str(output / 'analysis-web.png'))
-    result['web_blocks'] = len(view.bridge.model.blocks)
+    for tab in range(dialog.tabs.count()):
+        dialog.tabs.setCurrentIndex(tab)
+        app.processEvents()
+        assert dialog.grab().save(str(output / f'analysis-native-{tab}.png'))
+    dialog.tabs.setCurrentIndex(0)
+    dialog.buff_check.setChecked(True)
+    dialog.details_toggle.setChecked(True)
+    for tab in range(dialog.inspector.count()):
+        dialog.inspector.setCurrentIndex(tab)
+        app.processEvents()
+    assert dialog.curve_combo.currentData() == 'rdmg'
+    result['native_blocks'] = dialog.timeline.drawn_blocks
+    result['native_analysis_pages'] = dialog.tabs.count()
+    dialog._show_summary()
+    app.processEvents()
+    assert dialog._summary_dialog.tabs.count() == 2
+    dialog._summary_dialog.grab().save(str(output / 'analysis-native-summary.png'))
+    dialog._summary_dialog.close()
+    import psutil
+    checked_processes = set()
+    def verify_native_tree():
+        assert not any('QtWebEngine' in name or 'QtWebChannel' in name for name in sys.modules)
+        tree = [psutil.Process(), *psutil.Process().children(recursive=True)]
+        for process in tree:
+            assert 'webengine' not in process.name().lower()
+            libraries = [region.path.lower() for region in process.memory_maps()]
+            assert not any('qt6webengine' in path or 'qt6webchannel' in path for path in libraries)
+            checked_processes.add(process.pid)
+    verify_native_tree()
+    result['browser_processes'] = 0
     # An isolated ._pth must not borrow anything from the developer's Python/site.
     external = []
     for name, module in sys.modules.items():
@@ -176,6 +200,7 @@ def main():
         # A real spawn must work with the isolated interpreter and resource paths.
         worker.calculate(0)
         assert worker.last_metrics and worker.process.is_alive()
+        verify_native_tree()
         result['analysis_worker_spawn'] = True
     finally:
         worker.close()
@@ -191,6 +216,7 @@ def main():
         input_status=inputs.snapshot()
         assert input_status['status']=='waiting_game',input_status
         assert not input_status.get('errors'),input_status
+        verify_native_tree()
     finally:
         inputs.stop(wait=True)
     sidecars=list((output/'input-smoke').rglob('*.input.jsonl'))
@@ -209,8 +235,10 @@ def main():
         assert visual_state is not None
         assert '不可用' not in visual_state['snapshot']['status'],visual_state
         result['multimedia_worker_verified']=True
+        verify_native_tree()
     finally:
         visual.stop()
+    result['native_processes_checked'] = len(checked_processes)
     (output / 'result.json').write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding='utf8')
     dialog.close()
     window.close()

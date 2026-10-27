@@ -25,8 +25,6 @@ from endfield_pcap.capture.protocol import load_private_key_from_txt
 from endfield_pcap.runtime.paths import bundle_root
 from endfield_pcap.trace.bridge import TraceBridge, make_archive_trace_file
 from endfield_pcap.analysis.live.publisher import SnapshotPublisher
-from endfield_pcap.analysis.buffs import BuffDisplayPublisher
-from endfield_pcap.analysis.activity import DeferredDisplayInputs
 from endfield_pcap.service.session.helpers import _load_multi_phase_dungeon_map
 from endfield_pcap.service.config import ServiceConfig
 from endfield_pcap.service.session.pipeline import SessionPipeline
@@ -62,10 +60,6 @@ class DamageLogService(WebSocketDelivery, AnalysisStreams, FlowCapture, DebugOut
         self._analysis_demand_changed = asyncio.Event()
         self._analysis_streams = None  # Standalone service retains its default streams.
         self._summary_handshakes = 0
-        self.buff_publisher = BuffDisplayPublisher()
-        self._buff_inputs = DeferredDisplayInputs(lambda: self.buff_publisher)
-        self._last_buff_message = None
-        self._analysis_delivery_lock = asyncio.Lock()
         self.registry = MessageRegistry(bundle_root() / "data")
         self.name_index = load_name_index(config.name_index_path)
         self.multi_phase_dungeon_map = _load_multi_phase_dungeon_map(bundle_root() / "jsondata" / "Dungeon.json")
@@ -105,12 +99,9 @@ class DamageLogService(WebSocketDelivery, AnalysisStreams, FlowCapture, DebugOut
         self._stop_event = asyncio.Event()
         self.snapshot_publisher.reset(new_stream=True)
         self.summary_publisher.reset(new_stream=True)
-        self.buff_publisher.reset(new_stream=True)
-        self._buff_inputs.clear()
         try:
             await self._publish_analysis_snapshot()
             await self._publish_analysis_summary()
-            await self._publish_buff_snapshot()
             self.server = await websockets.serve(self._ws_handler, "127.0.0.1", self.config.ws_port,
                                                  process_request=self._ws_process_request)
             self.capture_manager.start()
@@ -137,7 +128,6 @@ class DamageLogService(WebSocketDelivery, AnalysisStreams, FlowCapture, DebugOut
             asyncio.create_task(self._batch_flush_loop(), name="batch-flush"),
             asyncio.create_task(self._analysis_snapshot_loop(), name="analysis-snapshot"),
             asyncio.create_task(self._analysis_summary_loop(), name="analysis-summary"),
-            asyncio.create_task(self._buff_snapshot_loop(), name="buff-snapshot"),
             asyncio.create_task(self._stats_loop(), name="stats-loop"),
         ]
         for task in tasks:
@@ -153,11 +143,8 @@ class DamageLogService(WebSocketDelivery, AnalysisStreams, FlowCapture, DebugOut
             self._reset_session()
             self.snapshot_publisher.reset()
             self.summary_publisher.reset()
-            self.buff_publisher.reset()
-            self._buff_inputs.clear()
             await self._publish_analysis_snapshot()
             await self._publish_analysis_summary()
-            await self._publish_buff_snapshot()
             await self.snapshot_publisher.close()
             await self.summary_publisher.close()
             self.capture_manager.stop()
@@ -318,13 +305,10 @@ class DamageLogService(WebSocketDelivery, AnalysisStreams, FlowCapture, DebugOut
         if had_capture_session and publisher is not None:
             publisher.reset()
             self.summary_publisher.reset()
-            self.buff_publisher.reset()
-            self._buff_inputs.clear()
 
     def _handle_trace_line(self, line: str) -> None:
         self.snapshot_publisher.feed_line(line)
         self.summary_publisher.feed_line(line)
-        self._buff_inputs.feed(line, active=self._analysis_required('buff_snapshot'))
 
     def _handle_outbound_event(self, event: OutboundEvent) -> None:
         payload = event.as_dict()

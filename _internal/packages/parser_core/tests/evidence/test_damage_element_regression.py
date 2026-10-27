@@ -1,4 +1,13 @@
 from parser_core.battle_log_parser import _infer_skill_action_damage_element, parse_raw_battle_log_text
+import parser_core.catalog.skill_damage as parser_skill_damage
+import parser_core.effects.damage_types as parser_damage_types
+import parser_core.ingestion.loadout as parser_loadout
+import parser_core.ingestion.skill_identity as parser_skill_identity
+import parser_core.ingestion.hits as parser_hits
+import parser_core.allocation.attack_model as parser_attack_model
+import parser_core.reporting.skill_stats as parser_skill_stats
+import parser_core.reporting.timeline as parser_timeline
+import parser_core.hit_debug as parser_hit_debug
 
 
 def test_resolved_hp_unit_keeps_its_own_element_separate_from_poise():
@@ -40,17 +49,32 @@ def test_phantom_requires_matching_action_unit_and_unambiguous_namespace(monkeyp
     assert parser._canonical_runtime_buff_skill_id(key, char, action_id=99, damage_unit_index=0) is None
     assert parser._canonical_runtime_buff_skill_id(key, char, action_id=7, damage_unit_index=1) is None
     assert parser._canonical_runtime_buff_skill_id(key, char, action_id=7, damage_unit_index=0) == 'buff_chr_0026_lastrite_normal_skill_phantom'
-    monkeypatch.setattr(parser, '_canonical_num_table_skill_id', lambda *args: 'some_real_skill')
+    for patched_consumer in (
+        parser,
+        parser_hit_debug,
+        parser_timeline,
+        parser_skill_stats,
+        parser_loadout,
+        parser_skill_identity,
+    ):
+        monkeypatch.setattr(patched_consumer, '_canonical_num_table_skill_id', lambda *args: 'some_real_skill')
     assert parser._canonical_runtime_buff_skill_id(key, char, action_id=7, damage_unit_index=0) is None
 
 
 def test_action_without_unit_index_does_not_choose_arbitrary_element(monkeypatch):
     import parser_core.battle_log_parser as parser
-    monkeypatch.setattr(parser, '_load_skill_action_damage_units', lambda key: {
-        0: [
-            {'index': 0, 'damage_attribute_type': 'hp', 'element': 'physical'},
-            {'index': 1, 'damage_attribute_type': 'hp', 'element': 'cryst'},
-        ],
-    })
+    for patched_consumer in (
+        parser,
+        parser_attack_model,
+        parser_hits,
+        parser_damage_types,
+        parser_skill_damage,
+    ):
+        monkeypatch.setattr(patched_consumer, '_load_skill_action_damage_units', lambda key: {
+            0: [
+                {'index': 0, 'damage_attribute_type': 'hp', 'element': 'physical'},
+                {'index': 1, 'damage_attribute_type': 'hp', 'element': 'cryst'},
+            ],
+        })
     assert parser._infer_skill_action_damage_element('mixed_skill', 0) is None
     assert parser._infer_skill_action_damage_element('mixed_skill', 0, 1) == 'cryst'
