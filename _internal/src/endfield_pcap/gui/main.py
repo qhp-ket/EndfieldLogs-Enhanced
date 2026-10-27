@@ -154,7 +154,7 @@ class MainWindow(
             app_config.overlay_migration_count = 0
             save_app_config(app_config, config_path)
             QTimer.singleShot(0, self, lambda: InfoBar.info(
-                '???????', f'??? {count} ???????????????????????',
+                '悬浮窗配置已迁移', f'已移除 {count} 个旧版悬浮窗配置，请按需重新添加原生悬浮窗。',
                 duration=9000, parent=self))
 
     def _drain_queue(self) -> None:

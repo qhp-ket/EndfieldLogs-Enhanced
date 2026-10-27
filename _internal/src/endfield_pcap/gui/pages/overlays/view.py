@@ -279,8 +279,8 @@ class OverlayPage(InterfacePage):
     def _show_template(self, entry: OverlayEntry) -> None:
         template = template_for(entry)
         self.template_label.setText(template.error or template.name)
-        labels = {"analysis_summary": "????????? / ?????", "combo_snapshot": "?? CD???????? Npcap????????"}
-        self.subscription_label.setText(" / ".join(labels[key] for key in template.subscriptions) or "????????????")
+        labels = {"analysis_summary": "战斗简报（伤害与贡献）", "combo_snapshot": "连携 CD（视觉识别，可配合 Npcap 绑定角色）"}
+        self.subscription_label.setText(" / ".join(labels[key] for key in template.subscriptions) or "无需实时数据")
         if entry.source_type == OverlaySourceType.BUILTIN and entry.source_value == "uid_mask":
             self.subscription_label.setText("无需战斗数据（本地遮挡）")
         self.subscription_label.setToolTip(" / ".join(template.subscriptions))

@@ -78,6 +78,9 @@ def main():
             issues.append((name, 'private key or credential token'))
         if LOCAL.search(content):
             issues.append((name, 'machine-local user path'))
+        if (path.parts[:4] == ('_internal', 'src', 'endfield_pcap', 'gui')
+                and path.suffix == '.py' and re.search(rb'\?{3,}', content)):
+            issues.append((name, 'unreadable GUI text placeholder'))
         if path.suffix == '.md':
             text = content.decode('utf8')
             for target in LINK.findall(text):
