@@ -78,7 +78,7 @@ def test_input_launch_option_is_independent_of_manual_recording_and_legacy_state
     window.settings_page.start_input_switch.setChecked(True)
     saved=load_app_config(window.config_path)
     assert saved.start_input_recording_on_launch
-    assert not window.input_controller.running
+    assert not window.independent_controller.input.running
     assert not saved.input_recording_enabled
     window.settings_page.start_input_switch.setChecked(False)
     assert not load_app_config(window.config_path).start_input_recording_on_launch

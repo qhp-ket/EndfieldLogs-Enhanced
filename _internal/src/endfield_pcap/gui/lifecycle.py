@@ -73,7 +73,7 @@ class GuiLifecycle:
         self.activateWindow()
         self._update_service_status()
         self.home_page.status_card.set_squad_members(self.current_squad)
-        self._drain_independent_services()
+        self.independent_presenter.drain()
 
     def _release_history_caches(self):
         self.history_controller.release_cache()

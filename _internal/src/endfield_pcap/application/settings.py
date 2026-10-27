@@ -71,3 +71,13 @@ class SettingsStore:
         self._assert_owner()
         self.current.input_settings = deepcopy(value)
         self.save()
+
+    def set_input_recording_enabled(self, enabled):
+        self._assert_owner()
+        self.current.input_recording_enabled = bool(enabled)
+        self.save()
+
+    def set_vision_settings(self, value):
+        self._assert_owner()
+        self.current.vision_settings = deepcopy(value)
+        self.save()

@@ -103,7 +103,7 @@ Git 采用源码白名单，个人状态、真实日志、原始数据、安装�
 | 历史与战斗分析 | 文件引用 → 分场索引 → 后台完整分析 → Qt 原生时间轴 | `history/`、`analysis/battle/`、`gui/battle/` |
 | 浮窗与 OBS | JSON 皮肤订阅 → QPainter 原生窗口 → Windows Graphics Capture | `overlays/manager.py`、`overlays/native/` |
 | 连携 CD | 游戏 HWND → WGC → HUD 像素 → 跨帧状态 → 浮窗 | `vision/`、`gui/independent/` |
-| 输入记录 | 独立进程 → Raw Input/兼容采集、SDL3 → JSONL → 每场绑定 → 时间轴 | `inputlog/`、`gui/services.py`、`application/input_evidence.py`、`gui/battle/presenter.py` |
+| 输入记录 | 独立进程 → Raw Input/兼容采集、SDL3 → JSONL → 每场绑定 → 时间轴 | `inputlog/`、`application/independent.py`、`application/input_evidence.py`、`gui/battle/presenter.py` |
 | 官网上传 | 原始 trace/status → 独立官网 uploader → 官网解析上传 | `trace/`、独立 `Uploader/` |
 | 数据与环境 | 精简数据包 → 清单校验恢复；便携包携带 Python、Qt 和依赖 | `runtime/`、`data/`、`_development/tools/` |
 

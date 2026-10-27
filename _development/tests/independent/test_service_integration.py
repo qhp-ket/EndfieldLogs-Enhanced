@@ -57,18 +57,18 @@ def test_home_input_and_combo_subscriptions_are_independent_of_capture(main_wind
         def stop(self,wait=False):
             self.running=False; calls.append(('input_stop',wait))
         def snapshot(self): return dict(status='waiting_game',count=0,lost=0,recent=[])
-    window.input_controller=Input()
-    window.vision_controller.stop()
-    window.vision_controller=SimpleNamespace(
+    window.independent_controller.input=Input()
+    window.independent_controller.vision.stop()
+    window.independent_controller.vision=SimpleNamespace(
         game_exe=None,set_enabled=lambda value:calls.append(('vision',value)),
         set_identity=lambda *a:None,take_snapshot=lambda:None,
-        state={'status':'等待游戏窗口'},stop=lambda:None)
+        state={'status':'等待游戏窗口'},stop=lambda:None,is_running=lambda:False)
     assert not window.service_controller.is_running()
-    window._toggle_input_recording()
-    assert window.input_controller.running
-    assert ('input_start',str(window._game_executable()),True) in calls
+    window.home_page.input_service_btn.click()
+    assert window.independent_controller.input.running
+    assert ('input_start',str(window.independent_controller.game_executable()),True) in calls
     assert not window.service_controller.is_running()
-    window._drain_independent_services()
+    window.independent_presenter.drain()
     assert '等待游戏前台' in window.home_page.input_status.text()
     assert not load_app_config(window.config_path).input_recording_enabled
     assert not load_app_config(window.config_path).start_input_recording_on_launch
@@ -80,9 +80,9 @@ def test_home_input_and_combo_subscriptions_are_independent_of_capture(main_wind
     assert not any(c==('vision',False) for c in calls[count:])
     window.overlay_manager.apply_entry(replace(combo,enabled=False))
     assert calls[-1]==('vision',False)
-    assert window.input_controller.running
-    window._toggle_input_recording()
-    assert not window.input_controller.running
+    assert window.independent_controller.input.running
+    window.home_page.input_service_btn.click()
+    assert not window.independent_controller.input.running
     assert not load_app_config(window.config_path).input_recording_enabled
 
 

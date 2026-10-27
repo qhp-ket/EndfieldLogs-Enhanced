@@ -200,18 +200,18 @@ def test_real_home_button_starts_worker_stops_and_closes_jsonl(main_window,app,t
     window = main_window
     # OS consent/elevated transport are tested separately; this regression
     # exercises the actual ordinary worker without requesting desktop UAC.
-    start=window.input_controller.start
-    monkeypatch.setattr(window.input_controller,'start',lambda game,folder,**kwargs:start(game,folder,elevated=False))
+    start=window.independent_controller.input.start
+    monkeypatch.setattr(window.independent_controller.input,'start',lambda game,folder,**kwargs:start(game,folder,elevated=False))
     window.app_config.service.game_exe='not-a-running-game.exe'
     window.home_page.input_service_btn.click()
     try:
-        wait_for(lambda: window.input_controller.snapshot()['status'] not in ('starting','stopped'),app)
-        state=window.input_controller.snapshot()
+        wait_for(lambda: window.independent_controller.input.snapshot()['status'] not in ('starting','stopped'),app)
+        state=window.independent_controller.input.snapshot()
         assert state['status']=='waiting_game',state
         path=Path(state['path'])
         wait_for(lambda:'停止记录输入' in window.home_page.input_service_btn.text(),app)
         window.home_page.input_service_btn.click()
-        wait_for(lambda:not window.input_controller.running,app)
+        wait_for(lambda:not window.independent_controller.input.running,app)
         rows=read_rows(path)
         assert rows[0]['type']=='session' and rows[-1]['type']=='end'
         assert rows[-1]['reason']=='stopped'
@@ -219,4 +219,4 @@ def test_real_home_button_starts_worker_stops_and_closes_jsonl(main_window,app,t
         assert not any(r['type']=='input' for r in rows), 'Background input must not enter recording'
         assert not window.service_controller.is_running()
     finally:
-        window.input_controller.stop(wait=True)
+        window.independent_controller.input.stop(wait=True)

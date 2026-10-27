@@ -36,9 +36,17 @@ class VisionController(QObject):
         self._published=None
         self._windows=None
         self._diagnostic_at=0.
+        self._enabled=False
+        self._stopping=False
+        self._stop_started=0.
+        self._stop_warned=False
+        self.stop_poll=QTimer(self)
+        self.stop_poll.setInterval(50)
+        self.stop_poll.timeout.connect(self._poll_stop)
 
     def set_enabled(self,enabled):
-        if enabled and self.thread is None:
+        self._enabled=bool(enabled)
+        if enabled and self.thread is None and not self._stopping:
             try:
                 from endfield_pcap.vision.capture import CaptureWorker
                 self.stream=uuid.uuid4().hex
@@ -47,6 +55,7 @@ class VisionController(QObject):
                 self.thread=QThread(self)
                 self.worker=CaptureWorker(self.config)
                 self.worker.moveToThread(self.thread)
+                self.thread.finished.connect(self.worker.deleteLater)
                 self.thread.started.connect(self.worker.start)
                 self.targetRequested.connect(self.worker.target)
                 self.configRequested.connect(self.worker.configure)
@@ -65,7 +74,8 @@ class VisionController(QObject):
             self.stop()
 
     def receive(self,state):
-        self._latest=state
+        if not self._stopping:
+            self._latest=state
 
     def discover(self):
         try:
@@ -98,6 +108,8 @@ class VisionController(QObject):
         if self.thread: self.discover()
 
     def take_snapshot(self):
+        if self._stopping:
+            return None
         latest,self._latest=self._latest,None
         if latest is None:
             latest=self.state
@@ -125,17 +137,36 @@ class VisionController(QObject):
                     snapshot={key:value for key,value in dict(latest,slots=slots).items() if key!='diagnostics'},source='vision')
 
     def stop(self):
+        self._enabled=False
         self.discovery.stop()
-        if self.thread:
+        if self.thread and not self._stopping:
+            self._stopping=True
+            self._stop_started=time.monotonic()
+            self._stop_warned=False
             self.stopRequested.emit()
-            if not self.thread.wait(5000):
-                # Keep ownership until Qt has released its capture resources.
-                self.thread.quit()
-                self.thread.wait(3000)
+            self.state=dict(status='正在停止图像捕获',frame_valid=False,slots=[])
+            self.stop_poll.start()
+        self._poll_stop()
+
+    def is_running(self):
+        return self.thread is not None and self.thread.isRunning()
+
+    def _poll_stop(self):
+        if self.thread is not None and self.thread.isRunning():
+            if self._stopping and not self._stop_warned and time.monotonic()-self._stop_started>5:
+                self._stop_warned=True
+                logging.getLogger(__name__).error('图像捕获线程退出超时，继续等待原生资源释放')
+                self.state=dict(status='图像捕获退出超时，请查看程序日志',frame_valid=False,slots=[])
+            return
+        self.stop_poll.stop()
+        if self.thread is not None:
             self.thread.deleteLater()
             self.thread=self.worker=None
+        self._stopping=False
         self.hwnd=self.foreign=None
         self._latest=None
         self._published=None
         self.identity={}
         self.state=dict(status='已停止',frame_valid=False,slots=[])
+        if self._enabled:
+            self.set_enabled(True)

@@ -7,7 +7,7 @@ import queue
 import sys
 from pathlib import Path
 from collections.abc import Callable
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QTimer, Signal
 from PySide6.QtGui import QFont, QIcon
 from PySide6.QtWidgets import QApplication
 from qfluentwidgets import (
@@ -18,6 +18,10 @@ from qfluentwidgets import (
     setTheme,
 )
 from endfield_pcap.application.settings import SettingsStore
+from endfield_pcap.application.independent import IndependentServiceController
+from endfield_pcap.application.shutdown import ShutdownController
+from endfield_pcap.inputlog.controller import InputController
+from endfield_pcap.vision.controller import VisionController
 from endfield_pcap.settings import (
     AppConfig,
     default_config_path,
@@ -46,7 +50,7 @@ from endfield_pcap.gui.pages.overlays.actions import OverlayActions
 from endfield_pcap.gui.pages.settings.actions import SettingsActions
 from endfield_pcap.gui.pages.overlays.hotkeys import OverlayHotkeys
 from endfield_pcap.gui.updates import UpdateActions
-from endfield_pcap.gui.services import IndependentServices
+from endfield_pcap.gui.independent.presenter import IndependentServicesPresenter
 from endfield_pcap.gui.lifecycle import GuiLifecycle
 
 
@@ -55,7 +59,6 @@ LOGGER = logging.getLogger(__name__)
 
 class MainWindow(
     GuiLifecycle,
-    IndependentServices,
     CaptureActions,
     OverlayActions,
     SettingsActions,
@@ -64,6 +67,8 @@ class MainWindow(
     WindowTheme,
     FluentWindow,
 ):
+    shutdownFinished = Signal()
+
     @property
     def app_config(self):
         return self.settings_store.current
@@ -76,19 +81,28 @@ class MainWindow(
         super().__init__()
         self.settings_store = SettingsStore(app_config, config_path)
         self.service_controller = ServiceController(self.app_config.service)
-        self._init_independent_services()
+        self.independent_controller = IndependentServiceController(InputController(),
+            VisionController(app_config.service.dll_dir / app_config.service.game_exe,
+                             app_config.vision_settings, self),
+            self.service_controller.set_analysis_streams, self.settings_store)
         self.overlay_manager = OverlayManager(
             self.app_config.service.ws_port,
             ws_browser_token=self.app_config.service.ws_browser_token,
             on_entry_changed=self._handle_overlay_entry_changed,
             use_in_process_snapshots=True,
             on_full_requirement=self.service_controller.set_full_analysis_required,
-            on_analysis_requirement=self._set_analysis_requirements,
+            on_analysis_requirement=self.independent_controller.set_requirements,
         )
         self.avatar_index = _load_avatar_index()
         self._stop_pending = False
         self._auto_start_attempted = False
         self._closing = False
+        self._close_ready = False
+        self.shutdown_controller = ShutdownController(self.service_controller, self.independent_controller)
+        self._shutdown_errors = 0
+        self.shutdown_timer = QTimer(self)
+        self.shutdown_timer.setInterval(25)
+        self.shutdown_timer.timeout.connect(self._poll_shutdown)
         self._capture_error = ''
         self._capture_error_bar = None
         self.current_state = ServiceState.WAITING_GAME
@@ -110,6 +124,9 @@ class MainWindow(
         self.records_page = BattleLogPage(self)
         self.settings_page = SettingsPage(self)
         self.logs_page = RuntimeLogPage(runtime_log_directory(config_path.parent / 'logs'), self)
+        self.independent_presenter = IndependentServicesPresenter(self.home_page, self.overlay_page,
+            self.independent_controller, self.settings_store, self.overlay_manager.apply_combo_snapshot,
+            lambda: self.switchTo(self.overlay_page), self)
 
         self.history_controller = HistoryController(self.settings_store, self.service_controller.writing_state)
         self.history_presenter = HistoryPresenter(self.records_page, self.history_controller,
@@ -134,7 +151,6 @@ class MainWindow(
         self.queue_timer.setInterval(33)
         self.queue_timer.timeout.connect(self._drain_queue)
         self.queue_timer.start()
-        self._bind_independent_services()
         if app_config.overlay_migration_count:
             from endfield_pcap.settings import save_app_config
             count = app_config.overlay_migration_count
@@ -145,7 +161,9 @@ class MainWindow(
                 duration=9000, parent=self))
 
     def _drain_queue(self) -> None:
-        self._drain_independent_services()
+        if self._closing:
+            return
+        self.independent_presenter.drain()
         self.history_presenter.drain()
         while True:
             try:
@@ -158,12 +176,13 @@ class MainWindow(
                 data = payload if isinstance(payload, dict) else {}
                 self.current_state = data.get("state", ServiceState.WAITING_GAME)
                 self.current_session_id = data.get("session_id")
+                self.independent_controller.set_session(self.current_session_id)
                 self.current_flow = data.get("flow")
                 self._update_service_status()
             elif event_type == 'started':
                 self._update_service_status()
             elif event_type == 'trace_path':
-                self.input_controller.set_trace(payload)
+                self.independent_controller.set_trace(payload)
             elif event_type == "metrics":
                 data = payload if isinstance(payload, dict) else {}
                 self.current_metrics = data.get("metrics", RuntimeMetrics())
@@ -181,8 +200,7 @@ class MainWindow(
                 reason = (str(exc).splitlines() or [type(exc).__name__])[0][:180]
                 self._show_capture_error(f'抓包失败：{reason}')
             elif event_type == "stopped":
-                self.input_controller.set_trace(None)
-                self.vision_controller.set_identity([],None)
+                self.independent_controller.capture_stopped()
                 self._finish_service_stop()
 
     def _handle_service_event(self, event: dict[str, object]) -> None:
@@ -206,7 +224,7 @@ class MainWindow(
             )
         self.current_squad = members
         self.home_page.status_card.set_squad_members(self.current_squad)
-        self.vision_controller.set_identity(members,self.current_session_id)
+        self.independent_controller.set_members(members)
 
     def showEvent(self, event) -> None:
         super().showEvent(event)
@@ -242,19 +260,43 @@ class MainWindow(
                 self.history_presenter.refresh() if stacked.widget(index) is self.records_page else None)
 
     def closeEvent(self, event) -> None:  # noqa: N802
+        if self._close_ready:
+            super().closeEvent(event)
+            return
+        event.ignore()
+        if self._closing:
+            return
         self._closing = True
         self.history_presenter.close()
         self.queue_timer.stop()
-        logging.getLogger().removeHandler(self.log_handler)
         self._unregister_overlay_hotkey()
         self._unregister_gui_hotkey()
-        self.tray_icon.hide()
-        save_app_config(self.app_config, self.config_path)
+        try:
+            self.settings_store.save()
+        except OSError as error:
+            self.shutdown_controller.add_error('settings', error)
         self.overlay_manager.close_all()
-        self._stop_independent_services()
-        self.service_controller.stop()
-        self.service_controller.join(timeout=5.0)
-        super().closeEvent(event)
+        self.shutdown_controller.begin()
+        self.shutdown_timer.start()
+        self._poll_shutdown()
+
+    def _poll_shutdown(self):
+        state = self.shutdown_controller.poll()
+        for error in state.errors[self._shutdown_errors:]:
+            LOGGER.error('程序退出：%s', error)
+            InfoBar.error(title='程序退出提示', content=error, parent=self, duration=-1)
+        self._shutdown_errors = len(state.errors)
+        self.home_page.service_hint.setText('正在退出…' + ' / '.join(state.pending))
+        if state.complete:
+            self.shutdown_timer.stop()
+            logging.getLogger().removeHandler(self.log_handler)
+            self.tray_icon.hide()
+            self._close_ready = True
+            QTimer.singleShot(0, self, self._finish_close)
+
+    def _finish_close(self):
+        self.close()
+        self.shutdownFinished.emit()
 
 
 def run_gui(
@@ -271,6 +313,7 @@ def run_gui(
     configure_logging(app_config.service.log_level)
 
     app = QApplication.instance() or QApplication([])
+    app.setQuitOnLastWindowClosed(False)
     app.setApplicationName(APP_NAME)
     app.setApplicationDisplayName(APP_NAME)
     app.setApplicationVersion(__version__)
@@ -286,6 +329,7 @@ def run_gui(
     setTheme(_theme_from_mode(app_config.theme_mode))
 
     window = MainWindow(app_config, target_path)
+    window.shutdownFinished.connect(app.quit)
     window.show()
     if on_ready is not None:
         def notify_when_visible():

@@ -426,7 +426,7 @@ except OSError: pass
 
 
 def test_gui_reports_ready_after_window_is_exposed(app, tmp_path, monkeypatch):
-    from PySide6.QtCore import QTimer
+    from PySide6.QtCore import QTimer, Signal
     from PySide6.QtWidgets import QWidget
     import endfield_pcap.gui.main as gui_main
     from endfield_pcap.settings import AppConfig, save_app_config
@@ -434,6 +434,8 @@ def test_gui_reports_ready_after_window_is_exposed(app, tmp_path, monkeypatch):
     save_app_config(AppConfig(service=default_service_config()), config)
     windows, states = [], []
     class ProbeWindow(QWidget):
+        shutdownFinished = Signal()
+
         def __init__(self, *args):
             super().__init__()
             windows.append(self)

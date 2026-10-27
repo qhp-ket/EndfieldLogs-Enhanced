@@ -83,3 +83,13 @@ CI 在 `main/python-qt` 与 `main` 的 push、PR 和手动触发时执行。`too
 私有状态访问应检查职责归属；拆分按状态所有权和调用接口进行。原生句柄、真实管道和 WebSocket 生命周期保留集成验证，退出测试检查有界等待、升级终止及失败诊断，避免固定到具体秒数。
 
 历史请求顺序、晚到失效和缓存释放在 `history/test_history_controller.py` 验证；页面保留真实点击、批量顺序、文件重命名及快照显示集成。输入解释的异步状态在 `independent/test_input_evidence_controller.py`，绑定和菜单交互在 `test_battle_input_binding.py`。`battle/test_detail_presenter.py` 验证独立分析窗口显式保存设置。
+
+独立服务需求和会话关联在 `independent/test_service_controller.py` 验证；Qt 视觉线程停止／重启在 `test_vision_publication.py`。`gui/test_shutdown.py` 覆盖可见／托盘隐藏时的异步退出、GUI 响应和停止失败诊断。
+
+按需视觉取证使用合成 trace 和独立临时配置；输出目录需尚未存在，截图另行检查布局：
+
+```powershell
+python -B _development/tools/preview_native_gui.py --output _development/verification/preview-dark --theme dark
+```
+
+`--theme light` 生成浅色版本，`--platform windows` 使用实际桌面。此工具只读取仓库合成夹具。

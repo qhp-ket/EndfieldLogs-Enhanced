@@ -238,10 +238,13 @@ def main():
         verify_native_tree()
     finally:
         visual.stop()
+        wait(lambda: not visual.is_running())
     result['native_processes_checked'] = len(checked_processes)
     (output / 'result.json').write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding='utf8')
     dialog.close()
     window.close()
+    wait(lambda: window._close_ready)
+    app.processEvents()
     window.deleteLater()
     QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
     app.processEvents()

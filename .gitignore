@@ -99,6 +99,7 @@
 !/_development/tools/smoke_portable.py
 !/_development/tools/verify_portable_zip.py
 !/_development/tools/benchmark_native_overlays.py
+!/_development/tools/preview_native_gui.py
 !/_development/tools/compare_parser_reference.py
 
 # Secrets, private captures, binaries and caches, at any depth.

@@ -37,4 +37,4 @@ def test_home_separates_services_and_vision_navigates_to_overlays(main_window, a
     page.vision_overlays_btn.click()
     app.processEvents()
     assert window.stackedWidget.currentWidget() == window.overlay_page
-    assert not window.vision_controller.state.get('enabled', False)
+    assert not window.independent_controller.vision.state.get('enabled', False)

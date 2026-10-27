@@ -10,7 +10,7 @@
 | `trace/` | 已解码事件转成统一 trace 文本，管理战斗上下文与来源证据 |
 | `analysis/` | 实时简报与完整报告发布、战斗分析的界面投影 |
 | `history/` | 历史索引、记录文件操作、trace 导入导出与离线分析 |
-| `application/` | 设置所有权、历史索引/任务/缓存、输入证据流程及公开写入状态 |
+| `application/` | 设置所有权、历史索引/任务/缓存、输入证据、独立服务协调及异步退出 |
 | `settings/` | 配置模型、编解码、迁移、原子写入与备份恢复 |
 | `data/` | 数据读取、装备数值、技能名称/帧数与离线头像身份解析；小型映射在 `assets/` |
 | `gui/` | 主窗口、侧栏、战斗分析与共享 Qt 控件 |
@@ -67,7 +67,8 @@ GUI 支持的内置类型为 `damage`、`uid_mask`、`combo_skill`。
 `window.py` 负责单窗绘制/拖动/缩放，`manager.py` 管理多窗及历史/实时状态切换。
 新增模板使用独立目录、稳定配置 ID 和相对资源路径。
 
-`gui/services.py` 组装输入与视觉服务，`gui/independent/` 是绑定配置、预览校准界面。
+`application/independent.py` 协调输入、视觉服务及抓包订阅；`gui/independent/presenter.py` 连接控件、格式化状态并打开绑定配置和预览校准界面。
+`application/shutdown.py` 汇总抓包、输入及视觉资源退出进度；窗口通过 Qt 定时器推进关闭，输入进程等待在后台线程执行，视觉捕获通过所属线程释放原生资源。
 `gui/battle/input_history.py` 提供绑定、对齐和解释设置编辑控件，`application/input_evidence.py` 管理异步解释及失效结果，原生绘制在 `timeline/inputs.py`。
 `inputlog/backends/windows.py` 隔离 Windows 消息线程，`windows_state.py` 提供带精度标记的状态采样兜底；`inputlog/bindings.py` 保存每场战斗的输入文件绑定。
 `inputlog/elevation.py` 仅为输入记录器申请管理员权限，通过认证的本机命名管道转发控制和状态，不提升主 GUI 权限。

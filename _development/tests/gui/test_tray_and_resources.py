@@ -17,8 +17,8 @@ def test_tray_hide_restore_preserves_services_and_overlays(main_window,app,monke
     stopped=[]
     monkeypatch.setattr(QSystemTrayIcon,'isSystemTrayAvailable',lambda:True)
     monkeypatch.setattr(window.tray_icon,'show',lambda:None)
-    monkeypatch.setattr(window.input_controller,'stop',lambda *a,**k:stopped.append('input'))
-    monkeypatch.setattr(window.vision_controller,'stop',lambda:stopped.append('vision'))
+    monkeypatch.setattr(window.independent_controller.input,'stop',lambda *a,**k:stopped.append('input'))
+    monkeypatch.setattr(window.independent_controller.vision,'stop',lambda:stopped.append('vision'))
     before=[(e.id,e.enabled,e.hidden) for e in window.app_config.overlays]
     window.home_page.hide_gui_btn.click();app.processEvents()
     assert not window.isVisible() and window.queue_timer.interval()==50
@@ -88,9 +88,9 @@ def test_hidden_ui_defers_log_layout_but_drains_input_and_combo(main_window,app,
     monkeypatch.setattr(window.tray_icon,'show',lambda:None)
     window._hide_gui();app.processEvents()
     shown=window.home_page.input_status.text()
-    monkeypatch.setattr(window.input_controller,'snapshot',lambda:dict(status='recording',input_received={'key':12},count=30))
+    monkeypatch.setattr(window.independent_controller.input,'snapshot',lambda:dict(status='recording',input_received={'key':12},count=30))
     combo=dict(type='combo_snapshot',schema_version=2,stream_id='test',sequence=1,snapshot={'slots':[]})
-    monkeypatch.setattr(window.vision_controller,'take_snapshot',lambda:combo)
+    monkeypatch.setattr(window.independent_controller.vision,'take_snapshot',lambda:combo)
     window.service_controller.queue.put(('log','hidden runtime evidence'))
     window._drain_queue()
     assert window.home_page.input_status.text()==shown

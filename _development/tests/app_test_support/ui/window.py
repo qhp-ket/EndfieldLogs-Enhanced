@@ -25,6 +25,9 @@ def main_window(app, monkeypatch, tmp_path):
     window.show()
     yield window
     window.close()
+    from app_test_support.scenarios.trace import wait_for
+    wait_for(lambda: window._close_ready, app)
+    app.processEvents()
     window.deleteLater()
     QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
     app.processEvents()
