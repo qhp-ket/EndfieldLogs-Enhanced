@@ -8,6 +8,7 @@ from qfluentwidgets import CaptionLabel
 from PySide6.QtCore import QPoint, QSize, QEvent, Qt
 from PySide6.QtTest import QTest
 import endfield_pcap.settings as gui_config
+from endfield_pcap.settings.codec import _overlay_entry_to_dict
 import endfield_pcap.gui.main as gui_main
 import endfield_pcap.overlays.manager as overlay_host
 from endfield_pcap.models import OverlayGeometry
@@ -21,17 +22,26 @@ from app_test_support.ui.qt import snapshot_message, EVIDENCE
 
 
 
-def test_old_configuration_migrates_font_and_template_settings_without_changing_geometry():
-    original = gui_config._overlay_entry_to_dict(entry(scale=1.4, bar_mode="rdps", overlay_theme="dark",
-        visible_columns=("damage_rate",), geometry=OverlayGeometry(10, 20, 500, 250)))
+def test_old_configuration_migrates_font_and_template_settings_without_changing_geometry(tmp_path):
+    path = tmp_path / 'old-overlay.json'
+    config = gui_config.AppConfig(service=gui_config.default_service_config(), overlays=[
+        entry(scale=1.4, bar_mode="rdps", overlay_theme="dark",
+              visible_columns=("damage_rate",), geometry=OverlayGeometry(10, 20, 500, 250))])
+    gui_config.save_app_config(config, path)
+    payload = json.loads(path.read_text(encoding='utf8'))
+    original = payload['overlays'][0]
     original.pop("font_scale")
     original.pop("template_settings")
-    restored = gui_config._overlay_entry_from_dict(original)
+    path.write_text(json.dumps(payload), encoding='utf8')
+    loaded = gui_config.load_app_config(path)
+    restored = next(row for row in loaded.overlays if row.id == original['id'])
     assert restored.font_scale == 1.4 and restored.geometry == OverlayGeometry(10, 20, 500, 250)
     assert template_values(restored) == dict(bar_mode="rdps", columns=["damage_rate"], theme="dark", show_character_avatars='on', avatar_size_percent=100)
     updated = with_template_value(restored, "columns", ["damage", "invalid"])
     assert updated.visible_columns == ("damage",)
-    assert gui_config._overlay_entry_from_dict(gui_config._overlay_entry_to_dict(updated)) == updated
+    loaded.overlays = [updated]
+    gui_config.save_app_config(loaded, path)
+    assert next(row for row in gui_config.load_app_config(path).overlays if row.id == updated.id) == updated
 
 
 
@@ -378,7 +388,7 @@ def test_reset_current_overlay_layout_is_persisted_and_preserves_options(main_wi
     app.processEvents()
     assert native.canvas.modules[0].settings['_font_scale'] == 1
     persisted = json.loads(window.config_path.read_text(encoding='utf8'))['overlays']
-    assert next(e for e in persisted if e['id'] == after.id) == gui_config._overlay_entry_to_dict(after)
+    assert next(e for e in persisted if e['id'] == after.id) == _overlay_entry_to_dict(after)
     window.switchTo(page)
     QTest.qWait(700)
     assert page.reset_layout_btn.isVisible()
