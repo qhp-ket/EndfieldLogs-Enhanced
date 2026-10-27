@@ -121,7 +121,7 @@ python -B _development/run_tests.py uploader_core
 ```
 
 测试分类和按改动选择范围见 [测试说明](_development/tests/README.md)；公开回归使用合成日志。
-GitHub CI 在 `main/python-qt` 的 push 和 PR 上运行仓库审计及上述三套回归，保存测试日志。
+GitHub CI 在 `main`、`main/python-qt` 的 push 和 PR 上运行仓库审计及上述三套回归，保存测试日志。
 Windows 桌面捕获、混合 DPI 和便携包验收按 [打包说明](_development/docs/portable-packaging.md) 在本机执行。
 
 版本来源为 `endfield_pcap/_version.py`，使用 SemVer，如 `0.1.0-dev.1`、`0.1.0`。
