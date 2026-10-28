@@ -135,6 +135,19 @@ python -B _development/tools/release.py build --component uploader
 产物写入 `_releases/`，附 SHA-256 和逐文件清单。
 同一源码已通过对应测试时使用 `build --skip-tests`，保留 ZIP 与解压验证。完整流程见 [打包说明](_development/docs/portable-packaging.md)。
 
+## 参考与致谢
+
+感谢以下项目为输入记录、连携 CD 识别及 HUD 设计提供的实现思路参考：
+
+- [EndfieldComboHUD](https://github.com/naokotg/EndfieldComboHUD)
+- [EndHud](https://github.com/Nedlitex/EndHud)
+- [EndfieldHUD](https://github.com/YuumiSama/EndfieldHUD)
+- EndfieldRotPilot、EndfieldCDHUD
+
+本项目相关模块独立实现，未复制或随包分发上述项目的代码、二进制或图片。此处致谢仅说明技术参考关系，不代表这些项目的作者参与、认可或为本项目背书。
+
+实际沿用的 ZMDLogs / Endfield Logs 代码，以及使用的 AKEData 数据与图片，另见下方许可与来源说明及 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+
 ## 许可与来源
 
 本项目新增/修改代码及组合 GUI 程序采用 **GPL-3.0-only**，见 [LICENSE](LICENSE)；上游 MIT 版权和许可原文保留，各依赖按各自许可授权。
