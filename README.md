@@ -29,7 +29,7 @@
 
 1. 完整解压本体 ZIP，双击 `Start-GUI.cmd`；CMD 在 GUI 显示后退出。
 2. 在「设置 → 游戏路径」选择 `Endfield.exe` 或游戏目录。
-3. 实时抓包另需 [Npcap 官方安装程序](https://npcap.com/#download)。点首页「启动抓包」后进入游戏。
+3. 实时抓包另需 [Npcap 官方安装程序](https://npcap.com/#download)，安装时勾选 **Install Npcap in WinPcap API-compatible Mode**。点首页「启动抓包」后进入游戏。
 4. 历史分析可直接在「战斗日志」导入本地 trace。
 
 抓包和输入记录默认关闭，可在设置中分别开启随启动运行。

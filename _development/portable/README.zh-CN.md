@@ -3,13 +3,15 @@
 适用于 Windows 10/11 x64，界面和说明使用中文。包内携带 Python、Qt 原生界面和运行依赖。
 完整解压到可写目录，双击 `Start-GUI.cmd`；启动时 CMD 等待 GUI 显示后退出。
 
+项目仓库及使用说明：https://github.com/qhp-ket/EndfieldLogs-Enhanced
+
 程序通过 Npcap 被动抓包，在自身进程解码，再生成 trace、增量统计和浮窗。
 程序不含对游戏进程的注入、Hook 或内存读写；登录解码调用用户游戏 DLL 的导出函数。
 
 ## 开始使用
 
 1. 在「设置 → 游戏路径」选择 `Endfield.exe` 或游戏目录，游戏迁移后可重新选择。
-2. 抓包需先安装 [Npcap](https://npcap.com/#download)，关闭其他抓包客户端。
+2. 抓包需先安装 [Npcap](https://npcap.com/#download)，安装时勾选 **Install Npcap in WinPcap API-compatible Mode**，并关闭其他抓包客户端。
 3. 首页点「启动抓包」后启动游戏。抓包默认关闭，可在设置启用随启动运行。
 4. 悬浮窗页选择功能、显隐、样式、字号和尺寸，列表顺序支持拖拽保存。
 5. 战斗日志页导入 trace，加载分析或发送到伤害浮窗；「返回实时日志」恢复实时。
