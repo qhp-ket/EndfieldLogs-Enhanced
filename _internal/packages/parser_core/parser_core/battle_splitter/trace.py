@@ -73,10 +73,10 @@ def _is_loadout_context_line(line: str) -> bool:
     return " LOADOUT slot=" in line or "LOADOUT slot=" in line or " LOADOUT_STATS " in line or "LOADOUT_STATS " in line
 
 
-def _find_loadout_context_start_line(lines: list[str], *, start_line: int, min_line: int) -> int | None:
+def _find_loadout_context_start_line(loadouts, blanks, *, start_line: int, min_line: int) -> int | None:
     last_loadout_line: int | None = None
     for index in range(start_line, min_line - 1, -1):
-        if _is_loadout_context_line(lines[index]):
+        if index in loadouts:
             last_loadout_line = index
             break
     if last_loadout_line is None:
@@ -84,25 +84,23 @@ def _find_loadout_context_start_line(lines: list[str], *, start_line: int, min_l
 
     block_start = last_loadout_line
     for index in range(last_loadout_line - 1, min_line - 1, -1):
-        if _is_loadout_context_line(lines[index]):
+        if index in loadouts:
             block_start = index
             continue
-        if lines[index].strip() == "":
+        if index in blanks:
             continue
         break
     return block_start
 
 
-def _find_context_start_line(records: list[dict], *, start_line: int, min_line: int, lines: list[str] | None = None) -> int:
+def _find_context_start_line(records: list[dict], *, start_line: int, min_line: int, loadouts, blanks) -> int:
     context_records = [
         record
         for record in records
         if record["is_dungeon_context"] and min_line <= int(record["line_index"]) <= start_line
     ]
     context_start = int(context_records[-1]["line_index"]) if context_records else start_line
-    if lines is None:
-        return context_start
-    loadout_start = _find_loadout_context_start_line(lines, start_line=context_start, min_line=min_line)
+    loadout_start = _find_loadout_context_start_line(loadouts, blanks, start_line=context_start, min_line=min_line)
     return min(context_start, loadout_start) if loadout_start is not None else context_start
 
 
@@ -210,6 +208,16 @@ def _split_trace_into_battles(raw_content: str, *, idle_split_ms: int = _IDLE_SP
         if record["is_hit"]:
             hit_records.append(record)
 
+    bounds = _split_observed_records(timestamped_records, hit_records, len(lines),
+        {index for index, line in enumerate(lines) if _is_loadout_context_line(line)},
+        {index for index, line in enumerate(lines) if not line.strip()}, idle_split_ms=idle_split_ms)
+    for segment in bounds:
+        end = segment.pop('end_line_index')
+        segment['content'] = ''.join(lines[segment['start_line_index']:end]).strip()
+    return bounds
+
+
+def _split_observed_records(timestamped_records, hit_records, record_count, loadouts, blanks, *, idle_split_ms):
     if not hit_records:
         raise ValueError("未在日志中识别到可用 battle。")
 
@@ -236,12 +244,12 @@ def _split_trace_into_battles(raw_content: str, *, idle_split_ms: int = _IDLE_SP
                 timestamped_records,
                 start_line=marker_start_line,
                 min_line=min_start_line,
-                lines=lines,
+                loadouts=loadouts, blanks=blanks,
             )
             next_start_line = (
                 int(timer_start_records[timer_index + 1]["line_index"])
                 if timer_index + 1 < len(timer_start_records)
-                else len(lines)
+                else record_count
             )
             if start_record["is_official_timer_start"]:
                 timer_end_record = next(
@@ -289,14 +297,11 @@ def _split_trace_into_battles(raw_content: str, *, idle_split_ms: int = _IDLE_SP
             ]
             if not battle_hits:
                 continue
-            content = "".join(lines[start_line : end_line + 1]).strip()
-            if not content:
-                continue
             segments.append(
                 {
                     "battle_index": len(segments) + 1,
                     "start_line_index": start_line,
-                    "content": content,
+                    "end_line_index": end_line + 1,
                     "first_hit_hint": str(battle_hits[0]["hint"]),
                     "last_hit_hint": str(battle_hits[-1]["hint"]),
                     "first_hit_line_index": int(battle_hits[0]["line_index"]),
@@ -324,12 +329,12 @@ def _split_trace_into_battles(raw_content: str, *, idle_split_ms: int = _IDLE_SP
                 timestamped_records,
                 start_line=marker_start_line,
                 min_line=previous_end_line + 1,
-                lines=lines,
+                loadouts=loadouts, blanks=blanks,
             )
             end_line = _extend_timer_tail_end_line(
                 timestamped_records,
                 timer_end_record=timer_end_record,
-                next_start_line=len(lines),
+                next_start_line=record_count,
             )
             battle_hits = [
                 record
@@ -340,15 +345,11 @@ def _split_trace_into_battles(raw_content: str, *, idle_split_ms: int = _IDLE_SP
             if not battle_hits:
                 previous_end_line = max(previous_end_line, end_line)
                 continue
-            content = "".join(lines[start_line : end_line + 1]).strip()
-            if not content:
-                previous_end_line = max(previous_end_line, end_line)
-                continue
             segments.append(
                 {
                     "battle_index": len(segments) + 1,
                     "start_line_index": start_line,
-                    "content": content,
+                    "end_line_index": end_line + 1,
                     "first_hit_hint": str(battle_hits[0]["hint"]),
                     "last_hit_hint": str(battle_hits[-1]["hint"]),
                     "first_hit_line_index": int(battle_hits[0]["line_index"]),
@@ -380,15 +381,12 @@ def _split_trace_into_battles(raw_content: str, *, idle_split_ms: int = _IDLE_SP
         if segment_index + 1 < len(segment_start_lines):
             end_line = max(segment_start_lines[segment_index + 1] - 1, start_line)
         else:
-            end_line = len(lines) - 1
-        content = "".join(lines[start_line : end_line + 1]).strip()
-        if not content:
-            continue
+            end_line = record_count - 1
         segments.append(
             {
                 "battle_index": segment_index + 1,
                 "start_line_index": start_line,
-                "content": content,
+                "end_line_index": end_line + 1,
                 "first_hit_hint": str(first_hit["hint"]),
                 "last_hit_hint": str(last_hit["hint"]),
                 "first_hit_line_index": int(first_hit["line_index"]),

@@ -7,8 +7,8 @@
   "source_archive_sha256": "dbddebee37320fa3da91b2e1e747c30b16c66e893d9a1387d52fbbee0dc74571",
   "bundle": {
     "path": "data/runtime-data.zip",
-    "bytes": 5794554,
-    "sha256": "d4aa67dc0c96ccd35cb1e6af0d2a5b83eac09cedbaa3303c9b72f0f1b53960f6"
+    "bytes": 5815850,
+    "sha256": "c38cf5542ec8c2aeeb805143791fe26fd540ba5082e1c9239e08d673ecdf5476"
   },
   "files": [
     {
@@ -681,6 +681,12 @@
       "path": "data/akedata/buff/items/buff_cardefend_slowdown.json",
       "bytes": 99,
       "sha256": "e6f7e361c691118c28c76687efa0433f33ded2c52a896af08fedc038c2d1c231",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/buff/items/buff_cc_chr_0037_minghe_disarm.json",
+      "bytes": 99,
+      "sha256": "adef5306d824b3b688384e345a089e3bda88ad3a55933cf1c419933cb743e5fe",
       "origin": "runtime_projection"
     },
     {
@@ -3396,6 +3402,150 @@
       "origin": "runtime_projection"
     },
     {
+      "path": "data/akedata/buff/items/buff_chr_0037_minghe_attack04_finishprojectile.json",
+      "bytes": 102,
+      "sha256": "33f66af9ed23da93b99480654080595e9c2ee3d0e039abd72bc283e467100d52",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/buff/items/buff_chr_0037_minghe_bandagemode.json",
+      "bytes": 101,
+      "sha256": "c28056704bbf6a8767289cc5fb4f91cf1d4a9a41783825f06d7e7d69bc4f7f14",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/buff/items/buff_chr_0037_minghe_forbid_power.json",
+      "bytes": 93,
+      "sha256": "8d6f3aa243e16842f38de1be6084ca904b89092b68d6268ff541827455204ac1",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/buff/items/buff_chr_0037_minghe_forbid_spdash.json",
+      "bytes": 93,
+      "sha256": "8d6f3aa243e16842f38de1be6084ca904b89092b68d6268ff541827455204ac1",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/buff/items/buff_chr_0037_minghe_injuredmode.json",
+      "bytes": 101,
+      "sha256": "c28056704bbf6a8767289cc5fb4f91cf1d4a9a41783825f06d7e7d69bc4f7f14",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/buff/items/buff_chr_0037_minghe_listen_ultimateend_storymode.json",
+      "bytes": 100,
+      "sha256": "7853e3face4c5edefeb230a5472c941b24479f76ea9313db22c0f9970e4a3e60",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/buff/items/buff_chr_0037_minghe_poiseup.json",
+      "bytes": 93,
+      "sha256": "8d6f3aa243e16842f38de1be6084ca904b89092b68d6268ff541827455204ac1",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/buff/items/buff_chr_0037_minghe_potential_1.json",
+      "bytes": 96,
+      "sha256": "cd1dbf09077c67d57919882cf00c0f19f442934bfb52456b5955b9c485b367bf",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/buff/items/buff_chr_0037_minghe_potential_3.json",
+      "bytes": 100,
+      "sha256": "7853e3face4c5edefeb230a5472c941b24479f76ea9313db22c0f9970e4a3e60",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/buff/items/buff_chr_0037_minghe_potential_5.json",
+      "bytes": 96,
+      "sha256": "cd1dbf09077c67d57919882cf00c0f19f442934bfb52456b5955b9c485b367bf",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/buff/items/buff_chr_0037_minghe_potential_5_effect.json",
+      "bytes": 96,
+      "sha256": "cd1dbf09077c67d57919882cf00c0f19f442934bfb52456b5955b9c485b367bf",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/buff/items/buff_chr_0037_minghe_power.json",
+      "bytes": 100,
+      "sha256": "7853e3face4c5edefeb230a5472c941b24479f76ea9313db22c0f9970e4a3e60",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/buff/items/buff_chr_0037_minghe_power_storymode.json",
+      "bytes": 100,
+      "sha256": "7853e3face4c5edefeb230a5472c941b24479f76ea9313db22c0f9970e4a3e60",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/buff/items/buff_chr_0037_minghe_sethp.json",
+      "bytes": 92,
+      "sha256": "5c778221249a3b0514bbfc497fba9dcae9df1be138a96728572847ff8640321c",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/buff/items/buff_chr_0037_minghe_talent.json",
+      "bytes": 101,
+      "sha256": "5e0fc4890d3ba7051be0126be6cb1d6622d9224210410975de2665b9228b7432",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/buff/items/buff_chr_0037_minghe_talent_1.json",
+      "bytes": 101,
+      "sha256": "5e0fc4890d3ba7051be0126be6cb1d6622d9224210410975de2665b9228b7432",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/buff/items/buff_chr_0037_minghe_talent_2.json",
+      "bytes": 101,
+      "sha256": "5e0fc4890d3ba7051be0126be6cb1d6622d9224210410975de2665b9228b7432",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/buff/items/buff_chr_0037_minghe_talent_2_effectbuff.json",
+      "bytes": 100,
+      "sha256": "7853e3face4c5edefeb230a5472c941b24479f76ea9313db22c0f9970e4a3e60",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/buff/items/buff_chr_0037_minghe_thunderdebuff.json",
+      "bytes": 100,
+      "sha256": "e5f268b66df4407a6172b15061380e7f370a7b6f691e75cb2fe660527d0e40cd",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/buff/items/buff_chr_0037_minghe_thundertrigger.json",
+      "bytes": 100,
+      "sha256": "aa959d1d0f6c8325e324a1e79fba63a7d796f625f42d6be6fb29acdbf5581f8f",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/buff/items/buff_chr_0037_minghe_thundertrigger_damagereduction.json",
+      "bytes": 100,
+      "sha256": "102b514d1554433c3c6151065e29cd096adb3f274bb81b3d2daac37a425da6a9",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/buff/items/buff_chr_0037_minghe_ultimate_grab.json",
+      "bytes": 101,
+      "sha256": "c28056704bbf6a8767289cc5fb4f91cf1d4a9a41783825f06d7e7d69bc4f7f14",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/buff/items/buff_chr_0037_minghe_ultimate_hit.json",
+      "bytes": 100,
+      "sha256": "107813a705d08cc4654826aa8fcf8c946348d4c97892aca1b915d31b3b45274e",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/buff/items/buff_chr_0037_minghe_ultimaterush.json",
+      "bytes": 100,
+      "sha256": "7853e3face4c5edefeb230a5472c941b24479f76ea9313db22c0f9970e4a3e60",
+      "origin": "runtime_projection"
+    },
+    {
       "path": "data/akedata/buff/items/buff_common_actortaunt.json",
       "bytes": 101,
       "sha256": "e661f426462bad33156da875c639206236a3ed6f84c96744c856cb4afba8587d",
@@ -3853,8 +4003,8 @@
     },
     {
       "path": "data/akedata/buff/manifest.json",
-      "bytes": 398899,
-      "sha256": "2f7d78d8958dd616f234f824445998060982d31209e072a97dd08dd04ea047c9",
+      "bytes": 403656,
+      "sha256": "c17ab1c6c4f449b67da54025ddf7083a91071359c4329951ca230f33c3f628a6",
       "origin": "runtime_projection"
     },
     {
@@ -4026,6 +4176,12 @@
       "origin": "runtime_projection"
     },
     {
+      "path": "data/akedata/character/items/chr_0037_minghe.json",
+      "bytes": 4348,
+      "sha256": "b4d1e39d518b4e51418ddda0112faaa42f5a662852261ca65b6c6246fa214439",
+      "origin": "runtime_projection"
+    },
+    {
       "path": "data/akedata/character/items/chr_9000_endmin.json",
       "bytes": 3100,
       "sha256": "c854c40472a4665fdfc4575457ebca0a1c26ca6a277e776cedc8801474efc881",
@@ -4033,8 +4189,8 @@
     },
     {
       "path": "data/akedata/character/manifest.json",
-      "bytes": 8588,
-      "sha256": "fbcd2e2d733713eaa2824adad0f72945005e28f7e9621bd4ec4e4f9c59d94685",
+      "bytes": 8885,
+      "sha256": "e4adb657eb647292473691fb72e3f6154d3c40a6ff0c371feb52ce560435a1a2",
       "origin": "runtime_projection"
     },
     {
@@ -8073,6 +8229,120 @@
       "path": "data/akedata/skill/items/chr_0030_zhuangfy_ultimate_skill_end.json",
       "bytes": 94,
       "sha256": "8af8e41e57533c6656b52b1cb8d5c8a38d234b9bd11061e13a3448b4e19802f9",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/skill/items/chr_0037_minghe_attack1.json",
+      "bytes": 1099,
+      "sha256": "1508be992bad4c79d5365a0ea3b24a53d4ea99ab382f763defc42292fa33b7cc",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/skill/items/chr_0037_minghe_attack2.json",
+      "bytes": 93,
+      "sha256": "bdd97e968a4bf26685a073b97efc5ccbed29cef4b7ec69afbada0aadb434f5dc",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/skill/items/chr_0037_minghe_attack3.json",
+      "bytes": 93,
+      "sha256": "bdd97e968a4bf26685a073b97efc5ccbed29cef4b7ec69afbada0aadb434f5dc",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/skill/items/chr_0037_minghe_attack4.json",
+      "bytes": 447,
+      "sha256": "d65a5a7b37ce259a1b94e9e31e50b51112561a3c0a599b5d8c0ccb32b58d2d66",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/skill/items/chr_0037_minghe_attack4_endprojectilehit.json",
+      "bytes": 93,
+      "sha256": "bdd97e968a4bf26685a073b97efc5ccbed29cef4b7ec69afbada0aadb434f5dc",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/skill/items/chr_0037_minghe_attack4_flysword.json",
+      "bytes": 93,
+      "sha256": "bdd97e968a4bf26685a073b97efc5ccbed29cef4b7ec69afbada0aadb434f5dc",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/skill/items/chr_0037_minghe_attack4_flysword_weapon.json",
+      "bytes": 93,
+      "sha256": "bdd97e968a4bf26685a073b97efc5ccbed29cef4b7ec69afbada0aadb434f5dc",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/skill/items/chr_0037_minghe_attack4_hitground.json",
+      "bytes": 93,
+      "sha256": "bdd97e968a4bf26685a073b97efc5ccbed29cef4b7ec69afbada0aadb434f5dc",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/skill/items/chr_0037_minghe_attack4_hitground_abilityentity.json",
+      "bytes": 93,
+      "sha256": "bdd97e968a4bf26685a073b97efc5ccbed29cef4b7ec69afbada0aadb434f5dc",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/skill/items/chr_0037_minghe_attack4_hitground_abilityentity_groundeffect.json",
+      "bytes": 93,
+      "sha256": "bdd97e968a4bf26685a073b97efc5ccbed29cef4b7ec69afbada0aadb434f5dc",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/skill/items/chr_0037_minghe_attack5.json",
+      "bytes": 93,
+      "sha256": "bdd97e968a4bf26685a073b97efc5ccbed29cef4b7ec69afbada0aadb434f5dc",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/skill/items/chr_0037_minghe_combo_skill.json",
+      "bytes": 91,
+      "sha256": "56aac2227b60d2865ff5f111392a6d444be37e49548357b1ec0183119d29c7bf",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/skill/items/chr_0037_minghe_normalskill_1.json",
+      "bytes": 92,
+      "sha256": "66436ccd9afc372e81dab954f9a72614b86d4943e490836241e2d7007a1168b5",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/skill/items/chr_0037_minghe_normalskill_2.json",
+      "bytes": 483,
+      "sha256": "24be81104f1cefdea812a627c881d375df835b3bbd9f9d84e77a57afaab9abad",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/skill/items/chr_0037_minghe_plunging_attack_end.json",
+      "bytes": 95,
+      "sha256": "b55a1724b9870952fc0b3abd82e261a5d6853632bbd47bb245c9fe89db16b11b",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/skill/items/chr_0037_minghe_plunging_attack_start.json",
+      "bytes": 95,
+      "sha256": "b55a1724b9870952fc0b3abd82e261a5d6853632bbd47bb245c9fe89db16b11b",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/skill/items/chr_0037_minghe_powerattack.json",
+      "bytes": 836,
+      "sha256": "8029a82573668cc9f16414880d4ff54add4f31a32c778cb76c7b652593d49a07",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/skill/items/chr_0037_minghe_specialfracture_thunderskill.json",
+      "bytes": 904,
+      "sha256": "5948623d3faa5f0d9dadcc098ae9828d42301006312e811060df04f03c27a1f9",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/akedata/skill/items/chr_0037_minghe_ultimate_skill.json",
+      "bytes": 1171,
+      "sha256": "b4c95f0704060f3a56415b6f418918db71f3a57257f541e37af60a8a13343280",
       "origin": "runtime_projection"
     },
     {
@@ -14761,14 +15031,14 @@
     },
     {
       "path": "data/local_semantics/skill_frame_rules.json",
-      "bytes": 268268,
-      "sha256": "fccf65dc11c5eeee0d257a67462d5b8e40645a1634b02bd3144f934e798ad474",
+      "bytes": 279969,
+      "sha256": "1f2d1554e55c9a7b28ef6729aa23f5bb8f605c2010da8e0062c913fa0d957e34",
       "origin": "development_override"
     },
     {
       "path": "data/local_semantics/team_energy_rules.json",
-      "bytes": 11772,
-      "sha256": "49efb29a8490916ae7f19596a30fcb139b1b3d29e17f76f5a89cdd01a069d284",
+      "bytes": 12594,
+      "sha256": "ec7df51b9e7b5170940c23cc09c36e41a9177427a75d4ea5f16a8c2cfd3136cb",
       "origin": "development_override"
     },
     {
@@ -15024,6 +15294,12 @@
       "origin": "runtime_projection"
     },
     {
+      "path": "data/local_tables/character/items/chr_0037_minghe.json",
+      "bytes": 37047,
+      "sha256": "541dd82089c15f3d9c3d0c7139593199825cef091be0acf9ea18c5e535247c1c",
+      "origin": "runtime_projection"
+    },
+    {
       "path": "data/local_tables/character/items/chr_0038_purrche.json",
       "bytes": 36219,
       "sha256": "1148824aa7c6d0647450515a84bb102d6c438d45e26cfefde2beb1d9c39ae21a",
@@ -15037,8 +15313,8 @@
     },
     {
       "path": "data/local_tables/character/manifest.json",
-      "bytes": 13196,
-      "sha256": "b722014da5fa7cfcff59450a9026e8966dda47d5ac5f21ee9a8d2588ccf349e0",
+      "bytes": 13588,
+      "sha256": "ca1938ab85072aea08f033562f523b5181726123d0d2939f01ad4e3fc8fe1b7b",
       "origin": "runtime_projection"
     },
     {
@@ -16441,8 +16717,8 @@
     },
     {
       "path": "jsondata/CharacterNameIndex.json",
-      "bytes": 1004,
-      "sha256": "a2b19dc299fdae009070067c526ee5bca364dba93abb7d40e5f33538a5c04370",
+      "bytes": 1032,
+      "sha256": "f7703920a70ef0d3825943d26b478fd8722006a84dee8c77fe00941930a50ffe",
       "origin": "runtime_projection"
     },
     {
@@ -16450,6 +16726,365 @@
       "bytes": 1455,
       "sha256": "28886786be7a13476d444c2979e9870298c39f0ea87297cd0e764ef23aa2a1ed",
       "origin": "runtime_projection"
+    }
+  ],
+  "supplements": [
+    {
+      "base_url": "https://data.akedata.wiki",
+      "character_ids": [
+        "chr_0037_minghe"
+      ],
+      "table_version": "1.6.4@11529267-11",
+      "asset_revision": "2026-11-05T04:05:33.465436+00:00",
+      "manifest_sha256": "0fc52d3032987381869fb5b6b39d5add637dc91c1b729cd3569a4469600e354a",
+      "asset_index_sha256": "39cec07e68994b42f12015f28a3245e70d57d00d8a6eb32d83897e98801ba3da",
+      "files": [
+        {
+          "path": "public/1.6.4/11529267-11/TableCfg/CharacterTable.json",
+          "bytes": 11293838,
+          "sha256": "f94bf917af3f4d3d059f8fb0c92a6f05c91955daa5755441b42ecbf4d200d32e"
+        },
+        {
+          "path": "public/1.6.4/11529267-11/TableCfg/CharGrowthTable.json",
+          "bytes": 1691849,
+          "sha256": "b9c1a7bd2d390824e82feced74becbafbdfef6d419bf55c803d76818373d5abc"
+        },
+        {
+          "path": "public/1.6.4/11529267-11/TableCfg/I18nTextTable_CN.json",
+          "bytes": 13264022,
+          "sha256": "2a92b375d44eae019fa119ca71df67b5779372e109ea513c060549b62adf9643"
+        },
+        {
+          "path": "public/1.6.4/11529267-11/TableCfg/SkillPatchTable.json",
+          "bytes": 7484637,
+          "sha256": "06170b6f4c12c57b2d93e6bb4ce3b179712b29bcd1dcac0607324cef263f7469"
+        },
+        {
+          "path": "public/1.6.4/11529267-11/TableCfg/CharacterPotentialTable.json",
+          "bytes": 79839,
+          "sha256": "d660d7ce2dfa1f1a99a4b005621c4549a66c8bc8c2d0804224503ee8852a17f5"
+        },
+        {
+          "path": "public/1.6.4/11529267-11/TableCfg/PotentialTalentEffectTable.json",
+          "bytes": 640246,
+          "sha256": "b8b192f423fd4458c8ddc6cb36e6c73946f912b6bdbef3bc3227696f70a33bea"
+        },
+        {
+          "path": "public/1.6.4/11529267-11/TableCfg/NumIdStrTable.json",
+          "bytes": 1076302,
+          "sha256": "52fd99504c7d9f45ea2b916c9287491d79e0675def6f05ea58f308617fc7cf11"
+        },
+        {
+          "path": "public/Json/BuffData/buff_cc_chr_0037_minghe_disarm.json",
+          "bytes": 2756,
+          "sha256": "58daf50218243ca2948ed5d797166a35537a7a331bbeb7f46eb3cfc52238275a",
+          "md5": "54db3a4b1319fb05b3489ce15a50753a",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/BuffData/buff_chr_0037_minghe_attack04_finishprojectile.json",
+          "bytes": 7939,
+          "sha256": "2e1399cdba8fa829779b70e2c8f320987142e26c7b703f0ef8ab9e292c68f47e",
+          "md5": "1713ab429267262445d94e72b8377e9a",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/BuffData/buff_chr_0037_minghe_bandagemode.json",
+          "bytes": 3388,
+          "sha256": "da69405009518ae552cbd9798716edcb484635fc5a0cc6fdbebd53d2eedafa3a",
+          "md5": "ddd731077c50305c04501dd162ecbe71",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/BuffData/buff_chr_0037_minghe_forbid_power.json",
+          "bytes": 2577,
+          "sha256": "d52aca62c2a3ef1754ff00454d85bf3ed3a2e820ceaef1809d42894093607721",
+          "md5": "f86f12d1357393fb190b9a7fb1774c31",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/BuffData/buff_chr_0037_minghe_forbid_spdash.json",
+          "bytes": 4246,
+          "sha256": "6d6763ab0e7572ba7cddfc6c8dd99bace716ea76dd86ad6628edd0bc182b0ac7",
+          "md5": "4a28c0156dc4af638acd3a200b7aa6e5",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/BuffData/buff_chr_0037_minghe_injuredmode.json",
+          "bytes": 3388,
+          "sha256": "7df172e46e23bf0a3cbd599a759e3221181176cf9d9e5e65c2b1c8c7ff16fb06",
+          "md5": "4cd88fd08017479503432c09571cc5fc",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/BuffData/buff_chr_0037_minghe_listen_ultimateend_storymode.json",
+          "bytes": 5621,
+          "sha256": "610f5fa6aaad17538fa3d494cd8fd90824883b7e579fdbc8dd8b53d691ca7948",
+          "md5": "3af28f107477e384ec72a328ca6ae1f9",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/BuffData/buff_chr_0037_minghe_poiseup.json",
+          "bytes": 2959,
+          "sha256": "a149c383059f0882bccd4d040999abe4c16b542bd881d75c6e72c7d4c0d003d4",
+          "md5": "6e6a89c5d6f05e048b44711aac543a4e",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/BuffData/buff_chr_0037_minghe_potential_1.json",
+          "bytes": 2808,
+          "sha256": "43d5e4dfbe93b052e9369bc3da4a8b9eec751536312779a09ac0447a543b8207",
+          "md5": "f5546f28b9da077386c17b16b2452785",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/BuffData/buff_chr_0037_minghe_potential_3.json",
+          "bytes": 3240,
+          "sha256": "142635293c5f00378c8f5066ad46388969918a6de228a96519647e23eaca8b2a",
+          "md5": "89261d3d7742d3ef895d985384a9b163",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/BuffData/buff_chr_0037_minghe_potential_5.json",
+          "bytes": 2853,
+          "sha256": "48fb6ec1ff594b15f90bf8e1d97456a0eeed8b85610893633698b88513ae9fee",
+          "md5": "8b30d2f6da1c6d13d5df80154dad543f",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/BuffData/buff_chr_0037_minghe_potential_5_effect.json",
+          "bytes": 38229,
+          "sha256": "fdd09a92c53ae3e17f09646970c843e01109c0535a4c21479c45260081d3191c",
+          "md5": "5950a8b921c7c27597bdc55a074bc34e",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/BuffData/buff_chr_0037_minghe_power.json",
+          "bytes": 29142,
+          "sha256": "e88e4c67a72e7a1663b1400adefc53479624c16ab89e2950739e984fff0a326e",
+          "md5": "5cf4056a2d6c163b0d24a3f4dccd7864",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/BuffData/buff_chr_0037_minghe_power_storymode.json",
+          "bytes": 5437,
+          "sha256": "f9747ffaad757607d7ce5ee5b5f2cafdf6491248a02d8e4c356981f2c7bc6b1c",
+          "md5": "8478e77a24fdc17f9f34d6827abbd61d",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/BuffData/buff_chr_0037_minghe_sethp.json",
+          "bytes": 14391,
+          "sha256": "a3ae7cc3750f49471faaa81e4cc857925c3e04e50ca008d5a2ce96a7b0a1bc81",
+          "md5": "adc66034a30d81884d2675795401c838",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/BuffData/buff_chr_0037_minghe_talent.json",
+          "bytes": 11250,
+          "sha256": "4f380e422187f26c302301cd1c701920ce2a1242200c10f3fe90e5db9e977e7b",
+          "md5": "9957a3bb8eb47ca961b799a98669560d",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/BuffData/buff_chr_0037_minghe_talent_1.json",
+          "bytes": 37284,
+          "sha256": "84fc72a988e7027a80f48f6b805553d2abe22f286ef324d99ca78a961e0b7465",
+          "md5": "78438d9d8847e98c99ecc8e7acfa4d94",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/BuffData/buff_chr_0037_minghe_talent_2.json",
+          "bytes": 30381,
+          "sha256": "8a34b5f9dc7df04d6943c1af2beb4c5a61b0e11650a287632f3130bbbc482cfc",
+          "md5": "ccbfb6db96bed2ed2283b63e735fb05b",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/BuffData/buff_chr_0037_minghe_talent_2_effectbuff.json",
+          "bytes": 3144,
+          "sha256": "c98a8269b3a361e79a13d241884db0a740c02b5ab2c8a1d29bca20de60e56292",
+          "md5": "4b022928bf0296c3ba7d0d1fb093ab44",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/BuffData/buff_chr_0037_minghe_thunderdebuff.json",
+          "bytes": 34726,
+          "sha256": "6cc1c5002dfad2f7450d8e6cdf4df6cf2fe60ffcf4b8dbc8ae8e42429108f144",
+          "md5": "e60cb29bd921e4e38193349129e46258",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/BuffData/buff_chr_0037_minghe_thundertrigger.json",
+          "bytes": 30701,
+          "sha256": "6fdb18032d6a9b0a55495ae823e69bc03661ee9e2bc40b349a9217f4b24257c4",
+          "md5": "eef5fd6e954d4f8afa2411a0c96338d0",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/BuffData/buff_chr_0037_minghe_thundertrigger_damagereduction.json",
+          "bytes": 3787,
+          "sha256": "cbd3b91e766a6bf26c63328c373d9203e5ab3c9136d1f9c4da610603c75e1d40",
+          "md5": "17e747dd477b9991e9bb35e3e9db39b9",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/BuffData/buff_chr_0037_minghe_ultimate_grab.json",
+          "bytes": 28209,
+          "sha256": "2fbc37e60619a475fa34a790f11778b159f1fa4b616479ab6520fe7befcb6f36",
+          "md5": "4fa442fef7cd2b5495d4be165fe546ec",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/BuffData/buff_chr_0037_minghe_ultimate_hit.json",
+          "bytes": 16679,
+          "sha256": "e8a22c0df701ea33819bc63b83d7a833c237b74d206a68b21d11c6442b5805bd",
+          "md5": "ab1c57fbec68b2484522b6499d7f26c2",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/BuffData/buff_chr_0037_minghe_ultimaterush.json",
+          "bytes": 11276,
+          "sha256": "3fe1fc7115020161817f04eae14e3a9cb4425c4cd2ba60512de218bbfdfc5f73",
+          "md5": "564a5f3cf5edcd5a477dd5b5a01c87f2",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/SkillData/chr_0037_minghe_attack1.json",
+          "bytes": 204357,
+          "sha256": "79eb8a2d21837c7dfd923b7ca3678823f2ecbb6f5952d72a59487fa7bcfb4139",
+          "md5": "c8a77562e7f4724029085c1d651184a2",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/SkillData/chr_0037_minghe_attack2.json",
+          "bytes": 148280,
+          "sha256": "1820e382b6a9e75fab5ebaa0738881992aa7600edd75e6ada7f8862c9616d00a",
+          "md5": "892cde34d6aeb1274757bba32b7fac7c",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/SkillData/chr_0037_minghe_attack3.json",
+          "bytes": 222200,
+          "sha256": "2cbf5128ccea7fa1e0b41170a803538886d5d67672c7aa74c7a190e51b5dc8fb",
+          "md5": "9822f683ece36704d7562ca423c019dd",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/SkillData/chr_0037_minghe_attack4.json",
+          "bytes": 386245,
+          "sha256": "c4847139ae2425599bcf1f652ad2ebed820c03d3a016f5ca44425443fe98d0f4",
+          "md5": "89b7b11ba563087237bf96ef86d97819",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/SkillData/chr_0037_minghe_attack4_endprojectilehit.json",
+          "bytes": 28316,
+          "sha256": "ae97f87e344ea08a720eebd874564753b8854b8e46007935f6c724c2db4d6cef",
+          "md5": "c77086d07bd77fd37f3b7fc0b0314c7d",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/SkillData/chr_0037_minghe_attack4_flysword.json",
+          "bytes": 9821,
+          "sha256": "b23516ad9dedff1bfcca1f087f6e5b4dee889003962d98155774ada3e673e790",
+          "md5": "057704bf3c1dd5e45a662430edd51590",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/SkillData/chr_0037_minghe_attack4_flysword_weapon.json",
+          "bytes": 4810,
+          "sha256": "f61fffbd5c373b8569d42415f8f94ca08f73c1ead705dba6d5a617a6c05291df",
+          "md5": "a0c3236a11fcd0f8e06b30bfb27fcddf",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/SkillData/chr_0037_minghe_attack4_hitground.json",
+          "bytes": 14900,
+          "sha256": "eb6dabaccfe3c56e40ce6ac5289404febfa7ee84855856be5ace75edb191df08",
+          "md5": "d4e3332b678bbec5eacc8adcdb09ae41",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/SkillData/chr_0037_minghe_attack4_hitground_abilityentity.json",
+          "bytes": 16064,
+          "sha256": "ec556bd8c28cc828d11e2ee1f154ce4802cf1e21a765de70b4220ee81dff1080",
+          "md5": "b509521f9e3072e48d2486a9407bc4e1",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/SkillData/chr_0037_minghe_attack4_hitground_abilityentity_groundeffect.json",
+          "bytes": 16066,
+          "sha256": "0c70ea6213a3ebc98e8dc50c79e03bddc81a27d069b6cbf5890a927fddf94eb6",
+          "md5": "7c314815762a5a4a1573890b8a0c119b",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/SkillData/chr_0037_minghe_attack5.json",
+          "bytes": 221179,
+          "sha256": "eee4e10757e881443fc5634cc2dc367d7a558f7d3e49fcd6bb5084296925e8e4",
+          "md5": "ce3449efb94bb6a88df97cd936497a45",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/SkillData/chr_0037_minghe_combo_skill.json",
+          "bytes": 444150,
+          "sha256": "b78f4b6444c4187a4438cb19b8c6beef71b9a7dc0605e9cbf7f6bc4e284dd29d",
+          "md5": "c8b58ef917d3fb4fdba9e99287f48c28",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/SkillData/chr_0037_minghe_normalskill_1.json",
+          "bytes": 369552,
+          "sha256": "95b8f540c92f8b594f43867be0caa5e9dac1c991dcf49d29e6bb5b1b9b0d1c63",
+          "md5": "5b0cdc8e1cb7eab3a234da815c42cfb9",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/SkillData/chr_0037_minghe_normalskill_2.json",
+          "bytes": 540685,
+          "sha256": "968cc620ceb273df58a72cf65092c482b07a352fba197d21a9075987041b1028",
+          "md5": "599a7fad2d57f8f8074a3ccbd7b44c17",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/SkillData/chr_0037_minghe_plunging_attack_end.json",
+          "bytes": 96935,
+          "sha256": "f62df4065ba49e751958f791be7e2aa7d6ab38ed00504e9a1dd7b72b8bb7e610",
+          "md5": "d0f4bd8750f98b40337b287d8ac12f8b",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/SkillData/chr_0037_minghe_plunging_attack_start.json",
+          "bytes": 31392,
+          "sha256": "9bc63eb0f14e2b772fc05cf0145a4bc75fbe0d54a34411f6fe471aad25d987ff",
+          "md5": "f12cf832aed367b1ce630834f3fca84e",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/SkillData/chr_0037_minghe_powerattack.json",
+          "bytes": 419710,
+          "sha256": "34d9d218829d3c50ae1f5c27e92263242882848e19c76bd0fa7af51eafb0308e",
+          "md5": "8cfdd8852a7414a51a907ac70825d454",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/SkillData/chr_0037_minghe_specialfracture_thunderskill.json",
+          "bytes": 66775,
+          "sha256": "0c8ec98a980bd414c952286009a6b778b4b8d17f604896948171260e56b9b33a",
+          "md5": "d4271b019ace4e66274cbdbf7f47df5a",
+          "asset_version": "1.6.4@11529267-11"
+        },
+        {
+          "path": "public/Json/SkillData/chr_0037_minghe_ultimate_skill.json",
+          "bytes": 992176,
+          "sha256": "98e37bcc5f8b8585d27930d6230a743673c2371cfc1904861be5ce6aac2c39f7",
+          "md5": "3ae003239ef529664cd599902521b1a7",
+          "asset_version": "1.6.4@11529267-11"
+        }
+      ],
+      "scope": "Character names, skill groups, base attributes, potentials, skill metadata, buff lifetime and presentation references; no typed damage or rDPS approval changes",
+      "display_adaptation": "镇影/奔霆 split uses the replacement heading in CharGrowthTable skill group description"
     }
   ]
 }

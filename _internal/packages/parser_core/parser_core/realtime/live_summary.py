@@ -35,7 +35,8 @@ def clock_summary(previous, state, timer_line):
                 return None
     result = isolated_copy(previous)
     result['battle'].update(duration_ms=elapsed,
-        battle_end_at=_build_iso_datetime(state['reference_date'], start+elapsed),
+        battle_end_at=_build_iso_datetime(state['reference_date'], start+elapsed,
+            timezone_offset_minutes=state.get('reference_timezone_offset_minutes')),
         total_dps=canonical_rates(battle['total_damage'], 0, elapsed)[0])
     seconds = elapsed/1000
     active, zero = [], []

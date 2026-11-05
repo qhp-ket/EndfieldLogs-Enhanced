@@ -66,8 +66,11 @@ class SnapshotClient(QObject):
                         except TimeoutError:
                             continue
                         message = json.loads(raw)
-                        if isinstance(message, dict) and message.get('type') in {'analysis_summary', 'combo_snapshot'}:
-                            self._post(message['type'], message)
+                        if isinstance(message, dict):
+                            if message.get('type') == 'hello':
+                                self._post('recording_state', dict(type='recording_state', recording=message.get('recording', False)))
+                            elif message.get('type') in {'analysis_summary', 'combo_snapshot', 'recording_state'}:
+                                self._post(message['type'], message)
             except Exception as exc:
                 if not self._stop.is_set(): LOGGER.debug('浮窗连接中断：%s', exc)
             self._post('connection', False)

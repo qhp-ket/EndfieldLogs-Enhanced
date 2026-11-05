@@ -147,6 +147,10 @@
     "chr_9000_endmin": {
       "n": "管理员",
       "p": ""
+    },
+    "chr_0037_minghe": {
+      "n": "明河",
+      "p": 0
     }
   },
   "groups": {
@@ -709,6 +713,26 @@
     "chr_9000_endmin_UltimateSkill": [
       "轰击序列",
       2
+    ],
+    "chr_0037_minghe_ComboSkill": [
+      "星移",
+      3
+    ],
+    "chr_0037_minghe_NormalAttack": [
+      "曜尘",
+      0
+    ],
+    "chr_0037_minghe_NormalSkill": [
+      "镇影",
+      1
+    ],
+    "chr_0037_minghe_UltimateSkill": [
+      "裂天",
+      2
+    ],
+    "chr_0037_minghe_NormalSkill_2": [
+      "奔霆",
+      1
     ]
   },
   "skillIndex": {
@@ -1069,7 +1093,18 @@
     "chr_0035_liino_normal_skill": "chr_0035_liino_NormalSkill",
     "chr_0035_liino_normal_skill_end": "chr_0035_liino_NormalSkill",
     "chr_0035_liino_normal_skill_combo": "chr_0035_liino_NormalSkill",
-    "chr_0035_liino_ultimate_skill": "chr_0035_liino_UltimateSkill"
+    "chr_0035_liino_ultimate_skill": "chr_0035_liino_UltimateSkill",
+    "chr_0037_minghe_combo_skill": "chr_0037_minghe_ComboSkill",
+    "chr_0037_minghe_attack1": "chr_0037_minghe_NormalAttack",
+    "chr_0037_minghe_attack2": "chr_0037_minghe_NormalAttack",
+    "chr_0037_minghe_attack3": "chr_0037_minghe_NormalAttack",
+    "chr_0037_minghe_attack4": "chr_0037_minghe_NormalAttack",
+    "chr_0037_minghe_attack5": "chr_0037_minghe_NormalAttack",
+    "chr_0037_minghe_powerattack": "chr_0037_minghe_NormalAttack",
+    "chr_0037_minghe_plunging_attack_end": "chr_0037_minghe_NormalAttack",
+    "chr_0037_minghe_normalskill_1": "chr_0037_minghe_NormalSkill",
+    "chr_0037_minghe_normalskill_2": "chr_0037_minghe_NormalSkill_2",
+    "chr_0037_minghe_ultimate_skill": "chr_0037_minghe_UltimateSkill"
   },
   "_source": {
     "provider": "AKEData",
@@ -1082,6 +1117,21 @@
       "CharacterTable": "9d8a1d8036a833c8f8cd47039b155422c9ab48a18b84270f68d03bdd8516dde6",
       "I18nTextTable_CN": "84bc67165390c0bb89feb108cbf725ed4921c176bd197e5595a7042cbdf5cf52"
     },
-    "method": "Field projection verified against the pinned original tables"
+    "method": "Field projection verified against the pinned original tables",
+    "supplements": [
+      {
+        "character_ids": [
+          "chr_0037_minghe"
+        ],
+        "version": "1.6.4@11529267-11",
+        "table_cfg_path": "public/1.6.4/11529267-11/TableCfg",
+        "tables_sha256": {
+          "CharacterTable": "f94bf917af3f4d3d059f8fb0c92a6f05c91955daa5755441b42ecbf4d200d32e",
+          "CharGrowthTable": "b9c1a7bd2d390824e82feced74becbafbdfef6d419bf55c803d76818373d5abc",
+          "I18nTextTable_CN": "2a92b375d44eae019fa119ca71df67b5779372e109ea513c060549b62adf9643"
+        },
+        "display_adaptation": "奔霆 uses the replacement heading in CharGrowthTable skill group description"
+      }
+    ]
   }
 }

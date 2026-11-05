@@ -13,8 +13,9 @@ from typing import Any
 
 def apply_official_timing(report_state: ReportState, text: str, live_projection: Any) -> tuple[dict[str, Any] | None, int | None, dict[str, Any] | None]:
     """Apply official challenge evidence and scope hits by lifecycle line order."""
-    timer_evidence = collect_timer_evidence(text, _extract_fields, _parse_prefixed_timestamp_ms, report_state.timer_observed_times,
-        indexed_lines=getattr(live_projection, 'timer_lines', None))
+    timer_evidence = (report_state.official_timer_evidence if report_state.has_official_timer_evidence
+        else collect_timer_evidence(text, _extract_fields, _parse_prefixed_timestamp_ms, report_state.timer_observed_times,
+            indexed_lines=getattr(live_projection, 'timer_lines', None)))
     if timer_evidence is not None:
         start = timer_evidence.get('start') or {}
         complete = timer_evidence.get('complete') or {}
@@ -50,7 +51,8 @@ def apply_official_timing(report_state: ReportState, text: str, live_projection:
         # proximity. A new challenge cannot inherit a previous one's hits.
         scope_end_line = ((timer_evidence or {}).get('complete') or {}).get('line')
         if scope_end_line is None:
-            scope_end_line = (live_projection.line_count if live_projection is not None else len(text.splitlines()))+1
+            scope_end_line = (report_state.evidence_count if report_state.evidence_count is not None else
+                              live_projection.line_count if live_projection is not None else len(text.splitlines()))+1
         scope_end_line = min([scope_end_line] + [
             event['line'] for event in timer_evidence['events']
             if event.get('kind') == 'boundary'

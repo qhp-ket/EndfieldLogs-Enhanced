@@ -12,6 +12,41 @@ from endfield_pcap.history.importer import load_trace_records
 from app_test_support.ui.window import main_window
 from app_test_support.ui.qt import EVIDENCE, snapshot_message
 
+def test_single_timeline_click_and_compatible_export_use_last_selected_battle(main_window, app, monkeypatch, tmp_path):
+    from endfield_pcap.history.index import record_key
+    from PySide6.QtCore import Qt, QItemSelectionModel
+    from uploader_core.log_integrity import load_raw_log_integrity
+    from parser_core.battle_splitter import split_trace_battles
+    from parser_core.unified import parse_overlay_battle_snapshot_text
+    window = main_window
+    path = tmp_path / 'trace_20261105.log'
+    path.write_text(two_battles(), encoding='utf8')
+    presenter = window.history_presenter
+    presenter.import_files([path])
+    wait_for(lambda: not window.history_controller.import_pending, app)
+    records = sorted(window.history_controller.records, key=lambda row: row.record_index)
+    keys = [record_key(row) for row in records]
+    listing = window.records_page.record_list
+    for index in range(listing.count()):
+        item = listing.item(index)
+        item.setSelected(item.data(Qt.ItemDataRole.UserRole) in keys)
+    current = next(listing.item(index) for index in range(listing.count())
+                   if listing.item(index).data(Qt.ItemDataRole.UserRole) == keys[0])
+    listing.setCurrentItem(current, QItemSelectionModel.SelectionFlag.NoUpdate)
+    assert record_key(window.history_controller.selected_records[-1]) == keys[0]
+    opened = []
+    monkeypatch.setattr(presenter, '_show_detail', lambda snapshot, record: opened.append((snapshot, record)))
+    window.records_page.analysis_detail_btn.click()
+    wait_for(lambda: bool(opened), app)
+    assert len(opened) == 1 and opened[0][1].record_index == 1
+    target = tmp_path / 'selected.log'
+    monkeypatch.setattr(QFileDialog, 'getSaveFileName', lambda *args: (str(target), ''))
+    window.records_page.export_btn.click()
+    wait_for(lambda: not presenter._export_pending, app)
+    integrity = load_raw_log_integrity(str(target))
+    assert integrity['verified'] and len(split_trace_battles(integrity['raw_content'])) == 1
+    assert parse_overlay_battle_snapshot_text(integrity['raw_content'])['battle']['total_damage'] == 760
+
 def wait_for_damage(overlay, expected):
     wait_for(lambda: str(int(overlay.canvas.modules[0].snapshot.get('battle',{}).get('total_damage',0))) == expected, __import__('PySide6.QtWidgets',fromlist=['QApplication']).QApplication.instance())
 

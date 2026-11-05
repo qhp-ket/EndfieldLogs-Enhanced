@@ -80,10 +80,9 @@ class OverlayCanvas(QWidget):
         padding=self.template.theme.get('padding',0);gap=self.template.theme.get('spacing',8)
         horizontal=self.template.layout.get('direction')=='horizontal'
         self.scale=max(.01,min(self.width()/max(1.,self.natural_size.width()),self.height()/max(1.,self.natural_size.height())))
-        if self.bars: self.scale=max(.01,self.height()/self.natural_size.height())
         x=y=padding;self._rects=[]
         for module in self.modules:
-            layout=module.measure(max(1.,self.width()/self.scale-padding*2) if self.bars else None)
+            layout=module.measure()
             self._rects.append((QRectF(x,y,layout.size.width(),layout.size.height()),layout))
             if horizontal: x+=layout.size.width()+gap
             else: y+=layout.size.height()+gap

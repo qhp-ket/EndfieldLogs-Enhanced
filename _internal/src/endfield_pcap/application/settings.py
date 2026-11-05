@@ -75,6 +75,7 @@ class SettingsStore:
     def set_input_recording_enabled(self, enabled):
         self._assert_owner()
         self.current.input_recording_enabled = bool(enabled)
+        self.current.start_input_recording_on_launch = bool(enabled)
         self.save()
 
     def set_vision_settings(self, value):

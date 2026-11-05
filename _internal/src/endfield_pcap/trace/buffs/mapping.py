@@ -234,11 +234,11 @@ class BuffMapping:
             existing = self._pending_buff_start_rows.get(buff_uid)
             if existing is None:
                 self._pending_buff_start_order.append(buff_uid)
-                self._pending_buff_start_rows[buff_uid] = (buff_id, owner, src, assigned_items)
+                self._pending_buff_start_rows[buff_uid] = (buff_id, owner, src, assigned_items, creation_event or {})
             else:
-                prev_buff_id, prev_owner, prev_src, prev_assigned_items = existing
+                prev_buff_id, prev_owner, prev_src, prev_assigned_items, prev_origin = existing
                 if self._prefer_buff_start(prev_buff_id, buff_id):
-                    self._pending_buff_start_rows[buff_uid] = (buff_id, owner, src, assigned_items)
+                    self._pending_buff_start_rows[buff_uid] = (buff_id, owner, src, assigned_items, creation_event or {})
         if creation_event is not None:
             # generation belongs to the operation owner entity. Neither
             # client create schema contains a generation for the new Buff.
@@ -268,8 +268,12 @@ class BuffMapping:
                 observation['creationActionRuntimeCase'] = creation_event.get('action_runtime_case')
             if type(observation['operationOwnerId']) in (int, str):
                 observation['operationOwnerId'] = str(observation['operationOwnerId'])
-            self._line(ts_ms, 'BUFF_CREATE_OBSERVED ' + json.dumps(
-                observation, ensure_ascii=False, separators=(',', ':'), allow_nan=False))
+            if self.event_sink is not None:
+                from parser_core.ingestion.buff_packet_wire import packet_data
+                self._emit_structured(ts_ms, 'buff_creation', packet_data(observation), creation_event)
+            else:
+                self._line(ts_ms, 'BUFF_CREATE_OBSERVED ' + json.dumps(
+                    observation, ensure_ascii=False, separators=(',', ':'), allow_nan=False))
 
     def _packet_buff_mapping_applies(self, mapping: dict[str, Any], owner: str, src: str) -> bool:
         return self.resolver._packet_buff_mapping_applies(

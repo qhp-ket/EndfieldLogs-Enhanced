@@ -3,6 +3,7 @@ from typing import Any
 from endfield_pcap.trace.formatting import _intish, _floatish
 from endfield_pcap.trace.damage_evidence import calculation_tokens, packet_identity_tokens as damage_packet_identity, write_damage_evidence
 from endfield_pcap.trace.resources import handle_update_atb_info, handle_modify_poise_value, handle_battle_state
+from endfield_pcap.trace.structured_damage import damage_event
 
 
 class DamageEvents:
@@ -37,20 +38,16 @@ class DamageEvents:
         actor_template = self._character_from_template(original_source_skill)
         if attacker_id and actor_template and self.id_to_name.get(attacker_id) is None:
             self.id_to_name[attacker_id] = actor_template
-            self._line(
-                ts_ms,
-                f"ACTOR_MAP id={attacker_id} template={actor_template} "
-                f"source=damage_original_skill skill={original_source_skill or skill}",
-            )
+            self._write_actor_mapping(ts_ms, attacker_id, actor_template, 'damage_original_skill', original_source_skill or skill, event)
         attacker = self._name_for_id(attacker_id)
         event_inst_id = int(_intish(event.get("inst_id")) or 0)
         dynamic_bb_rows = list(self.recent_dynamic_bb_by_inst.get(event_inst_id, [])) if event_inst_id else []
-        dynamic_bb_text = ",".join(f"{bb_action}:{bb_value:.6g}" for bb_action, bb_value in dynamic_bb_rows)
+        dynamic_bb_text = ",".join(f"{bb_action}:{bb_value:.6g}" for bb_action, bb_value in dynamic_bb_rows) if self.damage_sink is None else ''
         calc_bb_rows = list(self.recent_calc_bb_by_inst.get(event_inst_id, [])) if event_inst_id else []
         calc_bb_text = ",".join(
             f"{bb_action}:{bb_key}={bb_value:.6g}"
             for bb_action, bb_key, bb_value in calc_bb_rows
-        )
+        ) if self.damage_sink is None else ''
         details = damage_action.get("details") or []
         if not isinstance(details, list):
             return
@@ -73,10 +70,20 @@ class DamageEvents:
                 if detail_index < len(detail_presence_rows) and isinstance(detail_presence_rows[detail_index], dict)
                 else {}
             )
+            self.hit_seq += 1
+            if self.damage_sink is not None:
+                self._flush_pending_buff_starts()
+                self._structured_event_seq += 1
+                self.damage_sink(damage_event(
+                    self._structured_event_seq, ts_ms, event, detail, detail_index, detail_presence,
+                    hit_seq=self.hit_seq, attacker=attacker, attacker_id=attacker_id,
+                    target=target, target_id=target_id, skill=skill,
+                    original_template_int_id=original_template_int_id,
+                    dynamic_rows=dynamic_bb_rows, calculation_rows=calc_bb_rows))
+                continue
             calc_tokens = calculation_tokens(detail)
             shared = 3 if is_crit else 2
             packet_identity_tokens = damage_packet_identity(event)
-            self.hit_seq += 1
             self._line(
                 ts_ms,
                 (

@@ -9,7 +9,16 @@
     "table_version": "1.6.4@11262943-8",
     "skill_patch_sha256": "8962192053ce7b5281a408915c1df35f6deb5749b1f3c5325c2a3fc9fa967ac6",
     "mechanism": "public/CH/research/终末地数据机制导论.md §4.5",
-    "caveat": "Static defaults; dynamic discounts/refunds/pauses are not guaranteed by the log"
+    "caveat": "Static defaults; dynamic discounts/refunds/pauses are not guaranteed by the log",
+    "supplements": [
+      {
+        "table_version": "1.6.4@11529267-11",
+        "character_ids": [
+          "chr_0037_minghe"
+        ],
+        "skill_patch_sha256": "06170b6f4c12c57b2d93e6bb4ce3b179712b29bcd1dcac0607324cef263f7469"
+      }
+    ]
   },
   "skills": {
     "chr_0024_deepfin_normal_skill": {
@@ -716,6 +725,42 @@
     },
     "chr_0036_jsspsi_normal_skill_1": {
       "cost": 15.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0037_minghe_normalskill_1": {
+      "cost": 100.0,
+      "source": "SkillPatchTable",
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "chr_0037_minghe_normalskill_2": {
+      "cost": 100.0,
       "source": "SkillPatchTable",
       "levels": [
         1,

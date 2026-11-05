@@ -62,6 +62,38 @@ def test_observer_can_calibrate_before_official_start_and_advances_using_measure
     assert second["clockProvenance"]["scope"] == "independent_observer"
 
 
+def test_structured_clock_drives_the_same_observer_without_legacy_text(monkeypatch):
+    from endfield_pcap.trace.bridge import TraceBridge
+    from parser_core.trace_jsonl import parse, serialize
+    control = RotationGuideEngine(clock_spec=spec())
+    typed = RotationGuideEngine(clock_spec=spec())
+    for engine in (control, typed):
+        engine.replace_plans(envelope())
+        context(engine)
+    events = []
+    bridge = TraceBridge(write_enabled=False, event_sink=events.append,
+                         line_sink=lambda *_: pytest.fail('Structured clock emitted text'))
+    client, receive, server = START - 1040, START - 1000, START - 1070
+    for source in ({'type': 'CS_PING', 'timestamp_ms': client + 1, 'client_ts': client, 'logical_ts': 30091},
+                   {'type': 'SC_PING', 'timestamp_ms': receive, 'client_ts': client, 'server_ts': server}):
+        bridge.handle_event(source)
+        typed.feed_event(parse(serialize(events[-1]), header=False))
+    sync(control)
+    start(control)
+    start(typed)
+    monkeypatch.setattr(typed, 'feed_line', lambda *_: pytest.fail('Typed clock called legacy parser'))
+    assert typed.snapshot(START + 1000) == control.snapshot(START + 1000)
+    for raw, text in (
+        ({'type': 'GAME_CLOCK_TICK', 'source': 'CS_BATTLE_OP', 'tick_ms': 1}, 'GAME_CLOCK_TICK source=CS_BATTLE_OP tickMs=1'),
+        ({'type': 'SC_GAME_TIME_FREEZE_START_RSP', 'in_time_freeze': True}, 'GAME_TIME_FREEZE_STATE source=SC_GAME_TIME_FREEZE_START_RSP inTimeFreeze=1'),
+        ({'type': 'SC_GAME_TIME_FREEZE_END_RSP', 'in_time_freeze': False}, 'GAME_TIME_FREEZE_STATE source=SC_GAME_TIME_FREEZE_END_RSP inTimeFreeze=0'),
+        ({'type': 'SC_GAME_TIME_FREEZE_END_RSP', 'in_time_freeze': 0}, 'GAME_TIME_FREEZE_STATE source=SC_GAME_TIME_FREEZE_END_RSP inTimeFreeze=unknown')):
+        bridge.handle_event({**raw, 'timestamp_ms': START + 2000})
+        typed.feed_event(parse(serialize(events[-1]), header=False))
+        feed(control, text)
+        assert typed.snapshot(START + 3000) == control.snapshot(START + 3000)
+
+
 def test_logical_tick_regression_cannot_disable_or_calibrate_official_clock():
     engine = ready_engine()
     feed(engine, "GAME_CLOCK_TICK source=CS_BATTLE_OP tickMs=30091",

@@ -27,6 +27,7 @@ import re
 from typing import Any
 
 from parser_core.ingestion.state import IngestionState
+from parser_core.ingestion.loadout_observation import LoadoutSlotObservation, LoadoutStatsObservation
 
 
 
@@ -81,7 +82,10 @@ def _infer_verified_weapon_refine_from_levels(weapon_template: str, source_skill
 
 
 def _parse_inline_equips(raw_line: str) -> list[dict[str, Any]]:
-    equips_blob = _braced_field(raw_line, "equips")
+    return _inline_equips_blob(_braced_field(raw_line, "equips"))
+
+
+def _inline_equips_blob(equips_blob):
     if not equips_blob:
         return []
     matches = list(re.finditer(r"\[(\d+)\]=", equips_blob))
@@ -156,41 +160,84 @@ def _parse_loadout_slot_snapshot(raw_line: str) -> dict[str, Any] | None:
     # level and must remain unknown otherwise.
     raw_weapon_level = _coerce_int(_token_field(raw_line, "weaponLv"), default=0)
     weapon_level = raw_weapon_level if raw_weapon_level > 0 else None
-    weapon_meta = _load_weapon_catalog().get(weapon_template, {})
     equip_suit_blob = _braced_field(raw_line, "equipSuit") or ""
     raw_refine = _token_field(raw_line, "refine") or ""
     weapon_refine = int(raw_refine) if re.fullmatch(r"[0-5]", raw_refine) else None
+    unplaced = re.search(r'\bunplacedEquipInstIds=\[([^\]]*)\]', raw_line)
+    complete = _token_field(raw_line, 'equipsComplete')
+    return loadout_slot_snapshot(LoadoutSlotObservation(
+        character=char_key, slot=_coerce_int(_token_field(raw_line, "slot"), default=0),
+        character_level=_coerce_int(_token_field(raw_line, "charLv"), default=0) or None,
+        potential=_coerce_int(_token_field(raw_line, "potential"), default=0),
+        weapon_instance=_token_field(raw_line, "weaponInstId"), weapon=weapon_template,
+        weapon_level=weapon_level, refine=weapon_refine, breakthrough=_coerce_int(_token_field(raw_line, "break"), default=0),
+        suit_blob=equip_suit_blob, equipment_blob=_braced_field(raw_line, "equips"), skill_ids=_parse_skill_int_ids(raw_line),
+        unplaced_ids=re.findall(r'\d+', unplaced.group(1)) if unplaced else None,
+        equipment_complete=complete == '1' if complete in {'0', '1'} else None))
+
+
+def loadout_slot_snapshot(observation):
+    char_key, weapon_template = observation.character, observation.weapon
+    if not char_key.startswith('chr_'):
+        return None
+    weapon_level, weapon_refine = observation.weapon_level, observation.refine
+    equip_suit_blob = observation.suit_blob
+    weapon_meta = _load_weapon_catalog().get(weapon_template, {})
     row = {
-        "slot": _coerce_int(_token_field(raw_line, "slot"), default=0),
+        "slot": observation.slot,
         "character_key": char_key,
         "character_name": _resolve_character_name(char_key) or char_key,
-        "character_level": _coerce_int(_token_field(raw_line, "charLv"), default=0) or None,
-        "potential": _coerce_int(_token_field(raw_line, "potential"), default=0),
-        "weapon_inst_id": _token_field(raw_line, "weaponInstId"),
+        "character_level": observation.character_level,
+        "potential": observation.potential,
+        "weapon_inst_id": observation.weapon_instance,
         "weapon_template": weapon_template,
         "weapon_name": weapon_meta.get("weapon_name") or weapon_template,
         "weapon_level": weapon_level,
         "weapon_refine": weapon_refine,
         "weapon_refine_source": "loadout" if weapon_refine is not None else None,
-        "weapon_break": _coerce_int(_token_field(raw_line, "break"), default=0),
+        "weapon_break": observation.breakthrough,
         "weapon_base_atk": _selected_weapon_base_atk(weapon_template, weapon_level),
         "weapon_catalog_skilllist": weapon_meta.get("skilllist") or [],
         "equip_suit_raw": "{" + equip_suit_blob + "}" if equip_suit_blob else "{}",
         "suit_effects": _parse_suit_counts(equip_suit_blob),
-        "equips": _parse_inline_equips(raw_line),
-        "skill_int_ids": _parse_skill_int_ids(raw_line),
+        "equips": _inline_equips_blob(observation.equipment_blob),
+        "skill_int_ids": list(observation.skill_ids),
         "weapon_source_skills": [],
         "weapon_refine_stats": [],
         "gem_template": None,
         "gem_terms": {},
     }
-    unplaced = re.search(r'\bunplacedEquipInstIds=\[([^\]]*)\]', raw_line)
-    if unplaced:
-        row['unresolved_equip_inst_ids'] = re.findall(r'\d+', unplaced.group(1))
-    complete = _token_field(raw_line, 'equipsComplete')
-    if complete in {'0', '1'}:
-        row['equipment_snapshot_complete'] = complete == '1'
+    if observation.unplaced_ids is not None:
+        row['unresolved_equip_inst_ids'] = list(observation.unplaced_ids)
+    if observation.equipment_complete is not None:
+        row['equipment_snapshot_complete'] = observation.equipment_complete
     return row
+
+
+def _character_skill_refine_snapshot(parsed, owner_id, loadout_context, squad_actor_keys):
+    if parsed is None or not loadout_context or not squad_actor_keys:
+        return None
+    char_key, levels = parsed
+    if (squad_actor_keys.get(owner_id) != char_key
+            or list(squad_actor_keys.values()).count(char_key) != 1
+            or loadout_context.get("character_key") != char_key
+            or not re.fullmatch(r"[1-9]\d*", str(loadout_context.get("weapon_inst_id") or ""))
+            or loadout_context.get("weapon_refine") is not None):
+        return None
+    weapon_template = str(loadout_context.get("weapon_template") or "")
+    main_skill = _load_weapon_refine_catalog().get(weapon_template, {}).get("mainSkillId")
+    if not main_skill or main_skill not in levels:
+        return None
+    refine = _infer_verified_weapon_refine_from_levels(
+        weapon_template, [{"skill_id": main_skill, "level": levels[main_skill]}]
+    )
+    if refine is None:
+        return None
+    return {**copy.deepcopy(loadout_context), "weapon_refine": refine,
+            "weapon_refine_source": "source_skill",
+            "weapon_refine_evidence": {"source": "CHAR_SKILLS", "owner_id": owner_id,
+                "weapon_inst_id": str(loadout_context["weapon_inst_id"]),
+                "skill_id": main_skill, "level": levels[main_skill]}}
 
 
 def _parse_loadout_stats_snapshot(
@@ -202,44 +249,35 @@ def _parse_loadout_stats_snapshot(
 ) -> dict[str, Any] | None:
     if " CHAR_SKILLS " in raw_line:
         parsed = _parse_char_skills_line(raw_line)
-        if parsed is None or not loadout_context or not squad_actor_keys:
-            return None
-        char_key, levels = parsed
         owner_id = str(_token_field(raw_line, "ownerId") or "")
-        if (squad_actor_keys.get(owner_id) != char_key
-                or list(squad_actor_keys.values()).count(char_key) != 1
-                or loadout_context.get("character_key") != char_key
-                or not re.fullmatch(r"[1-9]\d*", str(loadout_context.get("weapon_inst_id") or ""))
-                or loadout_context.get("weapon_refine") is not None):
-            return None
-        weapon_template = str(loadout_context.get("weapon_template") or "")
-        main_skill = _load_weapon_refine_catalog().get(weapon_template, {}).get("mainSkillId")
-        if not main_skill or main_skill not in levels:
-            return None
-        refine = _infer_verified_weapon_refine_from_levels(
-            weapon_template, [{"skill_id": main_skill, "level": levels[main_skill]}]
-        )
-        if refine is None:
-            return None
-        return {**copy.deepcopy(loadout_context), "weapon_refine": refine,
-                "weapon_refine_source": "source_skill",
-                "weapon_refine_evidence": {"source": "CHAR_SKILLS", "owner_id": owner_id,
-                    "weapon_inst_id": str(loadout_context["weapon_inst_id"]),
-                    "skill_id": main_skill, "level": levels[main_skill]}}
+        return _character_skill_refine_snapshot(parsed, owner_id, loadout_context, squad_actor_keys)
     char_key = _token_field(raw_line, "char")
     if not char_key or not char_key.startswith("chr_"):
         return None
     weapon_template = _token_field(raw_line, "weaponTemplate") or ""
     raw_weapon_level = _coerce_int(_token_field(raw_line, "weaponLv"), default=0)
     weapon_level = raw_weapon_level if raw_weapon_level > 0 else None
-    weapon_refine_stats = _parse_weapon_source_skills(_braced_field(raw_line, "weaponRefineStats"))
-    weapon_source_skills = _parse_weapon_source_skills(_braced_field(raw_line, "weaponSourceSkills"))
+    return loadout_stats_snapshot(LoadoutStatsObservation(character=char_key, weapon=weapon_template,
+        weapon_instance=str(_token_field(raw_line, "weaponInstId") or ""), weapon_level=weapon_level,
+        refine_stats_blob=_braced_field(raw_line, "weaponRefineStats"), source_skills_blob=_braced_field(raw_line, "weaponSourceSkills"),
+        base_attack=_coerce_int(_token_field(raw_line, "weaponBaseAtk"), default=0),
+        base_attack_lv1=_coerce_int(_token_field(raw_line, "weaponBaseAtkLv1"), default=0),
+        base_attack_max=_coerce_int(_token_field(raw_line, "weaponBaseAtkMax"), default=0),
+        gem_instance=str(_token_field(raw_line, "gemInstId") or ""), gem_weapon=str(_token_field(raw_line, "gemWeaponId") or ""),
+        gem_template=_token_field(raw_line, "gemTemplate"), terms_blob=_braced_field(raw_line, "gemTerms") or ''),
+        allow_bound_gem=allow_bound_gem)
+
+
+def loadout_stats_snapshot(observation, *, allow_bound_gem=False):
+    char_key, weapon_template, weapon_level = observation.character, observation.weapon, observation.weapon_level
+    if not char_key.startswith('chr_'):
+        return None
+    weapon_refine_stats = _parse_weapon_source_skills(observation.refine_stats_blob)
+    weapon_source_skills = _parse_weapon_source_skills(observation.source_skills_blob)
     gem_terms = None
-    weapon_inst = str(_token_field(raw_line, "weaponInstId") or "")
-    gem_inst = str(_token_field(raw_line, "gemInstId") or "")
-    raw_terms = _braced_field(raw_line, "gemTerms")
+    weapon_inst, gem_inst, raw_terms = observation.weapon_instance, observation.gem_instance, observation.terms_blob
     if (allow_bound_gem and re.fullmatch(r"[1-9]\d*", weapon_inst) and re.fullmatch(r"[1-9]\d*", gem_inst)
-            and _token_field(raw_line, "gemWeaponId") == weapon_inst and raw_terms):
+            and observation.gem_weapon == weapon_inst and raw_terms):
         matches = [re.fullmatch(r"(\d+):[^,@{}]*@cost(\d+)", part.strip()) for part in raw_terms.split(',')]
         if all(matches):
             gem_terms = [{"term_num_id": int(match[1]), "cost": int(match[2])} for match in matches]
@@ -253,14 +291,13 @@ def _parse_loadout_stats_snapshot(
         "weapon_template": weapon_template,
         "weapon_refine": inferred_refine,
         "weapon_refine_source": "source_skill" if inferred_refine is not None else None,
-        "weapon_base_atk": _coerce_int(_token_field(raw_line, "weaponBaseAtk"), default=0)
-        or _selected_weapon_base_atk(weapon_template, weapon_level),
-        "weapon_base_atk_lv1": _coerce_int(_token_field(raw_line, "weaponBaseAtkLv1"), default=0),
-        "weapon_base_atk_max": _coerce_int(_token_field(raw_line, "weaponBaseAtkMax"), default=0),
+        "weapon_base_atk": observation.base_attack or _selected_weapon_base_atk(weapon_template, weapon_level),
+        "weapon_base_atk_lv1": observation.base_attack_lv1,
+        "weapon_base_atk_max": observation.base_attack_max,
         "weapon_refine_stats": weapon_refine_stats,
         "weapon_source_skills": weapon_source_skills,
-        "gem_template": _token_field(raw_line, "gemTemplate"),
-        "gem_terms": _parse_bb_assignments((_braced_field(raw_line, "gemTerms") or "").replace(":", "=")),
+        "gem_template": observation.gem_template,
+        "gem_terms": _parse_bb_assignments(raw_terms.replace(":", "=")),
     }
 
 
@@ -356,10 +393,17 @@ def _parse_char_skills_line(raw_line: str) -> tuple[str, dict[str, int]] | None:
     tokens_match = re.search(r"skills=\[([^\]]*)\]", raw_line)
     if not owner_key or not tokens_match:
         return None
+    pairs = [token.rpartition(":") for token in tokens_match.group(1).split()]
+    return character_skill_levels(owner_key, ((skill if separator else "", level) for skill, separator, level in pairs))
+
+
+def character_skill_levels(owner_key, observations):
+    """Fold explicit skill/level fields using the same rules as legacy evidence."""
+    if not owner_key:
+        return None
     levels: dict[str, int] = {}
     conflicted: set[str] = set()
-    for token in tokens_match.group(1).split():
-        skill_id, _, level_text = token.rpartition(":")
+    for skill_id, level_text in observations:
         level = _coerce_int(level_text, default=0)
         if not skill_id or level <= 0:
             continue
@@ -464,17 +508,17 @@ def _merge_tracked_loadout_state(
     return merged
 
 
+def apply_loadout_group(ingestion, reason, line_no, ts_ms):
+    ingestion.current_loadout_group = {
+        "ts_ms": ts_ms, "line_no": line_no, "reason": reason,
+        "index": len(ingestion.loadout_groups), "rows": {},
+    }
+    ingestion.loadout_groups.append(ingestion.current_loadout_group)
+
+
 def consume_loadout_group(ingestion: IngestionState, raw_line: str, line_no: int, ts_ms: int) -> bool:
     if " LOADOUT reason=" in raw_line or "LOADOUT reason=" in raw_line:
-        fields = _extract_fields(raw_line)
-        ingestion.current_loadout_group = {
-            "ts_ms": ts_ms,
-            "line_no": line_no,
-            "reason": str(fields.get("reason") or ""),
-            "index": len(ingestion.loadout_groups),
-            "rows": {},
-        }
-        ingestion.loadout_groups.append(ingestion.current_loadout_group)
+        apply_loadout_group(ingestion, str(_extract_fields(raw_line).get("reason") or ""), line_no, ts_ms)
         return True
     return False
 
@@ -485,108 +529,72 @@ _LOADOUT_SLOT_RE = re.compile(
     r"equipSuit=(?P<equip_suit>\{.*\})"
 )
 
+
+def apply_loadout_snapshot(ingestion, row, line_no, ts_ms, *, stats=False):
+    if row is None:
+        return
+    char_key = str(row["character_key"])
+    initial = {"character_key": char_key} if stats else {}
+    ingestion.loadout_by_char[char_key] = _merge_tracked_loadout_state(
+        ingestion.loadout_by_char.get(char_key, initial), row)
+    if char_key in ingestion.weapon_override_by_char:
+        ingestion.loadout_by_char[char_key] = _loadout_with_weapon_state(
+            ingestion.loadout_by_char[char_key], ingestion.weapon_override_by_char[char_key])
+    if ingestion.current_loadout_group is None or ingestion.current_loadout_group.get("ts_ms") != ts_ms:
+        apply_loadout_group(ingestion, "", line_no, ts_ms)
+    group_rows = ingestion.current_loadout_group["rows"]
+    group_rows[char_key] = _merge_loadout_snapshot(group_rows.get(char_key, initial), row)
+    if char_key in ingestion.weapon_override_by_char:
+        group_rows[char_key] = _loadout_with_weapon_state(group_rows[char_key], ingestion.weapon_override_by_char[char_key])
+
+
+def apply_active_loadout(ingestion, character, weapon, suits):
+    ingestion.active_weapons_by_char[character] = str(
+        ingestion.loadout_by_char.get(character, {}).get("weapon_template") or weapon)
+    ingestion.active_suits_by_char[character] = set(suits)
+
+
 def consume_loadout_snapshot(ingestion: IngestionState, raw_line: str, line_no: int, ts_ms: int) -> bool:
     if " LOADOUT_STATS " in raw_line or "LOADOUT_STATS " in raw_line:
-        stats_snapshot = _parse_loadout_stats_snapshot(raw_line,
+        snapshot = _parse_loadout_stats_snapshot(raw_line,
             allow_bound_gem=bool(ingestion.current_loadout_group and ingestion.current_loadout_group.get("ts_ms") == ts_ms
                 and ingestion.current_loadout_group.get("reason") in {"SC_SYNC_CHAR_BAG_INFO", "SC_SELF_SCENE_INFO"}))
-        if stats_snapshot is not None:
-            char_key = str(stats_snapshot["character_key"])
-            ingestion.loadout_by_char[char_key] = _merge_tracked_loadout_state(
-                ingestion.loadout_by_char.get(char_key, {"character_key": char_key}),
-                stats_snapshot,
-            )
-            if char_key in ingestion.weapon_override_by_char:
-                ingestion.loadout_by_char[char_key] = _loadout_with_weapon_state(
-                    ingestion.loadout_by_char[char_key],
-                    ingestion.weapon_override_by_char[char_key],
-                )
-            if ingestion.current_loadout_group is None or ingestion.current_loadout_group.get("ts_ms") != ts_ms:
-                ingestion.current_loadout_group = {
-                    "ts_ms": ts_ms,
-                    "line_no": line_no,
-                    "reason": "",
-                    "index": len(ingestion.loadout_groups),
-                    "rows": {},
-                }
-                ingestion.loadout_groups.append(ingestion.current_loadout_group)
-            group_rows = ingestion.current_loadout_group["rows"]
-            group_rows[char_key] = _merge_loadout_snapshot(
-                group_rows.get(char_key, {"character_key": char_key}),
-                stats_snapshot,
-            )
-            if char_key in ingestion.weapon_override_by_char:
-                group_rows[char_key] = _loadout_with_weapon_state(
-                    group_rows[char_key],
-                    ingestion.weapon_override_by_char[char_key],
-                )
+        apply_loadout_snapshot(ingestion, snapshot, line_no, ts_ms, stats=True)
         return True
-
     if " LOADOUT slot=" in raw_line or "LOADOUT slot=" in raw_line:
-        loadout_snapshot = _parse_loadout_slot_snapshot(raw_line)
-        if loadout_snapshot is not None:
-            char_key = str(loadout_snapshot["character_key"])
-            ingestion.loadout_by_char[char_key] = _merge_tracked_loadout_state(
-                ingestion.loadout_by_char.get(char_key, {}),
-                loadout_snapshot,
-            )
-            if char_key in ingestion.weapon_override_by_char:
-                ingestion.loadout_by_char[char_key] = _loadout_with_weapon_state(
-                    ingestion.loadout_by_char[char_key],
-                    ingestion.weapon_override_by_char[char_key],
-                )
-            if ingestion.current_loadout_group is None or ingestion.current_loadout_group.get("ts_ms") != ts_ms:
-                ingestion.current_loadout_group = {
-                    "ts_ms": ts_ms,
-                    "line_no": line_no,
-                    "reason": "",
-                    "index": len(ingestion.loadout_groups),
-                    "rows": {},
-                }
-                ingestion.loadout_groups.append(ingestion.current_loadout_group)
-            group_rows = ingestion.current_loadout_group["rows"]
-            group_rows[char_key] = _merge_loadout_snapshot(
-                group_rows.get(char_key, {}),
-                loadout_snapshot,
-            )
-            if char_key in ingestion.weapon_override_by_char:
-                group_rows[char_key] = _loadout_with_weapon_state(
-                    group_rows[char_key],
-                    ingestion.weapon_override_by_char[char_key],
-                )
-        loadout_match = _LOADOUT_SLOT_RE.search(raw_line)
-        if loadout_match:
-            char_key = loadout_match.group("char")
-            ingestion.active_weapons_by_char[char_key] = str(
-                ingestion.loadout_by_char.get(char_key, {}).get("weapon_template")
-                or loadout_match.group("weapon")
-            )
-            ingestion.active_suits_by_char[char_key] = _parse_loadout_suits(
-                loadout_match.group("equip_suit")
-            )
+        apply_loadout_snapshot(ingestion, _parse_loadout_slot_snapshot(raw_line), line_no, ts_ms)
+        match = _LOADOUT_SLOT_RE.search(raw_line)
+        if match:
+            apply_active_loadout(ingestion, match.group("char"), match.group("weapon"),
+                                 _parse_loadout_suits(match.group("equip_suit")))
         return True
     return False
+
 
 
 def consume_character_skills(ingestion: IngestionState, raw_line: str, line_no: int, ts_ms: int) -> bool:
     if " CHAR_SKILLS " in raw_line:
-        parsed_char_skills = _parse_char_skills_line(raw_line)
-        if parsed_char_skills is not None:
-            ingestion.char_skill_levels[parsed_char_skills[0]] = parsed_char_skills[1]
-            char_key = parsed_char_skills[0]
-            stats_snapshot = _parse_loadout_stats_snapshot(
-                raw_line, loadout_context=ingestion.loadout_by_char.get(char_key), squad_actor_keys=ingestion.squad_actor_keys
-            )
-            if stats_snapshot is not None:
-                ingestion.loadout_by_char[char_key] = stats_snapshot
-                ingestion.current_loadout_group = {
-                    "ts_ms": ts_ms, "line_no": line_no, "reason": "CHAR_SKILLS", "index": len(ingestion.loadout_groups),
-                    "rows": {key: copy.deepcopy(ingestion.loadout_by_char[key])
-                             for key in set(ingestion.squad_actor_keys.values()) if key in ingestion.loadout_by_char},
-                }
-                ingestion.loadout_groups.append(ingestion.current_loadout_group)
+        apply_character_skills(ingestion, _parse_char_skills_line(raw_line),
+                               str(_token_field(raw_line, "ownerId") or ""), line_no, ts_ms)
         return True
     return False
+
+
+def apply_character_skills(ingestion, parsed, owner_id, line_no, ts_ms):
+    if parsed is None:
+        return
+    char_key, levels = parsed
+    ingestion.char_skill_levels[char_key] = levels
+    stats_snapshot = _character_skill_refine_snapshot(parsed, owner_id,
+        ingestion.loadout_by_char.get(char_key), ingestion.squad_actor_keys)
+    if stats_snapshot is not None:
+        ingestion.loadout_by_char[char_key] = stats_snapshot
+        ingestion.current_loadout_group = {
+            "ts_ms": ts_ms, "line_no": line_no, "reason": "CHAR_SKILLS", "index": len(ingestion.loadout_groups),
+            "rows": {key: copy.deepcopy(ingestion.loadout_by_char[key])
+                     for key in set(ingestion.squad_actor_keys.values()) if key in ingestion.loadout_by_char},
+        }
+        ingestion.loadout_groups.append(ingestion.current_loadout_group)
 
 
 def _infer_weapon_refine_from_source_skills(

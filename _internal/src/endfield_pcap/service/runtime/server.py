@@ -32,13 +32,18 @@ from endfield_pcap.service.runtime.websocket import WebSocketDelivery
 from endfield_pcap.service.runtime.analysis import AnalysisStreams
 from endfield_pcap.service.runtime.flow import FlowCapture
 from endfield_pcap.service.runtime.debug import DebugOutput
+from endfield_pcap.service.runtime.recording import DiskRecording
+from endfield_pcap.trace.recording_context import RecordingContext
+from endfield_pcap.trace.recording import TraceRecording
 
 
 LOGGER = logging.getLogger(__name__)
 
 
-class DamageLogService(WebSocketDelivery, AnalysisStreams, FlowCapture, DebugOutput):
+class DamageLogService(DiskRecording, WebSocketDelivery, AnalysisStreams, FlowCapture, DebugOutput):
     def __init__(self, config: ServiceConfig, observer: ServiceObserver | None = None) -> None:
+        if config.trace_format not in ('legacy', 'jsonl'):
+            raise ValueError('Unsupported trace recording format')
         self.config = config
         self.observer = observer
         self.loop: asyncio.AbstractEventLoop | None = None
@@ -50,8 +55,17 @@ class DamageLogService(WebSocketDelivery, AnalysisStreams, FlowCapture, DebugOut
         self.metrics = RuntimeMetrics()
         self.packet_queue: asyncio.Queue[CapturedPacket] = asyncio.Queue(maxsize=20000)
         self.clients: set[Any] = set()
-        self.snapshot_publisher = SnapshotPublisher(use_process=True, minimum_interval=1.0)
-        self.summary_publisher = SnapshotPublisher(use_process=True, summary=True)
+        self._trace_recording = None
+        self._disk_trace = None
+        self._recording_context = RecordingContext()
+        structured = config.trace_format == 'jsonl'
+        if structured:
+            from endfield_pcap.trace.recording import make_recording_header
+            trace_header = make_recording_header()
+        publisher_options = (dict(structured=True, timezone_offset_minutes=trace_header.timezone_offset_minutes)
+                             if structured else {})
+        self.snapshot_publisher = SnapshotPublisher(use_process=True, minimum_interval=1.0, **publisher_options)
+        self.summary_publisher = SnapshotPublisher(use_process=True, summary=True, **publisher_options)
         self._client_senders = {}
         self._summary_clients = set()
         self._custom_full = False
@@ -72,25 +86,31 @@ class DamageLogService(WebSocketDelivery, AnalysisStreams, FlowCapture, DebugOut
         self.batch: list[dict[str, object]] = []
         self.log_file = None
         self.current_log_path: Path | None = None
+        self._log_session_id = None
+        self._log_volume = self._log_event_count = 0
         self.log_write_errors = 0
         self.debug_session_dir: Path | None = None
         self.debug_counters: dict[tuple[str, str], int] = defaultdict(int)
         self.server = None
-        if config.trace_enabled:
-            if config.trace_file is None:
-                config.trace_file = make_archive_trace_file(config.log_dir)
-            self.trace_bridge = TraceBridge(config.trace_file, line_sink=self._handle_trace_line)
-            # Source GUI constructs the service directly instead of runner.py.
-            # The official uploader recognizes managed traces by this sidecar.
-            if config.status_file is None:
-                config.status_file = config.trace_file.with_suffix(config.trace_file.suffix + ".status.json")
+        if structured:
+            from endfield_pcap.trace.recording import TraceRecording
+            self._trace_recording = self.trace_bridge = TraceRecording(self._handle_trace_events, trace_header,
+                log_directory=None)
         else:
             self.trace_bridge = TraceBridge(write_enabled=False, line_sink=self._handle_trace_line)
         self.status_file = config.status_file
+        if config.recording_on_start and config.trace_enabled:
+            self.set_recording(True)
+        else:
+            config.trace_file = None
         if self.status_file is not None:
             self.status_file.parent.mkdir(parents=True, exist_ok=True)
         # Open native handles after fallible trace/directory initialization.
-        self.capture_manager = CaptureManager.create(config.npcap_device, self._on_packet_from_thread)
+        try:
+            self.capture_manager = CaptureManager.create(config.npcap_device, self._on_packet_from_thread)
+        except BaseException:
+            self._close_trace_recording()
+            raise
         if self.status_file is not None:
             self._write_status()
 
@@ -120,6 +140,7 @@ class DamageLogService(WebSocketDelivery, AnalysisStreams, FlowCapture, DebugOut
             self.server = None
             self.loop = None
             self._stop_event = None
+            self._close_trace_recording()
             raise
         self._set_state(ServiceState.WAITING_RESTART if self._game_running() else ServiceState.WAITING_GAME)
         tasks = [
@@ -157,6 +178,7 @@ class DamageLogService(WebSocketDelivery, AnalysisStreams, FlowCapture, DebugOut
             self.server = None
             self.loop = None
             self._stop_event = None
+            self._close_trace_recording()
             if self._fatal_exception is not None:
                 exc = self._fatal_exception
                 self._fatal_exception = None
@@ -230,6 +252,7 @@ class DamageLogService(WebSocketDelivery, AnalysisStreams, FlowCapture, DebugOut
             "type": "status",
             "schema_version": 1,
             "state": self.state.value,
+            "recording": self.recording,
             "game_exe": self.config.game_exe,
             "session_id": self.active_session.session_id if self.active_session else None,
             "active_flow": active_flow,
@@ -248,7 +271,7 @@ class DamageLogService(WebSocketDelivery, AnalysisStreams, FlowCapture, DebugOut
         }
 
     def _write_status(self, pcap_stats: dict[str, int] | None = None) -> None:
-        if self.status_file is None:
+        if self.status_file is None or not hasattr(self, 'capture_manager'):
             return
         try:
             tmp_path = self.status_file.with_suffix(self.status_file.suffix + ".tmp")
@@ -276,29 +299,74 @@ class DamageLogService(WebSocketDelivery, AnalysisStreams, FlowCapture, DebugOut
             self.loop.create_task(self._broadcast(self._hello_payload()))
 
     def _open_log_file(self, session_id: str) -> None:
+        if not self.recording:
+            return
         if self.log_file is not None:
-            self.log_file.close()
-        timestamp = datetime.now().strftime("%Y%m%d")
-        day_dir = self.config.log_dir / timestamp
+            return
+        day_dir = self._disk_trace.trace_file.parent
         day_dir.mkdir(parents=True, exist_ok=True)
         file_name = f"session_{session_id}.ndjson"
         self.current_log_path = day_dir / file_name
-        self.log_file = self.current_log_path.open("a", encoding="utf-8")
+        structured = isinstance(self._disk_trace, TraceRecording)
+        self.log_file = self.current_log_path.open("x" if structured else "a", encoding="utf-8", newline='\n')
+        self._log_session_id, self._log_volume, self._log_event_count = session_id, 1, 0
+        if structured:
+            self._write_session_header(self.log_file, 1, None)
+
+    def _write_session_header(self, stream, volume, previous):
+        header = self._disk_trace.header
+        value = dict(type='session_volume', schema_version=1,
+            recording_id=self._log_session_id, session_id=self._log_session_id,
+            volume=volume, previous_volume=previous, event_offset=self._log_event_count,
+            trace_recording_id=header.recording_id, trace_volume=header.volume,
+            timezone_offset_minutes=header.timezone_offset_minutes)
+        stream.write(json.dumps(value, ensure_ascii=False, separators=(',', ':')) + '\n')
+        stream.flush()
+
+    def rotate_recording(self):
+        """Called by the capture event loop between complete business calls."""
+        if (self.active_session is None or self.log_file is None or self.current_log_path is None
+                or not isinstance(self._disk_trace, TraceRecording)):
+            raise ValueError('请在 JSONL 抓包会话开始后新建记录')
+        volume = self._log_volume + 1
+        path = self.current_log_path.with_name(f'session_{self._log_session_id}_v{volume:03d}.ndjson')
+        # Reserve the paired raw file before switching the trace writer.
+        next_stream = path.open('x', encoding='utf8', newline='\n')
+        old_trace = self._disk_trace.trace_file
+        try:
+            self.log_file.flush()
+            trace = self._disk_trace.rotate_volume()
+            self._write_session_header(next_stream, volume,
+                dict(volume=self._log_volume, file=self.current_log_path.name))
+        except BaseException as exc:
+            next_stream.close()
+            if self._disk_trace.trace_file != old_trace:
+                # A disk failure after one writer switched cannot safely resume
+                # the old pair. Reuse the service's fatal shutdown boundary.
+                self._fatal_exception = exc
+                self._fatal_error = dict(task='recording-rotation', type=type(exc).__name__, message=str(exc))
+                self._write_status()
+                self.request_stop()
+            raise
+        previous = self.log_file
+        self.log_file, self.current_log_path, self._log_volume = next_stream, path, volume
+        self.config.trace_file = trace
+        self.config.status_file = self.status_file = trace.with_suffix('.jsonl.status.json')
+        previous.close()
+        self._write_status()
+        return path, trace
 
     def _reset_session(self) -> None:
         had_capture_session = self.active_flow is not None or self.active_session is not None
         if had_capture_session and self.trace_bridge is not None:
             self.trace_bridge.end_capture_session()
+        self._recording_context.clear()
         if self.active_session is not None:
             self.active_session.flush_debug_state()
         self.active_flow = None
         self.active_session = None
         self._active_flow_capture_locked = False
         self.capture_manager.restore_default_filters()
-        if self.log_file is not None:
-            self.log_file.close()
-            self.log_file = None
-        self.current_log_path = None
         self.debug_session_dir = None
         self.debug_counters.clear()
         publisher = getattr(self, "snapshot_publisher", None)
@@ -307,23 +375,30 @@ class DamageLogService(WebSocketDelivery, AnalysisStreams, FlowCapture, DebugOut
             self.summary_publisher.reset()
 
     def _handle_trace_line(self, line: str) -> None:
+        self._write_disk_line(line)
         self.snapshot_publisher.feed_line(line)
         self.summary_publisher.feed_line(line)
+
+    def _handle_trace_events(self, events) -> None:
+        self._write_disk_events(events)
+        self.snapshot_publisher.feed_events(events)
+        self.summary_publisher.feed_events(events)
+
+    def _close_trace_recording(self):
+        if self._trace_recording is not None:
+            self._trace_recording.close()
+        if self.recording:
+            self.set_recording(False)
 
     def _handle_outbound_event(self, event: OutboundEvent) -> None:
         payload = event.as_dict()
         if self.trace_bridge is not None:
             self.trace_bridge.handle_event(payload)
+        self._recording_context.observe(payload)
+        self._write_recorded_event(payload)
         self.batch.append(payload)
         if self.observer is not None and self.observer.on_event is not None:
             self.observer.on_event(payload)
-        if self.log_file is not None:
-            try:
-                self.log_file.write(json.dumps(payload, ensure_ascii=False) + "\n")
-                self.log_file.flush()
-            except OSError:
-                self.log_write_errors += 1
-                LOGGER.warning("failed to write combat log %s", self.current_log_path, exc_info=True)
         if len(self.batch) >= 128 and self.loop is not None:
             self.loop.create_task(self._flush_batch())
 

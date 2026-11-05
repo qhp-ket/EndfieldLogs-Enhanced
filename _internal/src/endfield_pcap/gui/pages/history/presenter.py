@@ -1,5 +1,7 @@
 """Map history requests/results to widgets, overlays and explicit detail windows."""
 from dataclasses import replace
+import queue
+import threading
 from pathlib import Path
 from PySide6.QtCore import QObject, Qt
 from PySide6.QtWidgets import QFileDialog
@@ -19,6 +21,8 @@ class HistoryPresenter(QObject):
         self.overlays = overlays
         self._replace_overlay, self._refresh_settings = replace_overlay, refresh_settings
         self.dialog = None
+        self._exports = queue.SimpleQueue()
+        self._export_pending = False
         page.reload_btn.clicked.connect(self.refresh)
         page.import_trace_btn.clicked.connect(self.import_dialog)
         page.remove_record_btn.clicked.connect(self.remove_selected)
@@ -26,6 +30,7 @@ class HistoryPresenter(QObject):
         page.open_folder_btn.clicked.connect(lambda: open_folder(self))
         page.load_overlay_btn.clicked.connect(self.load_selected)
         page.analysis_detail_btn.clicked.connect(self.inspect_selected)
+        page.export_btn.clicked.connect(self.export_selected)
         page.return_live_btn.clicked.connect(self.return_live)
         page.record_list.currentItemChanged.connect(self.sync_selection)
         page.record_list.itemSelectionChanged.connect(self.sync_selection)
@@ -41,6 +46,8 @@ class HistoryPresenter(QObject):
             + (' · 正在更新索引…' if self.controller.records_pending else ''))
         for button in (self.page.load_overlay_btn, self.page.remove_record_btn, self.page.analysis_detail_btn):
             button.setEnabled(record is not None)
+        self.page.export_btn.setEnabled(record is not None and not self._export_pending)
+        self.page.analysis_detail_btn.setText('正在分析…' if self.controller.pending_keys else '战斗时间轴 / 技能构成…')
         self.page.rename_record_btn.setEnabled(bool(selected)
             and len({item.file_path for item in selected}) == 1 and not self.controller.busy)
         self.page.import_trace_btn.setEnabled(not self.controller.import_pending)
@@ -57,7 +64,7 @@ class HistoryPresenter(QObject):
 
     def import_dialog(self):
         names, _ = QFileDialog.getOpenFileNames(self.parent(), '导入 trace 日志',
-            str(self.settings.current.service.log_dir), 'Trace 日志 (*.log)')
+            str(self.settings.current.service.log_dir), 'Trace 日志 (*.jsonl *.log)')
         if names:
             self.import_files([Path(name).resolve() for name in names])
 
@@ -68,6 +75,27 @@ class HistoryPresenter(QObject):
 
     def load_selected(self):
         self._load(self.controller.selected_records)
+
+    def export_selected(self):
+        if self._export_pending or not self.controller.selected_records:
+            return
+        record = replace(self.controller.selected_records[-1])
+        name, _ = QFileDialog.getSaveFileName(self.parent(), '导出所选战斗 · 官网兼容日志',
+            str(record.file_path.with_name(f'{record.file_path.stem}-战斗{record.record_index}-官网兼容.log')), '战斗日志 (*.log)')
+        if not name:
+            return
+        self._export_pending = True
+        self.page.import_trace_status.setText('正在导出所选战斗的官网兼容日志…')
+        self.sync_selection()
+        sink = self._exports
+        def export():
+            try:
+                from endfield_pcap.history.export import export_battle_log
+                export_battle_log(record, Path(name))
+                sink.put(f'已导出当前战斗：{name}')
+            except Exception as exc:
+                sink.put(f'导出失败：{exc}')
+        threading.Thread(target=export, name='battle-export', daemon=True).start()
 
     def _load(self, records, *, open_details=False):
         if self.controller.load([record_key(record) for record in records], open_details=open_details):
@@ -118,6 +146,10 @@ class HistoryPresenter(QObject):
         self.page.overlay_source_status.setText(f'悬浮窗：历史 · {label}')
 
     def drain(self):
+        while not self._exports.empty():
+            self.page.import_trace_status.setText(self._exports.get_nowait())
+            self._export_pending = False
+            self.sync_selection()
         for result in self.controller.drain():
             if isinstance(result, HistoryBatch):
                 last = result.results[-1]

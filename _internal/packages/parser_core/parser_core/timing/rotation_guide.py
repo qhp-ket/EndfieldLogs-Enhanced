@@ -13,6 +13,7 @@ from typing import Any
 
 from parser_core.timing.timer_evidence import START_SOURCE
 from parser_core.timing.rotation_clock import RotationClockSpec, RotationObserverClock
+from parser_core.ingestion.structured_clock import ClockObservation, clock_observation
 
 _ADMIN_ALIASES = {"chr_0002_endminm": "chr_9000_endmin", "chr_0003_endminf": "chr_9000_endmin"}
 _LINE = re.compile(r"^(?:\[\d{2}:\d{2}:\d{2}\.\d{3}\]\s+)?([A-Z][A-Z0-9_]*)\b(.*)$")
@@ -270,10 +271,16 @@ class RotationGuideEngine:
         label, raw = match.groups()
         fields = dict(_FIELD.findall(raw))
         if label == "GAME_CLOCK_SYNC":
-            self._clock.observe_sync(source=fields.get("source", ""), client_ts=fields.get("clientTs"),
-                                     capture_ms=fields.get("captureMs"), server_ts=fields.get("serverTs"),
-                                     logical_ts=fields.get("logicalTs"))
-            self._select_plan()
+            self._feed_clock(ClockObservation('clock_sync', fields.get('source', ''), _integer(fields.get('captureMs')),
+                client_ts=_integer(fields.get('clientTs')), server_ts=_integer(fields.get('serverTs')),
+                logical_ts=_integer(fields.get('logicalTs'))))
+            return
+        if label in {"GAME_CLOCK_TICK", "GAME_TIME_FREEZE_STATE", "GAME_TIME_FREEZE_REQUEST"}:
+            kind = {'GAME_CLOCK_TICK': 'clock_tick', 'GAME_TIME_FREEZE_STATE': 'time_freeze_state',
+                    'GAME_TIME_FREEZE_REQUEST': 'time_freeze_request'}[label]
+            value = fields.get('inTimeFreeze')
+            self._feed_clock(ClockObservation(kind, fields.get('source', ''), None,
+                tick_ms=_integer(fields.get('tickMs')), frozen=value == '1' if value in {'0', '1'} else None))
             return
         if label in {"GAME_TIMER_RESET", "GAME_INST_LEAVE", "CAPTURE_SESSION_END"}:
             if label == "GAME_TIMER_RESET" and fields.get("source") == "CAPTURE_SESSION_START":
@@ -353,10 +360,6 @@ class RotationGuideEngine:
                 return
             if self._start_tick is None:
                 self._start_tick = self._last_tick = tick
-        elif label == "GAME_CLOCK_TICK" and fields.get("source") == "CS_BATTLE_OP":
-            tick = _integer(fields.get("tickMs"))
-            if tick is not None:
-                self._observe_tick(tick)
         elif label == "OFFICIAL_TIMER_PROGRESS":
             # Reserved for a future, proven official timer provider. Current
             # capture never fabricates this marker from ping or receipt time.
@@ -368,14 +371,6 @@ class RotationGuideEngine:
                     self._clock_conflict = True
                 else:
                     self._official_elapsed = progress
-        elif label == "GAME_TIME_FREEZE_STATE":
-            if fields.get("source") in {"SC_GAME_TIME_FREEZE_START_RSP", "SC_GAME_TIME_FREEZE_END_RSP"}:
-                value = fields.get("inTimeFreeze")
-                self._paused = value == "1" if value in {"0", "1"} else None
-                self._freeze_state_invalid = value not in {"0", "1"}
-                if self._freeze_state_invalid:
-                    self._last_confirmed_snapshot = None
-                self._clock.set_freeze_state(self._paused)
         elif label == "GAME_MECHANICS_TIME_FREEZE":
             if fields.get("source") == "SC_GAME_MECHANICS_MODIFY_INST_TIME_FREEZE":
                 values = fields.get("freezeInfos", "[]" if fields.get("count") == "0" else "")
@@ -392,6 +387,25 @@ class RotationGuideEngine:
                         self._clock.update_freeze(fields.get("gameId", ""), pairs)
         elif label == "SKILL_CAST_START":
             self._feed_cast(fields)
+        self._select_plan()
+
+    def feed_event(self, event) -> None:
+        if self._available:
+            self._feed_clock(clock_observation(event))
+
+    def _feed_clock(self, observation: ClockObservation) -> None:
+        if observation.kind == 'clock_sync':
+            self._clock.observe_sync(source=observation.source, client_ts=observation.client_ts,
+                capture_ms=observation.captured_at_ms, server_ts=observation.server_ts, logical_ts=observation.logical_ts)
+        elif observation.kind == 'clock_tick' and observation.source == 'CS_BATTLE_OP':
+            if observation.tick_ms is not None and observation.tick_ms >= 0:
+                self._observe_tick(observation.tick_ms)
+        elif observation.kind == 'time_freeze_state' and observation.source in {'SC_GAME_TIME_FREEZE_START_RSP', 'SC_GAME_TIME_FREEZE_END_RSP'}:
+            self._paused = observation.frozen
+            self._freeze_state_invalid = observation.frozen is None
+            if self._freeze_state_invalid:
+                self._last_confirmed_snapshot = None
+            self._clock.set_freeze_state(self._paused)
         self._select_plan()
 
     def _feed_cast(self, fields: dict[str, str]) -> None:

@@ -281,7 +281,7 @@ def test_service_memory_trace_and_observer_publish_replacement_with_raw_events_p
     raw = []
     service = service_factory(observer=ServiceObserver(on_event=raw.append, on_analysis_snapshot=observed.append))
     assert service.trace_bridge.trace_file is None
-    assert not service.config.trace_file.parent.exists()
+    assert service.config.trace_file is None
     async def scenario():
         await service._publish_analysis_snapshot()
         assert observed[-1]["snapshot"] is None
@@ -322,7 +322,7 @@ def test_decoded_damage_events_reach_disk_canonical_observer_and_websocket(servi
         await service._publish_analysis_snapshot()
         await service._publish_analysis_snapshot()
         message = service.snapshot_publisher.current_message()
-        disk = bridge.trace_file.read_text(encoding="utf-8")
+        disk = service.config.trace_file.read_text(encoding="utf-8")
         expected = LiveOverlayBattleParser(align_to_data_watermark=True)
         expected.feed_lines(disk.splitlines(keepends=True))
         assert message["snapshot"] == expected.snapshot()

@@ -1,5 +1,6 @@
 from app_test_support.scenarios.raw import raw_hit, raw_scene
 import json
+from types import SimpleNamespace
 from datetime import datetime
 import endfield_pcap.history.analysis as history_analysis
 import endfield_pcap.overlays.manager as overlay_host
@@ -7,7 +8,7 @@ from endfield_pcap.history.records import load_combat_records
 from endfield_pcap.models import OverlayEntry
 from endfield_pcap.models import OverlaySourceType
 
-def test_history_indexes_exact_source_range_and_replay_does_not_mix_next_battle(tmp_path):
+def test_history_indexes_exact_source_range_and_replay_does_not_mix_next_battle(tmp_path, monkeypatch):
     events = [raw_scene(),
         {"type": "SC_OBJECT_ENTER_VIEW", "timestamp_ms": 1_000_100,
          "objects": [{"battle_inst_id": 99, "templateid": "eny_0051_rodin"}]},
@@ -27,6 +28,10 @@ def test_history_indexes_exact_source_range_and_replay_does_not_mix_next_battle(
     # Appending to an active source after indexing cannot enter the selection.
     with path.open("a", encoding="utf-8") as stream:
         stream.write("\n" + json.dumps(raw_hit(1_792_001_101_000, 99999)))
+    def forbidden(*args, **kwargs):
+        raise AssertionError('Session history must consume events without legacy text')
+    monkeypatch.setattr('parser_core.ingestion.stream._raw_battle_ingestion', forbidden)
+    monkeypatch.setattr('endfield_pcap.trace.legacy.legacy_lines', forbidden)
     snapshots = [history_analysis.load_record_snapshot(r) for r in records]
     assert [s["battle"]["total_damage"] for s in snapshots] == [300, 1900]
     assert all("snapshot_quality" in s for s in snapshots)
@@ -34,7 +39,9 @@ def test_history_indexes_exact_source_range_and_replay_does_not_mix_next_battle(
 
 def test_history_mode_keeps_latest_live_and_reopen_replays_current_presentation(monkeypatch):
     class Window:
-        def __init__(self, config): self.messages = []
+        def __init__(self, config):
+            self.messages = []
+            self.canvas = SimpleNamespace(receive=lambda value: None)
         def apply_analysis_snapshot(self, value): self.messages.append(value)
         def show(self): pass
     monkeypatch.setattr(overlay_host, "OverlayWindow", Window)

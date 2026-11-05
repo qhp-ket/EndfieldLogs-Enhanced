@@ -56,6 +56,7 @@ def test_home_input_and_combo_subscriptions_are_independent_of_capture(main_wind
             self.running=True; calls.append(('input_start',str(game_exe),elevated))
         def stop(self,wait=False):
             self.running=False; calls.append(('input_stop',wait))
+        def set_trace(self, path, *, notify=True): pass
         def snapshot(self): return dict(status='waiting_game',count=0,lost=0,recent=[])
     window.independent_controller.input=Input()
     window.independent_controller.vision.stop()
@@ -65,13 +66,16 @@ def test_home_input_and_combo_subscriptions_are_independent_of_capture(main_wind
         state={'status':'等待游戏窗口'},stop=lambda:None,is_running=lambda:False)
     assert not window.service_controller.is_running()
     window.home_page.input_service_btn.click()
+    assert not window.independent_controller.input.running
+    assert window.independent_controller.input_enabled
+    window.independent_controller.set_recording(True, 'synthetic.jsonl')
     assert window.independent_controller.input.running
     assert ('input_start',str(window.independent_controller.game_executable()),True) in calls
     assert not window.service_controller.is_running()
     window.independent_presenter.drain()
     assert '等待游戏前台' in window.home_page.input_status.text()
     assert not load_app_config(window.config_path).input_recording_enabled
-    assert not load_app_config(window.config_path).start_input_recording_on_launch
+    assert load_app_config(window.config_path).start_input_recording_on_launch
     combo=OverlayEntry('visual','连携',OverlaySourceType.BUILTIN,'combo_skill',True,False,False)
     window.overlay_manager.apply_entry(combo)
     assert ('vision',True) in calls

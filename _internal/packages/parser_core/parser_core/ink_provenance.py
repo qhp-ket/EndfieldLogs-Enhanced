@@ -18,6 +18,69 @@ OWNER = 'chr_0036_jsspsi'
 POLICY = 'whole_ink_damage_log_zones_v1'
 
 
+@dataclass(frozen=True)
+class InkObservation:
+    kind: str
+    fields: dict = field(default_factory=dict)
+    release: dict | None = None
+    identity: object = None
+    identity_present: bool = False
+    invalid_identity: bool = False
+
+
+def ink_trace_observation(event):
+    """Direct event input for the same ledger used by imported legacy logs."""
+    if event.type not in ('ink_release', 'blackboard_dynamic', 'blackboard_calculation', 'actor_mapping', 'skill_cast'):
+        return InkObservation('other')
+    from parser_core.ingestion.blackboard_wire import blackboard_observation, blackboard_fields, release_observation
+    from parser_core.ingestion.dynamic_wire import dynamic_fields
+    from parser_core.ingestion.buff_packet_wire import packet_observation
+    from parser_core.ingestion.skill_wire import integer, identity_token, label
+    from parser_core.trace_values import restore_value
+    data = (blackboard_observation(event) if event.type in ('ink_release', 'blackboard_calculation')
+            else restore_value(event.data, event.data.get('legacy_layout', {})))
+    if event.type == 'ink_release':
+        return InkObservation('release', release=release_observation(data))
+    if event.type == 'blackboard_dynamic':
+        return InkObservation('operation', dynamic_fields(data), identity=packet_observation(data), identity_present=True)
+    if event.type == 'blackboard_calculation':
+        fields = blackboard_fields(data)
+        fields.update(key=data['key'], final=repr(float(data['final_value'])))
+        for source, target in (('value_a', 'valueA'), ('value_b', 'valueB')):
+            if source in data:
+                fields[target] = repr(float(data[source]))
+        return InkObservation('operation', fields)
+    if event.type == 'actor_mapping':
+        return InkObservation('mapping', dict(id=identity_token(data.get('entity_id')),
+            source=data['mapping_source'], template=data['template']))
+    if event.type == 'skill_cast' and data.get('phase') == 'start':
+        return InkObservation('cast', dict(ownerId=identity_token(data.get('owner_id')),
+            skill=label(data, 'skill', 'unknown_skill'), inst=identity_token(data.get('skill_inst_id')),
+            seq=str(integer(data.get('operation_seq')) or 0), startMs=str(integer(data.get('client_tick_ms')) or 0)))
+    return InkObservation('other')
+
+
+def _legacy_ink_observation(line, extract_fields):
+    if ' INK_RELEASE ' in line:
+        try:
+            return InkObservation('release', release=json.loads(line.split(' INK_RELEASE ', 1)[1]))
+        except (ValueError, TypeError):
+            return InkObservation('release')
+    if ' ACTOR_MAP ' in line:
+        return InkObservation('mapping', extract_fields(line))
+    if ' SKILL_CAST_START ' in line:
+        return InkObservation('cast', extract_fields(line))
+    if any(tag in line for tag in (' BB_MODIFY_DYNAMIC ', ' BB_SIMPLE_CALC ')):
+        fields = extract_fields(line.split(' identity=', 1)[0])
+        if ' identity=' not in line:
+            return InkObservation('operation', fields)
+        try:
+            return InkObservation('operation', fields, identity=json.loads(line.split(' identity=', 1)[1]), identity_present=True)
+        except (ValueError, TypeError):
+            return InkObservation('operation', fields, identity_present=True, invalid_identity=True)
+    return InkObservation('other')
+
+
 def _record_weights(source, increment):
     """Recover original external log weights, then add the ink recording zone.
 
@@ -232,9 +295,10 @@ def _ink_provenance_ingestion(*, root_lookup, extract_fields):
                 observed_sources[key].append(hit)
                 continue
 
-            if (' INK_RELEASE ' in line and profile_ok):
+            observation = line if isinstance(line, InkObservation) else _legacy_ink_observation(line, extract_fields)
+            if observation.kind == 'release' and profile_ok:
                 try:
-                    event = json.loads(line.split(' INK_RELEASE ', 1)[1])
+                    event = observation.release
                     fields = dict(inst=event['buff_uid'], ownerId=event['owner_id'])
                     state = bind(fields, line_no)
                     if (state and event.get('schema_version') == 1 and event['session_id'] == state.session
@@ -253,21 +317,21 @@ def _ink_provenance_ingestion(*, root_lookup, extract_fields):
             # Legacy traces contain ACTOR_MAP inside the typed 13 -> launch 14 ->
             # reset 15 block. Require one mapping bracketed by that exact instance,
             # session, tick and order; never choose a nearby ledger by elapsed time.
-            if ' ACTOR_MAP ' in line and release_preparation:
-                fields = extract_fields(line)
+            if observation.kind == 'mapping' and release_preparation:
+                fields = observation.fields
                 if fields.get('source') == 'launch_projectile' and fields.get('template') == OWNER:
                     release_preparation[2].append(dict(projectile=fields.get('id')))
                 continue
-            if ' SKILL_CAST_START ' in line and release_preparation:
-                fields = extract_fields(line)
+            if observation.kind == 'cast' and release_preparation:
+                fields = observation.fields
                 for candidate in release_preparation[2]:
                     if (fields.get('ownerId') == candidate['projectile'] and fields.get('skill') == EXPLOSION
                             and _integer(fields.get('startMs')) == release_preparation[1][1]):
                         candidate.update(cast_instance_id=fields.get('inst'), cast_seq=_integer(fields.get('seq')))
                 continue
-            if not profile_ok or not any(tag in line for tag in (' BB_MODIFY_DYNAMIC ', ' BB_SIMPLE_CALC ')):
+            if not profile_ok or observation.kind != 'operation':
                 continue
-            fields = extract_fields(line.split(' identity=', 1)[0])
+            fields = observation.fields
             if fields.get('skill') != BUFF:
                 continue
             state = bind(fields, line_no)
@@ -277,9 +341,11 @@ def _ink_provenance_ingestion(*, root_lookup, extract_fields):
             if sequence is None or tick is None or action is None:
                 state.reasons.add('missing_ink_operation_identity')
                 continue
-            if ' identity=' in line:
+            if observation.identity_present:
                 try:
-                    identity = json.loads(line.split(' identity=', 1)[1])
+                    if observation.invalid_identity:
+                        raise ValueError('Invalid ink identity')
+                    identity = observation.identity
                     if (identity.get('schemaVersion') != 1 or identity.get('ownerType') not in (1, '1')
                             or identity.get('triggerType') != 0 or identity.get('actionType') != 7
                             or identity.get('actionRuntimeCase') != 'modify_dynamic_blackboard_action'

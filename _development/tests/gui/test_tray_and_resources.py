@@ -82,6 +82,38 @@ def test_gui_hotkey_is_separate_persisted_and_dispatched(main_window,app,monkeyp
     assert calls==['gui']
 
 
+def test_recording_hotkey_default_dispatch_and_editing_feedback(main_window, app, monkeypatch):
+    from PySide6.QtCore import Qt
+    from PySide6.QtTest import QTest
+    window = main_window
+    assert window.app_config.toggle_recording_hotkey == 'Ctrl+I'
+    registry = {}
+    fake = SimpleNamespace(RegisterHotKey=lambda hwnd,key,mods,vk:registry.setdefault(key,(mods,vk)) is not None,
+                           UnregisterHotKey=lambda hwnd,key:registry.pop(key,None))
+    monkeypatch.setattr(hotkeys, 'USER32', fake)
+    monkeypatch.setattr(window, '_update_recording_shortcut', lambda key=None: hotkeys.OverlayHotkeys._update_recording_shortcut(window, key))
+    assert window._update_recording_shortcut()
+    assert registry[hotkeys.RECORDING_HOTKEY_ID][1] == ord('I')
+    calls = []
+    monkeypatch.setattr(window.service_controller, 'toggle_recording', lambda: calls.append('recording'))
+    msg = wintypes.MSG(message=hotkeys.WM_HOTKEY, wParam=hotkeys.RECORDING_HOTKEY_ID)
+    assert window.nativeEvent(b'windows_generic_MSG', ctypes.addressof(msg)) == (True, 0)
+    assert calls == ['recording']
+    window.switchTo(window.settings_page)
+    app.processEvents()
+    for edit, hint in ((window.settings_page.hotkey_edit, window.settings_page.hotkey_hint),
+                       (window.settings_page.gui_hotkey_edit, window.settings_page.gui_hotkey_hint),
+                       (window.settings_page.recording_hotkey_edit, window.settings_page.recording_hotkey_hint)):
+        edit.setFocus()
+        app.processEvents()
+        assert '正在录入' in hint.text() and not registry
+        QTest.keyClick(edit, Qt.Key.Key_K, Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.AltModifier)
+        assert edit.keySequence().toString(QKeySequence.SequenceFormat.PortableText) == 'Ctrl+Alt+K'
+        window.settings_page.port_edit.setFocus()
+        app.processEvents()
+        assert '正在录入' not in hint.text()
+
+
 def test_hidden_ui_defers_log_layout_but_drains_input_and_combo(main_window,app,monkeypatch):
     window=main_window
     monkeypatch.setattr(QSystemTrayIcon,'isSystemTrayAvailable',lambda:True)

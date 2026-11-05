@@ -76,17 +76,21 @@ class IntegerStepEdit(QWidget):
         self.edit.setValue(value)
 
 class SingleHotkeyEdit(QKeySequenceEdit):
+    captureChanged = Signal(bool)
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._replace_pending = False
+        self.setMaximumSequenceLength(1)
 
     def focusInEvent(self, event) -> None:  # type: ignore[override]
         self._replace_pending = True
         super().focusInEvent(event)
+        self.captureChanged.emit(True)
 
     def focusOutEvent(self, event) -> None:  # type: ignore[override]
         self._replace_pending = False
         super().focusOutEvent(event)
+        self.captureChanged.emit(False)
 
     def keyPressEvent(self, event) -> None:  # type: ignore[override]
         if self._replace_pending:

@@ -27,6 +27,9 @@ class CaptureActions:
         self.home_page.start_service_btn.setEnabled(enabled)
         running = lifecycle == CaptureLifecycle.RUNNING
         active = self.service_controller.running_config
+        self.home_page.recording_btn.setText('停止记录' if self.service_controller.recording else '开始记录')
+        self.home_page.recording_btn.setEnabled(running and not self.service_controller.recording_pending)
+        self.home_page.recording_status.setText('记录中' if self.service_controller.recording else '未记录')
         port = active.ws_port if self.service_controller.is_running() and active is not None else self.app_config.service.ws_port
         self.home_page.service_hint.setText(self._capture_error or f"{program} · ws://127.0.0.1:{port}/ws")
         if not running:
@@ -224,3 +227,8 @@ class CaptureActions:
 
     def _bind_home_events(self) -> None:
         self.home_page.start_service_btn.clicked.connect(self._toggle_capture)
+        self.home_page.recording_btn.clicked.connect(self._toggle_recording)
+
+    def _toggle_recording(self):
+        self.service_controller.toggle_recording()
+        self._update_service_status()

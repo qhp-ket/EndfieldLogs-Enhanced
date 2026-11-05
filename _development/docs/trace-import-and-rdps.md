@@ -11,6 +11,14 @@
 `trace_*.log` 及 `.log.status.json` 可直接进入官网 uploader 自动归档，上传还需完整性证明和官网校验。
 组件准备见 [运行资源](runtime-resources.md)。
 
+## JSONL 连续记录
+
+新录制默认使用 JSONL，规范化业务事件直接进入实时分析；显式配置 `service.trace_format: "legacy"` 仍沿用旧格式。历史页可导入新 trace 或读取配套 session，按需分析沿用同一计算核心，无须先转换为旧文本。
+
+抓包期间「新建记录」同时切换 session 与 trace，保持战斗分析连续。历史按录制身份连读各卷，缺卷时提示记录不完整；请将配套文件保留在同一目录。输入记录随新 trace 切换，跨卷绑定和时间对齐保留所有相关侧录。
+
+JSONL 不能直接交给官网 uploader。先在历史页选择一场，点击「导出官网兼容日志…」生成旧 `.log`；多选时只导出最后选择的那场。保留该场伤害、计时和必要前文，不带入其他场次；session 导出会重新确认该场边界，纳入同场新写入的证据。导出器按最终正文生成完整性证明，原 JSONL、session 和输入侧录保留。录制中的 session 正常追加不影响已有固定范围的重放；已索引内容改写、截断或缺卷仍拒绝处理。
+
 ## 通用腐蚀
 
 `buff_common_natural_fire_triggered`（329）的动态减抗来源取 trace 实例，读取实际 `def_decrease` / `additional_def_decrease` 及属性刷新证据。

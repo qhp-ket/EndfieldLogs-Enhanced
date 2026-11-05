@@ -85,6 +85,9 @@ def relocate_key(key: str | None, old: Path, new: Path):
 
 
 def relocate_record(record, old, new):
+    for volume in (*getattr(record, 'source_volumes', ()), *getattr(record, 'session_volumes', ())):
+        if volume['path'] == str(old):
+            volume['path'] = str(new)
     if record.file_path != old:
         return
     record.file_path = new

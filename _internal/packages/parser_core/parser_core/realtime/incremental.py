@@ -377,12 +377,7 @@ class IncrementalBattleParser:
 
     def _snapshot(self, lines, timer_line=None, *, summary=False, clock_previous=None):
         from parser_core.ingestion.identity import _apply_short_actor_aliases
-        from parser_core.reporting.battle import _build_raw_battle_report
-        from parser_core.ingestion.fields import _coerce_int
-        from parser_core.ingestion.fields import _extract_fields
-        from parser_core.ingestion.fields import _parse_prefixed_timestamp_ms
         from parser_core.ingestion.stream import _raw_battle_ingestion
-        from parser_core.unified import overlay_snapshot_from_report
         if lines[:len(self.input_lines)] != self.input_lines:
             self._restart('trace prefix or actor aliases changed')
         # Current canonical aliases are identity-only. Keep a conservative full
@@ -421,6 +416,15 @@ class IncrementalBattleParser:
         self.frontier.timer_lines = self.timer_lines
         self.frontier.line_count = len(normalized)+(1 if timer_line else 0)
         mark('new_input_ms')
+        return self._project(text, timer_line=timer_line, summary=summary, clock_previous=clock_previous,
+                             evidence_count=len(normalized))
+
+    def _project(self, text, *, timer_line=None, summary=False, clock_previous=None, evidence_count=0, observer=None,
+                 file_name='live-overlay.log'):
+        """Shared report projection for legacy lines and directly ingested event batches."""
+        from parser_core.reporting.battle import _build_raw_battle_report
+        from parser_core.ingestion.fields import _coerce_int, _extract_fields, _parse_prefixed_timestamp_ms
+        from parser_core.unified import overlay_snapshot_from_report
         if summary and clock_previous is not None:
             from parser_core.realtime.live_summary import clock_summary
             projected = clock_summary(clock_previous, self.state, timer_line)
@@ -456,16 +460,22 @@ class IncrementalBattleParser:
             if stamp is not None and origin is not None:
                 stamp = origin+(stamp-origin) % 86_400_000
                 state['last_context_ms'] = stamp
-                state['timer_observed_times'][len(normalized)+1] = stamp
+                state['timer_observed_times'][evidence_count+1] = stamp
             if elapsed > 0:
                 state.update(live_timer_elapsed_ms=elapsed, game_timer_end_ms=stamp,
                     game_timer_elapsed_ms=elapsed, game_timer_window_elapsed_ms=elapsed)
             text += timer_line
+        if observer is not None:
+            stamp, elapsed = observer
+            state['last_context_ms'] = stamp
+            if elapsed > 0:
+                state.update(live_timer_elapsed_ms=elapsed, game_timer_end_ms=stamp,
+                             game_timer_elapsed_ms=elapsed, game_timer_window_elapsed_ms=elapsed)
         token = ACTIVE_ALLOCATION_CACHE.set(self.frontier)
         self.frontier.summary_mode = summary
         try:
             self.report_builds += 1
-            report = _build_raw_battle_report(state, text, file_name='live-overlay.log', summary=summary, allow_empty=self.allow_empty)
+            report = _build_raw_battle_report(state, text, file_name=file_name, summary=summary, allow_empty=self.allow_empty)
         finally:
             ACTIVE_ALLOCATION_CACHE.reset(token)
         return report if summary or report is None else overlay_snapshot_from_report(report)

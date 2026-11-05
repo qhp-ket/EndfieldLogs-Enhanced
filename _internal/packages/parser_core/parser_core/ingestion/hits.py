@@ -27,6 +27,7 @@ from parser_core.ingestion.skill_identity import (
     _resolve_skill_family_key,
 )
 from parser_core.ingestion.state import IngestionState
+from parser_core.ingestion.damage_observation import DamageObservation, HIT_SEQUENCE_RE as _HIT_SEQ_RE
 from typing import Any
 import copy
 import re
@@ -39,248 +40,244 @@ _COMBO_CONSUME_SKILL_ALIASES: dict[str, dict[str, Any]] = {
     },
 }
 
-_HIT_SEQ_RE = re.compile(r"\bHP_V2\s+#(\d+)\b")
-
 _WEAPON_BUFF_RE = re.compile(r"^buff_wpn_[a-z]+_\d+_")
 
-def consume_hit_and_buff_lifecycle(ingestion: IngestionState, raw_line: str, line_no: int, ts_ms: int) -> bool:
-    current_buff_record: dict[str, Any] | None = None
+def consume_damage_observation(ingestion: IngestionState, observation: DamageObservation, line_no: int, ts_ms: int) -> bool:
+    """Update existing damage state without constructing or parsing a trace line."""
+    return _apply_damage_observation(ingestion, observation, line_no, ts_ms, own_values=True)
 
-    if " ATTR_MOD " in raw_line or " DMG_MOD " in raw_line:
-        fields = _extract_fields(raw_line)
-        buff_key = _normalize_buff_id(fields.get("buff"))
-        ingestion.pending_attr_mods[buff_key].append(
-            {
-                "attr_type": str(fields.get("attrType") or ""),
-                "bb_key": str(fields.get("bbKey") or ""),
-                "use_key": str(fields.get("useKey") or "0"),
-                "value": _safe_positive_rate(fields.get("val")),
-            }
+
+def _apply_damage_observation(ingestion: IngestionState, observation: DamageObservation, line_no: int, ts_ms: int,
+                              *, own_values: bool) -> bool:
+    source_actor = _extract_character_key(observation.source)
+    attacker_actor = _extract_character_key(observation.attacker)
+    if not source_actor and not attacker_actor and _extract_enemy_key(observation.source, observation.attacker):
+        # An explicitly identified enemy hit is outside player outgoing damage.
+        return True
+    character_key = source_actor or attacker_actor
+    target_enemy_key = _extract_enemy_key(observation.target)
+    conflicting_actor = bool(source_actor and attacker_actor and source_actor != attacker_actor)
+    if character_key is None or target_enemy_key is None or conflicting_actor:
+        ingestion.unresolved_hits.append({
+            "line_no": line_no, "ts_ms": ts_ms,
+            "source_actor": observation.source, "attacker_actor": observation.attacker,
+            "target_actor": observation.target, "raw_skill_key": observation.skill,
+            "packet_hit_value": (observation.unresolved_hit_text if observation.unresolved_hit_text is not None
+                                 else str(observation.hit) if observation.hit_observed else None),
+            "reason": "conflicting_damage_actor" if conflicting_actor else "unresolved_damage_actor",
+        })
+        return True
+    ingestion.enemy_counter[target_enemy_key] += 1
+
+    character_name = _resolve_character_name(character_key) or character_key
+    raw_hit_value = observation.hit
+    packet_hit_value = raw_hit_value if observation.hit_observed else None
+    packet_raw_value = observation.raw
+    packet_final_value = observation.final
+    has_enemy_hp_after = observation.enemy_hp_observed
+    enemy_hp_after = observation.enemy_hp
+    target_actor_id = observation.target_actor
+    source_actor_id = observation.source_actor
+    hp_state_key = _enemy_hp_state_key(target_enemy_key, target_actor_id)
+    target_entity_stats = _entity_stats_snapshot_at(ingestion.entity_stats_timelines, target_actor_id, ts_ms)
+    source_entity_stats = _entity_stats_snapshot_at(ingestion.entity_stats_timelines, source_actor_id, ts_ms)
+    hit_value = _cap_enemy_overkill_damage(
+        raw_hit_value,
+        enemy_hp_after=enemy_hp_after if has_enemy_hp_after else None,
+        previous_enemy_hp=ingestion.last_enemy_hp_by_target.get(hp_state_key),
+    )
+    damage_value_source = "packet_hit"
+    if packet_hit_value is None:
+        damage_value_source = "missing_packet_hit"
+    elif hit_value != raw_hit_value:
+        damage_value_source = "packet_hit_overkill_capped"
+    if has_enemy_hp_after:
+        ingestion.last_enemy_hp_by_target[hp_state_key] = enemy_hp_after
+    crit_flag = observation.critical
+    raw_skill_key = observation.skill or "unknown_skill"
+    original_template_int_id = observation.original_template
+    action_id = observation.action
+    damage_unit_index = observation.unit_index
+    damage_unit_index_source = None
+    skill_key = (
+        _canonical_hit_skill_id_from_cast_context(
+            raw_skill_key,
+            character_key,
+            ts_ms,
+            original_template_int_id=original_template_int_id,
+            target_enemy_key=target_enemy_key,
+            recent_skill_casts_by_char=ingestion.recent_skill_casts_by_char,
+            recent_numeric_buffs_by_source=ingestion.recent_numeric_buffs_by_source,
+            action_id=action_id,
+            damage_unit_index=damage_unit_index,
+            template_type=observation.template_type,
         )
+        or _canonical_hit_skill_id(raw_skill_key, character_key)
+    )
+    skill_name = _resolve_skill_name(skill_key) or skill_key
+    hit_index = observation.hit_index
+    skill_profile = _resolve_skill_profile(skill_key)
+    skill_group_type = None
+    skill_family_key = _resolve_skill_family_key(skill_key, skill_profile)
+    if skill_profile is not None:
+        try:
+            skill_group_type = int(skill_profile.get("group_type"))
+        except (TypeError, ValueError):
+            skill_group_type = None
+    alias_combo_consume = _COMBO_CONSUME_SKILL_ALIASES.get(skill_key)
+    if alias_combo_consume is not None:
+        skill_group_type = int(alias_combo_consume["group_type"])
+        skill_family_key = str(alias_combo_consume["family_skill_key"])
+
+    seq = observation.sequence if observation.sequence is not None else len(ingestion.hits) + 1
+    dynamic_bb_values = dict(observation.dynamic_values) if own_values else observation.dynamic_values
+    calc_bb_values = copy.deepcopy(observation.calculation_values) if own_values else observation.calculation_values
+    action_damage_element = _infer_skill_action_damage_element(
+        skill_key,
+        action_id,
+        damage_unit_index,
+    )
+    static_damage_decorate_mask = None
+    static_damage_decorate_mask_source = None
+    damage_calculation = None
+    if action_id is not None and damage_unit_index is not None:
+        exact_units = [unit for unit in _load_skill_action_damage_units(str(skill_key)).get(action_id, [])
+                       if type(unit.get('index')) is int and unit['index'] == damage_unit_index
+                       and unit.get('damage_attribute_type') == 'hp']
+        if len(exact_units) == 1 and exact_units[0].get('damage_attribute_type') == 'hp':
+            unit = exact_units[0]
+            if type(unit.get('damage_decorate_mask')) is int:
+                static_damage_decorate_mask = unit['damage_decorate_mask']
+                static_damage_decorate_mask_source = unit.get('damage_decorate_mask_source')
+            damage_calculation = copy.deepcopy(unit.get('damage_calculation'))
+    damage_element = action_damage_element
+    damage_school = _damage_school_from_element(damage_element)
+    hit = {
+        "seq": seq,
+        "line_no": line_no,
+        "ts_ms": ts_ms,
+        "character_key": character_key,
+        "character_name": character_name,
+        "target_enemy_key": target_enemy_key,
+        "target_enemy_name": _resolve_enemy_name(target_enemy_key) or target_enemy_key,
+        "raw_skill_key": raw_skill_key,
+        "target_actor_id": target_actor_id,
+        "source_actor_id": source_actor_id,
+        "skill_key": skill_key,
+        "skill_name": skill_name,
+        "skill_level": observation.skill_level,
+        "template_int_id": observation.template_integer,
+        "event_inst_id": observation.event_instance,
+        "event_owner_id": observation.event_owner,
+        "packet_seq_id": observation.packet_sequence,
+        "packet_session_id": observation.packet_session or None,
+        "packet_owner_id": observation.packet_owner,
+        "packet_generation": observation.packet_generation,
+        "client_tick_ms": observation.client_tick,
+        "action_id": action_id,
+        "damage_unit_index": damage_unit_index,
+        "damage_unit_index_source": damage_unit_index_source,
+        "original_template_int_id": original_template_int_id,
+        "dynamic_bb_signature": observation.dynamic_signature,
+        "dynamic_bb_values": dynamic_bb_values,
+        "calc_bb_signature": observation.calculation_signature,
+        "calc_bb_values": calc_bb_values,
+        "damage_element": damage_element,
+        "damage_school": damage_school,
+        "damage_element_source": "official_action_unit" if damage_element else None,
+        "damage_decorate_mask": None,
+        "damage_decorate_mask_source": None,
+        "static_damage_decorate_mask": static_damage_decorate_mask,
+        "static_damage_decorate_mask_source": static_damage_decorate_mask_source,
+        "damage_calculation": damage_calculation,
+        "skill_group_type": skill_group_type,
+        "skill_family_key": skill_family_key,
+        "hit_value": hit_value,
+        "raw_hit_value": raw_hit_value,
+        "packet_hit_value": packet_hit_value,
+        "packet_raw_value": packet_raw_value,
+        "packet_final_value": packet_final_value,
+        "damage_value_source": damage_value_source,
+        "rdps_basis_value": hit_value,
+        "rdps_basis_source": damage_value_source,
+        "overkill_damage": max(0, raw_hit_value - hit_value),
+        "enemy_hp_after": enemy_hp_after,
+        "enemy_hp_after_observed": has_enemy_hp_after,
+        "crit_flag": crit_flag,
+        "critical_flag_observed": observation.critical_observed,
+        "critical_observation": copy.deepcopy(ingestion.critical_stats_by_actor.get(source_actor_id)),
+        "part_inst_id": observation.part_instance,
+        "hit_index": hit_index,
+        "dpd_raw": None,
+        "baseline": ingestion.baseline_by_character.get(character_key),
+        "packet_modifier_seen": False,
+        "packet_modifier_uids": {"attacker": [], "defender": []},
+        "packet_attr_details": {"attacker": [], "defender": []},
+    }
+    _is_arts_strength_damage_hit(hit)
+    _attach_target_entity_stats(hit, target_entity_stats)
+    _attach_attacker_entity_stats(hit, source_entity_stats)
+    # Scene snapshots are observations at their own timestamp. They do
+    # not establish current-hit modifier state or passive coverage.
+    ingestion.hits.append(hit)
+    ingestion.hits_by_seq[seq] = hit
+    if ingestion.loadout_by_char and character_key not in ingestion.loadout_by_char:
+        # A battle actor outside the frozen loadout proves that the
+        # client carried an old bag team across an empty dungeon-team
+        # packet. Stop using that loadout for subsequent inference.
+        ingestion.loadout_by_char.clear()
+        ingestion.active_suits_by_char.clear()
+        ingestion.active_weapons_by_char.clear()
+    if character_key not in ingestion.roster_seen:
+        ingestion.roster_seen.add(character_key)
+        ingestion.roster_order.append(character_key)
+
+    participant = ingestion.participant_totals[character_key]
+    participant["character_key"] = character_key
+    participant["character_name"] = character_name
+    participant["total_damage"] += hit_value
+    participant["max_hit"] = max(participant["max_hit"], hit_value)
+    participant["crit_hits"] += 1 if crit_flag else 0
+    participant["hit_count"] += 1
+
+    skill_entry = ingestion.skill_totals[(character_key, skill_key)]
+    skill_entry["character_key"] = character_key
+    skill_entry["character_name"] = character_name
+    skill_entry["skill_key"] = skill_key
+    skill_entry["skill_name"] = skill_name
+    skill_entry["total_damage"] += hit_value
+    skill_entry["max_damage"] = max(skill_entry["max_damage"], hit_value)
+    skill_entry["hit_count"] += 1
+    if hit_index == 1:
+        skill_entry["cast_count"] += 1
+
+    ingestion.pending_buff_record = None
+    return False
+
+
+def observe_legacy_modifier(ingestion: IngestionState, fields) -> None:
+    buff_key = _normalize_buff_id(fields.get('buff'))
+    ingestion.pending_attr_mods[buff_key].append({
+        'attr_type': str(fields.get('attrType') or ''), 'bb_key': str(fields.get('bbKey') or ''),
+        'use_key': str(fields.get('useKey') or '0'), 'value': _safe_positive_rate(fields.get('val')),
+    })
+
+
+def consume_hit_and_buff_lifecycle(ingestion: IngestionState, raw_line: str, line_no: int, ts_ms: int) -> bool:
+    if " ATTR_MOD " in raw_line or " DMG_MOD " in raw_line:
+        observe_legacy_modifier(ingestion, _extract_fields(raw_line))
 
     if " HP_V2 " in raw_line:
-        fields = _extract_fields(raw_line)
-        source_actor = _extract_character_key(fields.get("src"))
-        attacker_actor = _extract_character_key(fields.get("atk"))
-        if not source_actor and not attacker_actor and _extract_enemy_key(fields.get("src"), fields.get("atk")):
-            # An explicitly identified enemy hit is outside player outgoing damage.
-            return True
-        character_key = source_actor or attacker_actor
-        target_enemy_key = _extract_enemy_key(fields.get("tgt"))
-        conflicting_actor = bool(source_actor and attacker_actor and source_actor != attacker_actor)
-        if character_key is None or target_enemy_key is None or conflicting_actor:
-            ingestion.unresolved_hits.append({
-                "line_no": line_no, "ts_ms": ts_ms,
-                "source_actor": fields.get("src"), "attacker_actor": fields.get("atk"),
-                "target_actor": fields.get("tgt"), "raw_skill_key": fields.get("skill"),
-                "packet_hit_value": fields.get("hit"),
-                "reason": "conflicting_damage_actor" if conflicting_actor else "unresolved_damage_actor",
-            })
-            return True
-        ingestion.enemy_counter[target_enemy_key] += 1
+        return _apply_damage_observation(ingestion, DamageObservation.from_legacy(raw_line), line_no, ts_ms, own_values=False)
 
-        character_name = _resolve_character_name(character_key) or character_key
-        raw_hit_value = _coerce_int(fields.get("hit"))
-        packet_hit_value = raw_hit_value if fields.get("hit") is not None else None
-        packet_raw_value = _coerce_optional_float(fields.get("raw"))
-        packet_final_value = _coerce_optional_float(fields.get("packetFinalValue"))
-        has_enemy_hp_after = "eHP" in fields
-        enemy_hp_after = _coerce_int(fields.get("eHP"))
-        target_actor_id = fields.get("tgtId") if re.fullmatch(r"[1-9]\d*", fields.get("tgtId", "")) else None
-        source_actor_id = fields.get("atkId") if re.fullmatch(r"[1-9]\d*", fields.get("atkId", "")) else None
-        hp_state_key = _enemy_hp_state_key(target_enemy_key, target_actor_id)
-        target_entity_stats = _entity_stats_snapshot_at(ingestion.entity_stats_timelines, target_actor_id, ts_ms)
-        source_entity_stats = _entity_stats_snapshot_at(ingestion.entity_stats_timelines, source_actor_id, ts_ms)
-        hit_value = _cap_enemy_overkill_damage(
-            raw_hit_value,
-            enemy_hp_after=enemy_hp_after if has_enemy_hp_after else None,
-            previous_enemy_hp=ingestion.last_enemy_hp_by_target.get(hp_state_key),
-        )
-        damage_value_source = "packet_hit"
-        if packet_hit_value is None:
-            damage_value_source = "missing_packet_hit"
-        elif hit_value != raw_hit_value:
-            damage_value_source = "packet_hit_overkill_capped"
-        if has_enemy_hp_after:
-            ingestion.last_enemy_hp_by_target[hp_state_key] = enemy_hp_after
-        crit_flag = _coerce_int(fields.get("critFlag"))
-        raw_skill_key = fields.get("skill") or "unknown_skill"
-        original_template_int_id = _coerce_int(fields.get("origTemplateIntId"), default=0) or None
-        action_id = int(fields["actionId"]) if re.fullmatch(r"\d+", fields.get("actionId", "")) else None
-        damage_unit_index = int(fields["damageUnitIndex"]) if re.fullmatch(r"\d+", fields.get("damageUnitIndex", "")) else None
-        damage_unit_index_source = None
-        skill_key = (
-            _canonical_hit_skill_id_from_cast_context(
-                raw_skill_key,
-                character_key,
-                ts_ms,
-                original_template_int_id=original_template_int_id,
-                target_enemy_key=target_enemy_key,
-                recent_skill_casts_by_char=ingestion.recent_skill_casts_by_char,
-                recent_numeric_buffs_by_source=ingestion.recent_numeric_buffs_by_source,
-                action_id=action_id,
-                damage_unit_index=damage_unit_index,
-                template_type=fields.get("templateType"),
-            )
-            or _canonical_hit_skill_id(raw_skill_key, character_key)
-        )
-        skill_name = _resolve_skill_name(skill_key) or skill_key
-        hit_index = _coerce_int(fields.get("hits"), default=1)
-        skill_profile = _resolve_skill_profile(skill_key)
-        skill_group_type = None
-        skill_family_key = _resolve_skill_family_key(skill_key, skill_profile)
-        if skill_profile is not None:
-            try:
-                skill_group_type = int(skill_profile.get("group_type"))
-            except (TypeError, ValueError):
-                skill_group_type = None
-        alias_combo_consume = _COMBO_CONSUME_SKILL_ALIASES.get(skill_key)
-        if alias_combo_consume is not None:
-            skill_group_type = int(alias_combo_consume["group_type"])
-            skill_family_key = str(alias_combo_consume["family_skill_key"])
+    phase = 'start' if " BUFF_START " in raw_line else 'end' if " BUFF_END " in raw_line else None
+    return apply_buff_lifecycle(ingestion, phase, _extract_fields(raw_line) if phase else {}, line_no, ts_ms)
 
-        seq_match = _HIT_SEQ_RE.search(raw_line)
-        seq = int(seq_match.group(1)) if seq_match else len(ingestion.hits) + 1
-        dynamic_bb_values: dict[int, float] = {}
-        for token in re.split(r"[,;]", str(fields.get("dynBB") or "")):
-            key_text, separator, value_text = token.partition(":")
-            key = _coerce_optional_int(key_text)
-            value = _coerce_optional_float(value_text) if separator else None
-            if key is not None and value is not None:
-                dynamic_bb_values[key] = value
-        calc_bb_values: dict[int, dict[str, float | str]] = {}
-        for token in re.split(r"[,;]", str(fields.get("calcBB") or "")):
-            group_text, separator, assignment = token.partition(":")
-            group = _coerce_optional_int(group_text)
-            key_text, assignment_separator, value_text = assignment.partition("=")
-            if group is None or not separator or not assignment_separator or not key_text:
-                continue
-            numeric_value = _coerce_optional_float(value_text)
-            calc_bb_values.setdefault(group, {})[key_text] = (
-                numeric_value if numeric_value is not None else value_text
-            )
-        action_damage_element = _infer_skill_action_damage_element(
-            skill_key,
-            action_id,
-            damage_unit_index,
-        )
-        static_damage_decorate_mask = None
-        static_damage_decorate_mask_source = None
-        damage_calculation = None
-        if action_id is not None and damage_unit_index is not None:
-            exact_units = [unit for unit in _load_skill_action_damage_units(str(skill_key)).get(action_id, [])
-                           if type(unit.get('index')) is int and unit['index'] == damage_unit_index
-                           and unit.get('damage_attribute_type') == 'hp']
-            if len(exact_units) == 1 and exact_units[0].get('damage_attribute_type') == 'hp':
-                unit = exact_units[0]
-                if type(unit.get('damage_decorate_mask')) is int:
-                    static_damage_decorate_mask = unit['damage_decorate_mask']
-                    static_damage_decorate_mask_source = unit.get('damage_decorate_mask_source')
-                damage_calculation = copy.deepcopy(unit.get('damage_calculation'))
-        damage_element = action_damage_element
-        damage_school = _damage_school_from_element(damage_element)
-        hit = {
-            "seq": seq,
-            "line_no": line_no,
-            "ts_ms": ts_ms,
-            "character_key": character_key,
-            "character_name": character_name,
-            "target_enemy_key": target_enemy_key,
-            "target_enemy_name": _resolve_enemy_name(target_enemy_key) or target_enemy_key,
-            "raw_skill_key": raw_skill_key,
-            "target_actor_id": target_actor_id,
-            "source_actor_id": source_actor_id,
-            "skill_key": skill_key,
-            "skill_name": skill_name,
-            "skill_level": _coerce_int(fields.get("skillLv"), default=0) or None,
-            "template_int_id": _coerce_int(fields.get("templateIntId"), default=0) or None,
-            "event_inst_id": fields.get("eventInstId") if re.fullmatch(r"[1-9]\d*", fields.get("eventInstId", "")) else None,
-            "event_owner_id": fields.get("eventOwnerId") if re.fullmatch(r"[1-9]\d*", fields.get("eventOwnerId", "")) else None,
-            "packet_seq_id": int(fields["packetSeq"]) if re.fullmatch(r"\d+", fields.get("packetSeq", "")) else None,
-            "packet_session_id": fields.get('packetSessionId') or None,
-            "packet_owner_id": (fields.get('packetOwnerId') if re.fullmatch(r'[1-9]\d*', fields.get('packetOwnerId', ''))
-                                and int(fields['packetOwnerId']) < 2**64 else None),
-            "packet_generation": (int(fields['packetGeneration']) if re.fullmatch(r'\d+', fields.get('packetGeneration', '')) else None),
-            "client_tick_ms": int(fields["clientTick"]) if re.fullmatch(r"\d+", fields.get("clientTick", "")) else None,
-            "action_id": action_id,
-            "damage_unit_index": damage_unit_index,
-            "damage_unit_index_source": damage_unit_index_source,
-            "original_template_int_id": original_template_int_id,
-            "dynamic_bb_signature": fields.get("dynBB"),
-            "dynamic_bb_values": dynamic_bb_values,
-            "calc_bb_signature": fields.get("calcBB"),
-            "calc_bb_values": calc_bb_values,
-            "damage_element": damage_element,
-            "damage_school": damage_school,
-            "damage_element_source": "official_action_unit" if damage_element else None,
-            "damage_decorate_mask": None,
-            "damage_decorate_mask_source": None,
-            "static_damage_decorate_mask": static_damage_decorate_mask,
-            "static_damage_decorate_mask_source": static_damage_decorate_mask_source,
-            "damage_calculation": damage_calculation,
-            "skill_group_type": skill_group_type,
-            "skill_family_key": skill_family_key,
-            "hit_value": hit_value,
-            "raw_hit_value": raw_hit_value,
-            "packet_hit_value": packet_hit_value,
-            "packet_raw_value": packet_raw_value,
-            "packet_final_value": packet_final_value,
-            "damage_value_source": damage_value_source,
-            "rdps_basis_value": hit_value,
-            "rdps_basis_source": damage_value_source,
-            "overkill_damage": max(0, raw_hit_value - hit_value),
-            "enemy_hp_after": enemy_hp_after,
-            "enemy_hp_after_observed": has_enemy_hp_after,
-            "crit_flag": crit_flag,
-            "critical_flag_observed": fields.get("critFlag") in {"0", "1"},
-            "critical_observation": copy.deepcopy(ingestion.critical_stats_by_actor.get(source_actor_id)),
-            "part_inst_id": _coerce_optional_int(fields.get("partInstId")),
-            "hit_index": hit_index,
-            "dpd_raw": None,
-            "baseline": ingestion.baseline_by_character.get(character_key),
-            "packet_modifier_seen": False,
-            "packet_modifier_uids": {"attacker": [], "defender": []},
-            "packet_attr_details": {"attacker": [], "defender": []},
-        }
-        _is_arts_strength_damage_hit(hit)
-        _attach_target_entity_stats(hit, target_entity_stats)
-        _attach_attacker_entity_stats(hit, source_entity_stats)
-        # Scene snapshots are observations at their own timestamp. They do
-        # not establish current-hit modifier state or passive coverage.
-        ingestion.hits.append(hit)
-        ingestion.hits_by_seq[seq] = hit
-        if ingestion.loadout_by_char and character_key not in ingestion.loadout_by_char:
-            # A battle actor outside the frozen loadout proves that the
-            # client carried an old bag team across an empty dungeon-team
-            # packet. Stop using that loadout for subsequent inference.
-            ingestion.loadout_by_char.clear()
-            ingestion.active_suits_by_char.clear()
-            ingestion.active_weapons_by_char.clear()
-        if character_key not in ingestion.roster_seen:
-            ingestion.roster_seen.add(character_key)
-            ingestion.roster_order.append(character_key)
 
-        participant = ingestion.participant_totals[character_key]
-        participant["character_key"] = character_key
-        participant["character_name"] = character_name
-        participant["total_damage"] += hit_value
-        participant["max_hit"] = max(participant["max_hit"], hit_value)
-        participant["crit_hits"] += 1 if crit_flag else 0
-        participant["hit_count"] += 1
-
-        skill_entry = ingestion.skill_totals[(character_key, skill_key)]
-        skill_entry["character_key"] = character_key
-        skill_entry["character_name"] = character_name
-        skill_entry["skill_key"] = skill_key
-        skill_entry["skill_name"] = skill_name
-        skill_entry["total_damage"] += hit_value
-        skill_entry["max_damage"] = max(skill_entry["max_damage"], hit_value)
-        skill_entry["hit_count"] += 1
-        if hit_index == 1:
-            skill_entry["cast_count"] += 1
-
-    elif " BUFF_START " in raw_line:
-        fields = _extract_fields(raw_line)
+def apply_buff_lifecycle(ingestion: IngestionState, phase: str | None, fields, line_no: int, ts_ms: int) -> bool:
+    """Shared lifecycle state; the legacy reader alone extracts string fields."""
+    current_buff_record = None
+    if phase == 'start':
         owner_value = str(fields.get("owner") or "")
         owner_key = _extract_character_key(owner_value)
         target_enemy_key = _extract_enemy_key(fields.get("owner"))
@@ -432,8 +429,7 @@ def consume_hit_and_buff_lifecycle(ingestion: IngestionState, raw_line: str, lin
             ingestion.active_buff_starts_by_uid[uid_key] = buff_record
         current_buff_record = buff_record
 
-    elif " BUFF_END " in raw_line:
-        fields = _extract_fields(raw_line)
+    elif phase == "end":
         uid = str(fields.get("uid") or "")
         if uid:
             for unresolved in ingestion.unresolved_buff_actions:

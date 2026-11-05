@@ -12,6 +12,7 @@ from typing import Any
 
 from parser_core.catalog.dungeons import _resolve_dungeon_context
 from parser_core.reporting.totals import _new_participant_totals, _new_skill_totals
+from parser_core.timing.timer_evidence import TimerEvidenceCollector
 
 
 class IngestionState:
@@ -108,6 +109,8 @@ class IngestionState:
         self.poise_damage_events: list[dict[str, Any]] = []
         self.timestamp_clock_origin: int | None = None
         self.timer_observed_times: dict[int, int] = {}
+        self.official_timer_collector = TimerEvidenceCollector()
+        self.evidence_count = 0
 
     def set_dungeon_context(self, raw_dungeon_id: str | None) -> None:
         context_id = str(raw_dungeon_id or "").strip()
@@ -162,7 +165,11 @@ class IngestionState:
             'skill_casts': self.skill_casts,
             'timer_end_seen': self.timer_end_seen,
             'timer_observed_times': self.timer_observed_times,
+            'has_official_timer_evidence': True,
+            'official_timer_evidence': self.official_timer_collector.evidence,
+            'evidence_count': self.evidence_count,
             'timestamp_clock_origin': self.timestamp_clock_origin,
+            'trace_identity_inference_seen': self.trace_identity_inference_seen,
             'timer_start_seen': self.timer_start_seen,
             'timer_window_valid': self.timer_window_valid,
             'unresolved_buff_actions': self.unresolved_buff_actions,

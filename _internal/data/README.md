@@ -1,13 +1,14 @@
 # 运行数据维护
 
 开发环境与便携版共用精简数据。基准为 ZMDLogs 3.0.12（2026-10-16），另含四份项目维护规则。
-解析数据 2,740 个文件，约 16.9 MB；源码恢复包 `runtime-data.zip` 约 5.8 MB。体积使用十进制 MB。
+解析数据 2,786 个文件，约 16.9 MB；源码恢复包 `runtime-data.zip` 约 5.8 MB。体积使用十进制 MB。
 
 ## 来源与保留范围
 
 | 内容 | 来源记录 |
 | --- | --- |
 | `runtime-data.zip` | 固定 ZMDLogs 发行包，地址与 SHA-256 见 `resource-manifest.json`；`akedata` 保留上游目录名 |
+| 明河角色及技能补充 | AKEData `1.6.4@11529267-11`；角色、潜能、技能分组、技能/Buff 配置、技能帧与技力参考的输入 SHA-256、资产 MD5 和版本见清单 `supplements`，未扩展 typed 伤害证据及 rDPS 批准规则 |
 | `local_semantics/team_energy_rules.json` | [AKEDatabase](https://github.com/NagiYume/AKEDatabase) 技力机制与技能表，提交 `31b53147cd88fb6e9576b5c389967d21687c85cf` 及表哈希见 `source` |
 | `local_semantics/skill_frame_rules.json` | AKEDatabase SkillData，资源时间、摘要和文件数见 `source` |
 | `game_resource_snapshot.json`、`packet_semantics/rdps_semantics_registry.json` | 本项目维护的元数据及解析规则，含输入哈希和证据 |
@@ -15,6 +16,7 @@
 
 来源和已有许可声明见根目录 `THIRD_PARTY_NOTICES.md`。
 头像是独立展示资源，解析字段投影单独存入 `runtime-data.zip`。
+原生时间轴的技能名称字典另记录 `_source.supplements`；镇影和替换战技奔霆分别展示，分类均为战技。
 
 提取规则按目录和静态字段保留：
 
@@ -83,6 +85,7 @@ python -B _development/tools/verify_runtime_projection.py `
 
 1. 核对完整发行 ZIP、SHA-256、解码版本，更新 `SOURCE`、输入清单及 typed 证据绑定；保留基准目录用于比较。
 2. 同步 manifest、数字映射、技能/Buff 条目和四份开发规则；新增 rDPS 效果单独审核批准。
+   清单中的 AKEData 补充需一并保留或以已核验新版本替换，同时同步原生时间轴名称字典，避免重建旧基准时丢失新角色。
 3. 在新目录提取、对照，并运行应用、parser_core、uploader_core 回归。
 4. 审核后调用 `activate(project_root, projection_root)`，或在新输出目录重提取并加 `--install`。
 5. 生成恢复 ZIP 和清单，再构建便携包。安装前完整校验并归档基准输入，ZIP 使用固定时间戳。

@@ -21,6 +21,7 @@ MOD_NOREPEAT = 0x4000
 
 GLOBAL_HOTKEY_ID = 0xB100
 GUI_HOTKEY_ID = 0xB101
+RECORDING_HOTKEY_ID = 0xB102
 
 USER32 = ctypes.WinDLL("user32", use_last_error=True) if sys.platform == "win32" else None
 
@@ -84,6 +85,44 @@ def _portable_hotkey_to_native(hotkey: str) -> tuple[int, int] | None:
 
 
 class OverlayHotkeys:
+    def _update_recording_shortcut(self, hotkey=None):
+        target = hotkey or self.app_config.toggle_recording_hotkey
+        native = _portable_hotkey_to_native(target)
+        status = self.settings_page.recording_hotkey_status
+        if sys.platform != 'win32' or USER32 is None or native is None:
+            status.setText('记录快捷键不可用，请使用首页按钮')
+            return False
+        previous = self._registered_recording_hotkey
+        self._unregister_recording_hotkey()
+        if USER32.RegisterHotKey(int(self.winId()), RECORDING_HOTKEY_ID, native[0] | MOD_NOREPEAT, native[1]):
+            self._recording_hotkey_registered = True
+            self._registered_recording_hotkey = target
+            status.setText(f'记录全局快捷键：{target}')
+            return True
+        old = _portable_hotkey_to_native(previous) if previous else None
+        if old and USER32.RegisterHotKey(int(self.winId()), RECORDING_HOTKEY_ID, old[0] | MOD_NOREPEAT, old[1]):
+            self._recording_hotkey_registered = True
+            self._registered_recording_hotkey = previous
+        status.setText(f'快捷键冲突：{target}')
+        return False
+
+    def _unregister_recording_hotkey(self):
+        if sys.platform == 'win32' and USER32 is not None and self._recording_hotkey_registered:
+            USER32.UnregisterHotKey(int(self.winId()), RECORDING_HOTKEY_ID)
+        self._recording_hotkey_registered = False
+
+    def _hotkey_capture_changed(self, active):
+        if self._closing:
+            return
+        if active:
+            self._unregister_gui_hotkey()
+            self._unregister_overlay_hotkey()
+            self._unregister_recording_hotkey()
+        else:
+            self._update_gui_shortcut()
+            self._update_overlay_shortcut()
+            self._update_recording_shortcut()
+
     def _update_gui_shortcut(self,hotkey=None):
         target=hotkey or self.app_config.toggle_gui_hotkey
         native=_portable_hotkey_to_native(target)
@@ -158,5 +197,8 @@ class OverlayHotkeys:
                     return True, 0
                 if msg.message == WM_HOTKEY and int(msg.wParam) == GUI_HOTKEY_ID:
                     self._toggle_gui_visibility()
+                    return True, 0
+                if msg.message == WM_HOTKEY and int(msg.wParam) == RECORDING_HOTKEY_ID:
+                    self._toggle_recording()
                     return True, 0
         return super().nativeEvent(eventType, message)

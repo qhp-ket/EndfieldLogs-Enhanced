@@ -25,23 +25,21 @@ class ContentFitter(QObject):
         self.reset_position = window.entry.geometry is None
         self.default_anchor = self.reset_position
         self.layout_style = 'bars' if window.canvas.bars else 'circles'
-        self.bar_width = (window.width() if self.layout_style == 'bars' and window.entry.geometry else None)
         self.timer = QTimer(self)
         self.timer.setSingleShot(True)
         self.timer.timeout.connect(self._apply)
-    def window_resized(self):
+    def window_resized(self, previous_size):
         window = self.window
         if self.resizing or self.reset_position or self.reference is None or window._drag_size is not None:
             return
         width, height = self.reference
-        if self.window.canvas.bars:
-            self.scale = window.height()/height
-            self.bar_width = window.width()
-        else:
-            self.scale = min(window.width()/width, window.height()/height)
+        use_width = (previous_size.width() <= 0 or previous_size.height() <= 0
+                     or abs(window.width()/previous_size.width()-1)
+                     >= abs(window.height()/previous_size.height()-1))
+        self.scale = window.width()/width if use_width else window.height()/height
         self.default_anchor = False
-        self.pending = None
-        self.timer.stop()
+        self.pending = self.reference
+        self.timer.start(0)
 
     def window_moved(self):
         if not self.resizing and not self.reset_position:
@@ -53,8 +51,6 @@ class ContentFitter(QObject):
         style_changed = self.window.canvas.bars != (self.layout_style == 'bars')
         if not self.reset_position and not style_changed and self.reference == (width,height):
             return
-        if style_changed:
-            self.bar_width = None
         self.layout_style = 'bars' if self.window.canvas.bars else 'circles'
         self.pending = (width, height)
         if self.reference is None:
@@ -78,16 +74,13 @@ class ContentFitter(QObject):
         self.reference = (width, height)
         screen = window.screen()
         area = screen.availableGeometry() if screen else None
+        self.scale = max(self.scale, window.minimumWidth()/width, window.minimumHeight()/height)
         if area:
             self.scale = min(self.scale, max(window.minimumWidth(), area.width())/width,
                              max(window.minimumHeight(), area.height())/height)
         # Clamp the common scale first; independently clamping dimensions leaves
         # empty space below the table and changes height again on the next open.
         target_width = max(window.minimumWidth(), math.ceil(width*self.scale))
-        if self.window.canvas.bars and self.bar_width:
-            target_width = max(window.minimumWidth(), self.bar_width)
-            if area:
-                target_width = min(target_width, max(window.minimumWidth(), area.width()))
         target_height = max(window.minimumHeight(), math.ceil(height*self.scale))
         right = window.x()+window.width()
         self.resizing = True

@@ -23,7 +23,7 @@ class Input:
         self.running = False
         self.calls.append(('stop', wait))
 
-    def set_trace(self, path):
+    def set_trace(self, path, *, notify=True):
         self.calls.append(('trace', path))
 
     def snapshot(self):
@@ -60,13 +60,15 @@ def controller(tmp_path):
     return value, streams
 
 
-def test_capture_stop_clears_associations_and_keeps_recording_and_visual_demand(controller):
+def test_capture_stop_closes_input_and_keeps_enabled_preference_and_visual_demand(controller):
     value, streams = controller
     value.start_input()
+    assert not value.input.running
+    value.set_recording(True, Path('trace-a.log'))
     value.set_requirements({'analysis_summary', 'combo_snapshot'})
     assert streams == [frozenset({'analysis_summary'})]
     assert value.vision.enabled
-    assert value.input.calls[0] == ('start', value.game_executable(), value.settings.current.service.log_dir, True)
+    assert value.input.calls[1] == ('start', value.game_executable(), value.settings.current.service.log_dir, True)
     value.set_session('session-a')
     members = [SimpleNamespace(templateid='character')]
     value.set_members(members)
@@ -76,7 +78,7 @@ def test_capture_stop_clears_associations_and_keeps_recording_and_visual_demand(
     value.capture_stopped()
     assert value.vision.identities[-1] == ([], None)
     assert value.input.calls[-1] == ('trace', None)
-    assert value.input.running and value.vision.enabled
+    assert not value.input.running and value.vision.enabled and value.input_enabled
     value.set_session('session-b')
     assert value.vision.identities[-1] == ([], 'session-b')
 
@@ -113,15 +115,22 @@ def test_closed_controller_rejects_late_ui_requests_and_owner_thread_changes(con
     value.start_input()
     value.set_session('late')
     value.set_trace('late.log')
+    value.set_recording(True, 'late.log')
     assert not value.input.calls and not value.vision.enabled and not value.vision.identities
 
 
-def test_toggle_persists_launch_preferences_without_restoring_runtime_state(controller):
+def test_enable_preference_persists_but_waits_for_recording(controller):
     value, _ = controller
-    value.settings.current.start_input_recording_on_launch = True
     value.toggle_input()
-    assert value.input.running
+    assert value.input_enabled and not value.input.running
     saved = load_app_config(value.settings.path)
-    assert saved.start_input_recording_on_launch and not saved.input_recording_enabled
+    assert saved.start_input_recording_on_launch
+    value.set_recording(True, Path('first.jsonl'))
+    assert value.input.running
+    value.set_recording(False)
+    assert not value.input.running and value.input_enabled
+    value.set_recording(True, Path('second.jsonl'))
+    assert value.input.running
     value.toggle_input()
-    assert not value.input.running
+    assert not value.input.running and not value.input_enabled
+    assert not load_app_config(value.settings.path).start_input_recording_on_launch

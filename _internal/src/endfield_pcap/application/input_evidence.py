@@ -81,7 +81,7 @@ class InputEvidenceController:
         bindings = self._store.current.input_log_bindings
         key = record_key(record)
         saved = read_binding(bindings.get(key), record.file_path)
-        self._paths = ([saved['path']] if saved['path'] else []) if key in bindings else discover(record.file_path)[:1]
+        self._paths = saved['paths'] if key in bindings else discover(record.file_path)
         self._visible, self._manual = saved['visible'], saved['manual']
         self._offset, self._start_override = saved['offset_ms'], saved['start_override']
         self._slots = saved['manual_slots']
@@ -133,6 +133,7 @@ class InputEvidenceController:
         if self._record:
             self._store.set_input_binding(self._record, write_binding(
                 self._trace_path, self._paths[0] if self._paths else None,
+                paths=self._paths,
                 visible=self._visible, offset_ms=self._offset, start_override=self._start_override,
                 manual_slots=self._slots, manual=self._manual))
 
@@ -173,12 +174,14 @@ class InputEvidenceController:
 
     def relocate(self, old, new):
         self._assert_owner()
-        if self._closed or self._trace_path != old:
+        if self._closed:
             return
-        self._record = relocate_key(self._record, old, new)
-        self._trace_path = new
-        binding = read_binding(self._store.current.input_log_bindings.get(self._record), new)
-        self._paths = [binding['path']] if binding['path'] else []
+        if self._trace_path == old:
+            self._record = relocate_key(self._record, old, new)
+            self._trace_path = new
+        bindings = self._store.current.input_log_bindings
+        binding = read_binding(bindings.get(self._record), self._trace_path)
+        self._paths = binding['paths'] if self._record in bindings else discover(self._trace_path)
         self.reload()
 
     def drain(self):

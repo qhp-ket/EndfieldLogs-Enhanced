@@ -69,8 +69,10 @@ def build_empty_report(report_state: ReportState, official_timer_observed_elapse
                 if report_state.dungeon_context_id
                 else "missing_dungeon_context"
             ),
-            "battle_start_at": _build_iso_datetime(report_state.reference_date, anchor_ms),
-            "battle_end_at": _build_iso_datetime(report_state.reference_date, end_ms),
+            "battle_start_at": _build_iso_datetime(report_state.reference_date, anchor_ms,
+                timezone_offset_minutes=report_state.reference_timezone_offset_minutes),
+            "battle_end_at": _build_iso_datetime(report_state.reference_date, end_ms,
+                timezone_offset_minutes=report_state.reference_timezone_offset_minutes),
             "duration_ms": 0,
             "time_source": time_source,
             "timeline_zero_source": time_source,

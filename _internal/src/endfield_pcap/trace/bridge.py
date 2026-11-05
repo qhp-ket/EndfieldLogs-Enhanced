@@ -2,6 +2,7 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
+from parser_core.trace_jsonl import TraceEvent
 from endfield_pcap.capture.resolver import PacketResolver
 from endfield_pcap.trace.formatting import _intish
 from endfield_pcap.trace.observations import (
@@ -44,9 +45,20 @@ class TraceBridge(BattleContext, ActorEvents, SkillEvents, DamageEvents, BuffEve
         self, trace_file: Path | None = None, *,
         line_sink: Callable[[str], None] | None = None,
         write_enabled: bool = True,
+        damage_sink: Callable[[TraceEvent], None] | None = None,
+        event_sink: Callable[[TraceEvent], None] | None = None,
     ) -> None:
+        if damage_sink is not None and event_sink is not None:
+            raise ValueError('Choose one structured event destination')
+        if (damage_sink is not None or event_sink is not None) and write_enabled:
+            raise ValueError('结构化入口尚未覆盖所有事件，不能写入不完整的旧日志')
         self.trace_file = (trace_file or default_trace_file()) if write_enabled else None
         self.line_sink = line_sink
+        # event_sink covers connected observation families during migration;
+        # damage_sink remains the damage-only verification destination.
+        self.damage_sink = damage_sink if damage_sink is not None else event_sink
+        self.event_sink = event_sink
+        self._structured_event_seq = 0
         self.id_to_name: dict[int, str] = {}
         self.skill_id_by_inst: dict[int, str] = {}
         self.skill_source_by_inst: dict[int, str] = {}
@@ -76,7 +88,7 @@ class TraceBridge(BattleContext, ActorEvents, SkillEvents, DamageEvents, BuffEve
         self._pending_create_buff_events: list[dict[str, Any]] = []
         self._pending_buff_start_ts_ms: int | None = None
         self._pending_buff_start_order: list[int] = []
-        self._pending_buff_start_rows: dict[int, tuple[str, str, str, Any]] = {}
+        self._pending_buff_start_rows: dict[int, tuple[str, str, str, Any, dict]] = {}
         self._battle_active = False
         self._battle_start_ts_ms: int | None = None
         self._battle_start_client_tick_ms: int | None = None
@@ -190,19 +202,27 @@ class TraceBridge(BattleContext, ActorEvents, SkillEvents, DamageEvents, BuffEve
         elif event_type == 'BattleOpSetBuffEnableState':
             write_buff_enable(self, event, ts_ms)
         elif event_type == "BattleOpEntityDie":
-            self._line(ts_ms, f"ENTITY_DIE id={event.get('entity_inst_id')}")
+            if self.event_sink is not None:
+                self._emit_structured(ts_ms, 'entity_die',
+                    {'entity_id': event['entity_inst_id']} if 'entity_inst_id' in event else {}, event)
+            else:
+                self._line(ts_ms, f"ENTITY_DIE id={event.get('entity_inst_id')}")
         elif event_type == "BattleOpEntityValueModify":
             write_entity_value(self, event, ts_ms)
         elif event_type == "SESSION_WARNING":
-            self._line(
-                ts_ms,
-                (
-                    f"SESSION_WARNING kind={event.get('kind') or 'unknown'} "
-                    f"direction={event.get('direction') or 'unknown'} "
-                    f"missingBytes={event.get('missing_bytes') if event.get('missing_bytes') is not None else 'unknown'} "
-                    f"gapCount={event.get('startup_tcp_gap_count') if event.get('startup_tcp_gap_count') is not None else 'unknown'}"
-                ),
-            )
+            if self.event_sink is not None:
+                from parser_core.ingestion.structured_context import context_data
+                self._emit_structured(ts_ms, 'session_warning', context_data('session_warning', event), event)
+            else:
+                self._line(
+                    ts_ms,
+                    (
+                        f"SESSION_WARNING kind={event.get('kind') or 'unknown'} "
+                        f"direction={event.get('direction') or 'unknown'} "
+                        f"missingBytes={event.get('missing_bytes') if event.get('missing_bytes') is not None else 'unknown'} "
+                        f"gapCount={event.get('startup_tcp_gap_count') if event.get('startup_tcp_gap_count') is not None else 'unknown'}"
+                    ),
+                )
         elif event_type == "LOADOUT":
             self._handle_loadout(event, ts_ms)
 
@@ -218,11 +238,15 @@ class TraceBridge(BattleContext, ActorEvents, SkillEvents, DamageEvents, BuffEve
         if ts_ms is None:
             ts_ms = int(datetime.now().timestamp() * 1000)
         self._last_ts_ms = ts_ms
+        self.flush_pending()
+        self._record_missing_official_timer(ts_ms, boundary="CAPTURE_SESSION_LOST")
+        return False
+
+    def flush_pending(self):
+        """Finish observations without changing capture/battle state."""
         self._flush_pending_add_buffs()
         self._flush_pending_create_buff_triggers()
         self._flush_pending_buff_starts()
-        self._record_missing_official_timer(ts_ms, boundary="CAPTURE_SESSION_LOST")
-        return False
 
     def begin_capture_session(self, *, timestamp_ms: int | None = None) -> None:
         """Reset trace state before replaying packets from a new TCP flow."""
@@ -262,6 +286,15 @@ class TraceBridge(BattleContext, ActorEvents, SkillEvents, DamageEvents, BuffEve
         self._current_enemy_hint = ""
         self._current_enemy_hint_source = ""
         self._has_scene_squad = False
+
+    def _emit_structured(self, ts_ms: int, event_type: str, data: dict, origin: dict) -> None:
+        self._flush_pending_buff_starts()
+        self._append_structured(ts_ms, event_type, data, origin)
+
+    def _append_structured(self, ts_ms: int, event_type: str, data: dict, origin: dict) -> None:
+        from endfield_pcap.trace.structured_events import observation_event
+        self._structured_event_seq += 1
+        self.event_sink(observation_event(self._structured_event_seq, ts_ms, event_type, data, origin))
 
     def _line(self, ts_ms: int, body: str) -> None:
         self._flush_pending_buff_starts()

@@ -15,11 +15,45 @@ _cache=OrderedDict()
 _lock=threading.Lock()
 
 
-def discover(trace):
+def _source_paths(trace):
+    trace = Path(trace).resolve()
+    if trace.suffix.lower() == '.jsonl' and trace.is_file():
+        from parser_core.trace_volumes import resolve_volumes
+        chain = resolve_volumes(trace)
+        if not chain.complete:
+            raise ValueError('；'.join(chain.issues))
+        return [item.path for item in chain.volumes]
+    if trace.suffix.lower() == '.ndjson' and trace.is_file():
+        from endfield_pcap.history.session_volumes import resolve_sessions, associated_trace
+        chain = resolve_sessions(trace)
+        if not chain.complete:
+            raise ValueError('；'.join(chain.issues))
+        linked = associated_trace(chain)
+        if linked is not None and not linked.complete:
+            raise ValueError('；'.join(linked.issues))
+        trace_volumes = {item.header['trace_volume'] for item in chain.volumes if item.header}
+        return [item.path for item in chain.volumes] + ([item.path for item in linked.volumes
+            if item.header.volume in trace_volumes] if linked else [])
+    return [trace]
+
+
+def _companions(trace):
     trace=Path(trace)
     base=companion(trace)
     parts=sorted(trace.parent.glob(base.name.removesuffix('.input.jsonl')+'.part-*.input.jsonl'))
     return ([base] if base.is_file() else [])+parts
+
+
+def discover(trace):
+    try:
+        sources = _source_paths(trace)
+    except (OSError, ValueError):
+        sources = [Path(trace)]  # A worker reports incomplete history without breaking selection.
+    return list(dict.fromkeys(path for source in sources for path in _companions(source)))
+
+
+def _input_sources(trace):
+    return {path.resolve(): source for source in _source_paths(trace) for path in _companions(source)}
 
 
 class InputArchive:
@@ -146,22 +180,35 @@ def archive(path,settings):
 def loadout_history(path,start_ms):
     """Explicit trace LOADOUT slots, including changes. Never participant/ranking order."""
     updates=[]
+    path=Path(path)
+    if path.suffix.lower()=='.jsonl':
+        from parser_core.trace_volumes import resolve_volumes, read_events
+        for event in read_events(resolve_volumes(path)):
+            if event.type=='loadout_group':
+                updates.append((event.captured_at_ms,None,None))
+            elif event.type=='loadout_slot':
+                slot=event.data.get('slot');character=event.data.get('template')
+                if type(slot) is int and 0<=slot<4 and character:
+                    updates.append((event.captured_at_ms,slot,character))
+        return updates
+    if path.suffix.lower()=='.ndjson':
+        from endfield_pcap.history.session_volumes import resolve_sessions, read_lines
+        for line in read_lines(resolve_sessions(path)):
+            try: event=json.loads(line)
+            except ValueError: continue
+            if event.get('type')=='LOADOUT':
+                wall=event.get('timestamp_ms',0)
+                updates.append((wall,None,None))
+                for row in event.get('rows',[]):
+                    if type(row.get('slot')) is int and 0<=row['slot']<4 and row.get('char'):
+                        updates.append((wall,row['slot'],row['char']))
+        return updates
     reference=datetime.fromtimestamp(start_ms/1000)
     match=re.search(r'(20\d{6})',Path(path).name)
     day=datetime.strptime(match[1],'%Y%m%d').date() if match else reference.date()
     last_time=None
     with Path(path).open(encoding='utf-8-sig') as source:
         for line in source:
-            if Path(path).suffix.lower()=='.ndjson':
-                try: event=json.loads(line)
-                except ValueError: continue
-                if event.get('type')=='LOADOUT':
-                    wall=event.get('timestamp_ms',0)
-                    updates.append((wall,None,None))
-                    for row in event.get('rows',[]):
-                        if type(row.get('slot')) is int and 0<=row['slot']<4 and row.get('char'):
-                            updates.append((wall,row['slot'],row['char']))
-                continue
             stamp=re.search(r'(\d{2}):(\d{2}):(\d{2})\.(\d{3})',line)
             if not stamp: continue
             h,m,s,ms=map(int,stamp.groups())
@@ -203,13 +250,14 @@ def load_evidence(paths,trace,battle,settings=None,*,offset_ms=0,manual_slots=No
     start=float(start_override) if start_override is not None else battle_start_wall_ms(battle)
     duration=float(battle.get('duration_ms') or 0)
     updates=loadout_history(trace,start)
+    input_sources=_input_sources(trace) if verify else {}
     actions,raws,warnings=[],[],[]
     input_counts,recording_counts=Counter(),Counter()
     for path in paths:
         data=archive(path,settings)
         warnings.extend(data.warnings)
         recording_counts.update(data.input_counts)
-        if verify: warnings.append(data.verify_trace(trace))
+        if verify: warnings.append(data.verify_trace(input_sources.get(Path(path).resolve(),trace)))
         projected=project(data.actions,start,duration,offset_ms=offset_ms)
         for action in projected:
             slots={}

@@ -48,7 +48,7 @@ def _build_raw_battle_report(state, text, *, file_name=None, include_rdps_debug=
     live_projection = ACTIVE_ALLOCATION_CACHE.get()
     report_state = ReportState.from_snapshot(state)
     context_enemy_hint = _infer_context_enemy_hint(text)
-    trace_identity_inference_seen = " IDENTITY_INFERENCE " in text
+    trace_identity_inference_seen = state.get('trace_identity_inference_seen', False) or " IDENTITY_INFERENCE " in text
 
     report_state.loadout_by_char = _repair_weapon_puton_loadout_groups(report_state.loadout_groups, report_state.loadout_by_char)
     for event in report_state.buff_attribute_refresh_events:
@@ -232,8 +232,10 @@ def _build_raw_battle_report(state, text, *, file_name=None, include_rdps_debug=
             "dungeon_name": dungeon_name,
             "boss_key": boss_key,
             "boss_name": boss_name,
-            "battle_start_at": _build_iso_datetime(report_state.reference_date, first_hit_ms),
-            "battle_end_at": _build_iso_datetime(report_state.reference_date, last_hit_ms),
+            "battle_start_at": _build_iso_datetime(report_state.reference_date, first_hit_ms,
+                timezone_offset_minutes=report_state.reference_timezone_offset_minutes),
+            "battle_end_at": _build_iso_datetime(report_state.reference_date, last_hit_ms,
+                timezone_offset_minutes=report_state.reference_timezone_offset_minutes),
             "duration_ms": duration_ms,
             "time_source": "game_timer" if has_game_timer_window else time_source,
             "timeline_zero_source": timeline_zero_source,

@@ -1,5 +1,6 @@
 from __future__ import annotations
 import json
+import hashlib
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -39,6 +40,8 @@ class CombatRecord:
     source_start_line: int = 0
     source_end_line: int = 0  # Exclusive; fixed when the list was read.
     analysis_loaded: bool = True
+    session_volumes: list[dict] = field(default_factory=list)
+    source_prefix_sha256: str = ''
 
     @property
     def dps(self) -> float:
@@ -49,27 +52,64 @@ class CombatRecord:
 
 def load_combat_records(log_dir: Path) -> list[CombatRecord]:
     records: list[CombatRecord] = []
+    seen = set()
     for path in sorted(log_dir.rglob("session_*.ndjson"), reverse=True):
         if path.stat().st_size == 0:
             continue
-        records.extend(_parse_log_file(path))
+        rows = _parse_log_file(path)
+        for row in rows:
+            key = row.file_path, row.record_index, row.started_at_ms
+            if key not in seen:
+                records.append(row)
+                seen.add(key)
     return sorted(records, key=lambda item: item.started_at_ms, reverse=True)
 
 
 def _parse_log_file(path: Path) -> list[CombatRecord]:
+    from endfield_pcap.history.session_volumes import resolve_sessions, read_lines, chain_signature
+    chain = resolve_sessions(path)
+    path = chain.volumes[0].path
     records: list[CombatRecord] = []
     current_squad: dict[int, CombatPlayerSummary] = {}
     current_record: _MutableRecord | None = None
     record_index = 0
+    active_official = None
 
-    source_lines = path.read_text(encoding="utf-8").splitlines()
-    for line_index, raw_line in enumerate(source_lines):
+    line_count = 0
+    prefix_hash = hashlib.sha256()
+    for line_index, raw_line in enumerate(read_lines(chain, allow_append=True)):
+        before = prefix_hash.copy()
+        prefix_hash.update(raw_line.encode('utf8') + b'\n')
+        line_count = line_index + 1
         try:
             event = json.loads(raw_line)
         except json.JSONDecodeError:
             continue
         event_type = str(event.get("type", ""))
         timestamp_ms = int(event.get("timestamp_ms", 0) or 0)
+
+        if event_type == 'SC_GAME_MECHANICS_SYNC_CHALLENGE_START':
+            identity = (event.get('game_id'), str(event.get('challenge_start_ts') or ''))
+            duplicate = active_official == identity and identity[1] not in ('', '0')
+            if not duplicate:
+                if current_record is not None:
+                    maybe_record = current_record.freeze(line_index)
+                    if maybe_record is not None:
+                        maybe_record.source_prefix_sha256 = before.hexdigest()
+                        records.append(maybe_record)
+                current_record = None
+                active_official = identity
+        elif event_type in ('SC_GAME_MECHANICS_SYNC_CHALLENGE_COMPLETE',
+                            'SC_GAME_MECHANICS_SYNC_LEAVE_GAME_INST',
+                            'SC_GAME_MECHANICS_SYNC_RESTART_GAME_INST'):
+            if active_official is not None and event.get('game_id') in (None, '', active_official[0]):
+                if event_type == 'SC_GAME_MECHANICS_SYNC_CHALLENGE_COMPLETE' and current_record is not None:
+                    maybe_record = current_record.freeze(line_index + 1)
+                    if maybe_record is not None:
+                        maybe_record.source_prefix_sha256 = prefix_hash.hexdigest()
+                        records.append(maybe_record)
+                    current_record = None
+                active_official = None
 
         members = _extract_squad_members(event_type, event)
         if members is not None:
@@ -86,16 +126,20 @@ def _parse_log_file(path: Path) -> list[CombatRecord]:
                 if current_record is not None:
                     maybe_record = current_record.freeze(line_index)
                     if maybe_record is not None:
+                        maybe_record.source_prefix_sha256 = before.hexdigest()
                         records.append(maybe_record)
                 current_record = None
             current_squad = next_squad
             continue
 
         if event_type == "BattleOpModifyBattleState" and bool(event.get("is_in_battle", False)):
+            if active_official is not None and current_record is not None:
+                continue  # Packet battle phases belong to the active official challenge.
             if current_squad:
                 if current_record is not None:
                     maybe_record = current_record.freeze(line_index)
                     if maybe_record is not None:
+                        maybe_record.source_prefix_sha256 = before.hexdigest()
                         records.append(maybe_record)
                 record_index += 1
                 current_record = _MutableRecord(
@@ -129,9 +173,15 @@ def _parse_log_file(path: Path) -> list[CombatRecord]:
         current_record.apply_damage(damage_event, timestamp_ms)
 
     if current_record is not None:
-        maybe_record = current_record.freeze(len(source_lines))
+        maybe_record = current_record.freeze(line_count)
         if maybe_record is not None:
+            maybe_record.source_prefix_sha256 = prefix_hash.hexdigest()
             records.append(maybe_record)
+    if chain.volumes[0].header:
+        sources = chain_signature(chain)
+        from copy import deepcopy
+        for record in records:
+            record.session_volumes = deepcopy(sources)
     return records
 
 

@@ -19,9 +19,15 @@ LOGGER = logging.getLogger(__name__)
 
 def signature(record):
     try:
+        if getattr(record, 'session_volumes', None):
+            from endfield_pcap.history.session_volumes import session_source_signature
+            return session_source_signature(record.file_path)
+        if getattr(record, 'source_volumes', None):
+            from endfield_pcap.history.structured import trace_source_signature
+            return trace_source_signature(record.file_path)
         stat = record.file_path.stat()
         return stat.st_mtime_ns, stat.st_size
-    except OSError:
+    except (OSError, ValueError):
         return None
 
 
@@ -72,6 +78,8 @@ class HistoryController:
         self.records = []
         self.selection_order = []
         self.pending_keys = set()
+        self._pending_order = ()
+        self._open_details = False
         self.records_pending = self.import_pending = False
         self.record = None
         self.displayed_key = None
@@ -104,7 +112,8 @@ class HistoryController:
 
     def _refresh_list(self):
         hidden = set(self.settings.current.hidden_history_records)
-        records = [*self._raw_records, *(record for rows in self._trace_records.values() for record in rows)]
+        records = {record_key(record): record for record in
+                   [*self._raw_records, *(record for rows in self._trace_records.values() for record in rows)]}.values()
         self.records = sorted((record for record in records if record_key(record) not in hidden),
                               key=lambda record: record.started_at_ms, reverse=True)
         keys = {record_key(record) for record in self.records}
@@ -147,10 +156,11 @@ class HistoryController:
         changed = []
         for path in config.imported_trace_files:
             try:
-                stat = path.stat()
-            except OSError:
+                from endfield_pcap.history.structured import trace_source_signature
+                current_signature = trace_source_signature(path)
+            except (OSError, ValueError):
                 continue
-            if self._trace_signatures.get(path) != (stat.st_mtime_ns, stat.st_size):
+            if self._trace_signatures.get(path) != current_signature:
                 changed.append(path)
         self.import_files(changed, restore_removed=False)
         return changed_directory
@@ -169,9 +179,10 @@ class HistoryController:
             results, errors = [], []
             for path in paths:
                 try:
-                    stat = path.stat()
+                    from endfield_pcap.history.structured import trace_source_signature
+                    source_signature = trace_source_signature(path)
                     records = index.records(path, trace=True)
-                    results.append((path, (stat.st_mtime_ns, stat.st_size), records))
+                    results.append((path, source_signature, records))
                 except Exception as exc:
                     LOGGER.exception('trace import failed: %s', path)
                     errors.append(f'{path.name}: {exc}')
@@ -184,6 +195,8 @@ class HistoryController:
         self._cancel.set()
         self._generation += 1
         self.pending_keys.clear()
+        self._pending_order = ()
+        self._open_details = False
 
     def load(self, keys, *, open_details=False):
         self._assert_owner()
@@ -193,7 +206,12 @@ class HistoryController:
         records = [indexed[key] for key in dict.fromkeys(keys) if key in indexed]
         if not records:
             return False
+        order = tuple(record_key(record) for record in records)
+        if self.pending_keys and order == self._pending_order:
+            self._open_details |= open_details
+            return True
         self._invalidate_analysis()
+        self._pending_order, self._open_details = order, open_details
         self._cancel = cancel = threading.Event()
         generation, sink, loader = self._generation, self._results, self._loader or analysis.load_record_snapshot
         self.record = records[-1]
@@ -238,6 +256,8 @@ class HistoryController:
                 if result.generation != self._generation:
                     continue
                 self.pending_keys.clear()
+                result = replace(result, open_details=result.open_details or self._open_details)
+                self._pending_order, self._open_details = (), False
                 indexed = {record_key(record): record for record in self.records}
                 for value in result.results:
                     if value.snapshot is not None and value.key in indexed:

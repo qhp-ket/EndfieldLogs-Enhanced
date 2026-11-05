@@ -114,7 +114,7 @@ class LiveOverlayBattleParser:
         self._closed_by_timer_end = False
         self._closed_by_official_timer_end = False
         self._live_clock_enabled = True
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._analysis_lock = threading.RLock()
         self._engine = IncrementalBattleParser(allow_empty=True)
         self._engine_generation = self._generation
@@ -164,23 +164,32 @@ class LiveOverlayBattleParser:
             self.reset()
             return None
         clock_ms = _line_timestamp_ms(raw_line)
-        abs_ms = None
         is_hit = bool(_HIT_RE.search(raw_line))
         is_context = bool(_LIVE_CONTEXT_RE.search(raw_line))
         is_party_action = bool(_PARTY_ACTION_RE.search(raw_line))
         is_official_timer_start = bool(_OFFICIAL_TIMER_START_RE.search(raw_line))
         is_official_timer_end = bool(_OFFICIAL_TIMER_END_RE.search(raw_line))
-        is_timer_start = is_official_timer_start or (
-            bool(_TIMER_START_RE.search(raw_line)) and not self._official_timer_active
-        )
         is_timer_end = bool(_OFFICIAL_TIMER_END_RE.search(raw_line)) or bool(_TIMER_END_RE.search(raw_line))
+        game_match = re.search(r"\bgameId=(\S+)", raw_line) if is_official_timer_start else None
+        return self._feed_observation(raw_line, clock_ms=clock_ms, is_hit=is_hit, is_context=is_context,
+            is_party_action=is_party_action, is_official_timer_start=is_official_timer_start,
+            is_official_timer_end=is_official_timer_end, packet_timer_start=bool(_TIMER_START_RE.search(raw_line)),
+            is_timer_end=is_timer_end, game_id=game_match.group(1) if game_match else '',
+            is_clock_tick=bool(re.match(r'^\[[\d:.]+\] GAME_CLOCK_TICK(?:\s|$)', raw_line)),
+            is_heartbeat=bool(re.match(r'^\[[\d:.]+\] (?:GAME_CLOCK_TICK|GAME_TIMER_TICK|HEARTBEAT)(?:\s|$)', raw_line)))
 
+    def _feed_observation(self, item, *, clock_ms, is_hit, is_context, is_party_action,
+                          is_official_timer_start, is_official_timer_end, packet_timer_start,
+                          is_timer_end, game_id, is_clock_tick, is_heartbeat, absolute_clock=False):
+        """Share battle boundaries and publication state between text and event adapters."""
+        abs_ms = None
         with self._lock:
+            is_timer_start = is_official_timer_start or (packet_timer_start and not self._official_timer_active)
             self._revision += 1
-            if not re.match(r'^\[[\d:.]+\] GAME_CLOCK_TICK(?:\s|$)', raw_line):
+            if not is_clock_tick:
                 self._clock_only = False
             if clock_ms is not None:
-                if self._last_clock_ms is not None and clock_ms + 300_000 < self._last_clock_ms:
+                if not absolute_clock and self._last_clock_ms is not None and clock_ms + 300_000 < self._last_clock_ms:
                     self._day_offset_ms += _DAY_MS
                 self._last_clock_ms = clock_ms
                 abs_ms = clock_ms + self._day_offset_ms
@@ -192,20 +201,19 @@ class LiveOverlayBattleParser:
                     and self._last_hit_abs_ms is not None
                     and abs_ms - self._last_hit_abs_ms > self.idle_split_ms
                 ):
-                    self._lines = _preserved_context_lines(self._lines)
+                    self._retain_context()
                     self._generation += 1
                     self._last_hit_abs_ms = None
                     self._hit_count = 0
 
             if is_timer_start:
-                self._lines = _preserved_context_lines(self._lines)
+                self._retain_context()
                 self._generation += 1
                 self._last_hit_abs_ms = None
                 self._official_timer_active = is_official_timer_start
                 self._official_timer_start_abs_ms = abs_ms if is_official_timer_start and abs_ms is not None else None
                 if is_official_timer_start:
-                    game_match = re.search(r"\bgameId=(\S+)", raw_line)
-                    self._official_timer_game_id = game_match.group(1) if game_match else ""
+                    self._official_timer_game_id = game_id
                 else:
                     self._official_timer_game_id = ""
                 self._hit_count = 0
@@ -215,7 +223,7 @@ class LiveOverlayBattleParser:
 
             if is_hit and abs_ms is not None:
                 if self._closed_by_timer_end and not self._closed_by_official_timer_end:
-                    self._lines = _preserved_context_lines(self._lines)
+                    self._retain_context()
                     self._generation += 1
                     self._last_hit_abs_ms = None
                     self._official_timer_active = False
@@ -229,7 +237,7 @@ class LiveOverlayBattleParser:
                         and self._last_hit_abs_ms is not None
                         and abs_ms - self._last_hit_abs_ms > self.idle_split_ms
                     ):
-                        self._lines = _preserved_context_lines(self._lines)
+                        self._retain_context()
                         self._generation += 1
                         self._official_timer_active = False
                         self._hit_count = 0
@@ -237,21 +245,20 @@ class LiveOverlayBattleParser:
                     self._last_hit_abs_ms = abs_ms
                     self._hit_count += 1
 
-            self._lines.append(raw_line)
+            self._append_input(item)
             # Retain the complete current battle for deterministic replay.
             # Truncating a long battle loses identity and damage evidence.
 
             # Only a syntactically proven heartbeat may be ignored after an
             # official end. Unknown input and late evidence remain semantic.
-            ended_heartbeat = self._closed_by_official_timer_end and bool(
-                re.match(r'^\[[\d:.]+\] (?:GAME_CLOCK_TICK|GAME_TIMER_TICK|HEARTBEAT)(?:\s|$)', raw_line))
+            ended_heartbeat = self._closed_by_official_timer_end and is_heartbeat
             self._dirty = (
                 self._dirty
                 or (self._hit_count > 0 and not ended_heartbeat)
                 or is_context
                 or is_party_action
                 or is_timer_start
-                or (is_timer_end and bool(self._lines))
+                or is_timer_end
             )
             if is_timer_end:
                 if is_official_timer_end:
@@ -265,6 +272,31 @@ class LiveOverlayBattleParser:
                     self._closed_by_timer_end = True
                     self._force_reparse = True
             return self._snapshot
+
+    def _retain_context(self):
+        self._lines = _preserved_context_lines(self._lines)
+
+    def _append_input(self, item):
+        self._lines.append(item)
+
+    def _capture_input(self):
+        return list(self._lines)
+
+    def _calculate_snapshot(self, lines, timer, generation, clock_previous):
+        if self._engine_generation != generation:
+            self._engine = IncrementalBattleParser(allow_empty=True)
+            self._engine_generation = generation
+        try:
+            return (self._engine.snapshot(lines, timer, summary=True, clock_previous=clock_previous)
+                    if self._summary else self._engine.snapshot(lines, timer))
+        except Exception:
+            LOGGER.exception("incremental parser failed; replaying current battle")
+            self._engine._restart('unexpected incremental exception')
+            snapshot = parse_overlay_battle_snapshot_text(''.join(lines)+(timer or ''), file_name='live-overlay.log')
+            if self._summary:
+                from parser_core.realtime.live_summary import summary_from_report
+                snapshot = summary_from_report(snapshot)
+            return snapshot
 
     def _live_timer_snapshot_line(self, now_ms: int | None = None) -> str | None:
         if (
@@ -341,26 +373,12 @@ class LiveOverlayBattleParser:
                 and (time.monotonic() - self._last_parse_monotonic) * 1000.0 < self.min_reparse_interval_ms
             ):
                 return self._snapshot
-            lines = list(self._lines)
+            lines = self._capture_input()
             revision, generation = self._revision, self._generation
             clock_previous = self._snapshot if self._clock_only and self._engine_generation == generation else None
         try:
             with self._analysis_lock:
-                if self._engine_generation != generation:
-                    self._engine = IncrementalBattleParser(allow_empty=True)
-                    self._engine_generation = generation
-                try:
-                    snapshot = self._engine.snapshot(lines, live_timer_line, summary=True, clock_previous=clock_previous) if self._summary else self._engine.snapshot(lines, live_timer_line)
-                except Exception:
-                    # Unexpected incremental failures get an independent full
-                    # parse, then a fresh stream on the next dirty revision.
-                    LOGGER.exception("incremental parser failed; replaying current battle")
-                    self._engine._restart('unexpected incremental exception')
-                    snapshot = parse_overlay_battle_snapshot_text(
-                        ''.join(lines)+(live_timer_line or ''), file_name='live-overlay.log')
-                    if self._summary:
-                        from parser_core.realtime.live_summary import summary_from_report
-                        snapshot = summary_from_report(snapshot)
+                snapshot = self._calculate_snapshot(lines, live_timer_line, generation, clock_previous)
         except Exception:
             LOGGER.exception("live overlay parser failed; dropping stale snapshot")
             with self._lock:

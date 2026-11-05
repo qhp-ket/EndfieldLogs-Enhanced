@@ -17,12 +17,16 @@ _RESET_RE = re.compile(r"\bGAME_TIMER_RESET\b")
 _JS_SAFE_INTEGER = (1 << 53) - 1
 
 
-def _new_live_parser(*, summary=False):
+def _new_live_parser(*, summary=False, structured=False, timezone_offset_minutes=0):
     # Source launches use the same bundled parser as rdps_audit. Do not search
     # upstream checkouts or install a second parser copy.
     local_package = bundle_root() / "packages" / "parser_core"
     if local_package.is_dir() and str(local_package) not in sys.path:
         sys.path.insert(0, str(local_package))
+    if structured:
+        from parser_core.realtime.live_events import LiveEventOverlayBattleParser
+        return LiveEventOverlayBattleParser(align_to_data_watermark=True, summary=summary,
+                                            timezone_offset_minutes=timezone_offset_minutes)
     from parser_core.realtime.live import LiveOverlayBattleParser
 
     return LiveOverlayBattleParser(align_to_data_watermark=True, summary=summary)
@@ -49,23 +53,27 @@ def _transport_copy(value: Any) -> Any:
 class SnapshotPublisher:
     """Event-loop-owned inbox with one ordered parser worker at a time.
 
-    ``feed_line`` never parses. ``publish_pending`` coalesces all queued lines
+    ``feed_line``/``feed_events`` never parse. ``publish_pending`` coalesces queued input
     into one worker call. A reset replaces the parser generation and publishes
     a null frame before any following battle, including when a worker is busy.
     """
 
     def __init__(self, *, parser_factory: Callable[[], Any] | None = None, use_process: bool = False,
-                 summary: bool = False, minimum_interval: float = 0.0) -> None:
+                 summary: bool = False, minimum_interval: float = 0.0, structured: bool = False,
+                 timezone_offset_minutes: int = 0) -> None:
         self.summary = summary
         self.minimum_interval = minimum_interval
         self._last_started = None
         self._use_process = use_process
         self._worker = None
-        self._parser_factory = parser_factory or (lambda: _new_live_parser(summary=summary))
+        self._structured = structured
+        self._timezone_offset_minutes = timezone_offset_minutes
+        self._parser_factory = parser_factory or (lambda: _new_live_parser(summary=summary, structured=structured,
+                                                                        timezone_offset_minutes=timezone_offset_minutes))
         self._parser = None if use_process else self._parser_factory()
         self._generation = 0
-        self._pending_lines: list[str] = []
-        self._trace_lines: list[str] = []
+        self._pending_lines: list[Any] = []
+        self._trace_lines: list[Any] = []
         self._revision = 0
         self._publish_lock = asyncio.Lock()
         self._changed = asyncio.Event()
@@ -89,7 +97,11 @@ class SnapshotPublisher:
     def start(self) -> None:
         if self._use_process and self._worker is None:
             from endfield_pcap.analysis.live.process import SnapshotProcess
-            self._worker = SnapshotProcess(summary=True) if self.summary else SnapshotProcess()
+            if self._structured:
+                self._worker = SnapshotProcess(summary=self.summary, structured=True,
+                                               timezone_offset_minutes=self._timezone_offset_minutes)
+            else:
+                self._worker = SnapshotProcess(summary=True) if self.summary else SnapshotProcess()
 
     async def close(self) -> None:
         worker, self._worker = self._worker, None
@@ -109,6 +121,8 @@ class SnapshotPublisher:
         self._changed.set()
 
     def feed_line(self, line: str) -> None:
+        if self._structured:
+            raise TypeError('Structured publisher requires feed_events')
         if _RESET_RE.search(line):
             self.reset()
             return
@@ -118,6 +132,31 @@ class SnapshotPublisher:
         self._changed.set()
         if self._worker is not None:
             self._worker.feed_line(self._generation, line)
+
+    def feed_events(self, events) -> None:
+        if not self._structured:
+            raise TypeError('Legacy publisher requires feed_line')
+        # The event-loop owner appends a complete producer batch without yielding.
+        # Detach before asynchronous IPC, since TraceEvent contains nested mappings.
+        pending = []
+        for event in deepcopy(tuple(events)):
+            if event.type == 'battle_timer' and event.data.get('phase') == 'reset':
+                self._enqueue_events(pending)
+                pending = []
+                self.reset()
+            else:
+                pending.append(event)
+        self._enqueue_events(pending)
+
+    def _enqueue_events(self, events):
+        if not events:
+            return
+        self._pending_lines.extend(events)
+        self._trace_lines.extend(events)
+        self._revision += len(events)
+        self._changed.set()
+        if self._worker is not None:
+            self._worker.feed_events(self._generation, tuple(events))
 
     def request_current(self):
         self._requested = True
@@ -129,9 +168,11 @@ class SnapshotPublisher:
             self._changed.clear()
             await self._changed.wait()
 
-    @staticmethod
-    def _calculate(parser: Any, lines: list[str]) -> Any:
-        parser.feed_lines(lines)
+    def _calculate(self, parser: Any, lines) -> Any:
+        if self._structured:
+            parser.feed_events(lines)
+        else:
+            parser.feed_lines(lines)
         return _transport_copy(parser.snapshot())
 
     async def publish_pending(self, *, copy_result: bool = True) -> dict[str, Any] | None:
@@ -141,8 +182,11 @@ class SnapshotPublisher:
                 return self.current_message()
             if self._use_process and self._worker is None:
                 self.start()
-                for line in self._trace_lines:
-                    self._worker.feed_line(self._generation, line)
+                if self._structured:
+                    self._worker.feed_events(self._generation, tuple(self._trace_lines))
+                else:
+                    for line in self._trace_lines:
+                        self._worker.feed_line(self._generation, line)
             if not self._pending_lines and not self._requested:
                 return None
             if self._last_started is not None:

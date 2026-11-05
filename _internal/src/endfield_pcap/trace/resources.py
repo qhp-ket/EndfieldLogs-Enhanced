@@ -2,6 +2,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 from endfield_pcap.trace.formatting import _intish, _floatish
+from parser_core.ingestion.skill_wire import skill_data
 if TYPE_CHECKING:
     from endfield_pcap.trace.bridge import TraceBridge
 
@@ -22,6 +23,13 @@ def handle_update_atb_info(bridge: TraceBridge, event: dict[str, Any], ts_ms: in
         event.get("orig_template_int_id"),
         owner_hint=owner_hint,
     )
+    if bridge.event_sink is not None:
+        data = skill_data("atb", event)
+        data.update(owner=owner if owner != "?" else None,
+                    source=source_skill or event.get("template_str_id") or None,
+                    original_source=orig_source_skill or event.get("orig_template_str_id") or None)
+        bridge._emit_structured(ts_ms, "atb", data, event)
+        return
     seq = _intish(event.get("seq_id")) or 0
     client_tick = _intish(event.get("client_tick_tms")) or 0
     atb_value = _floatish(event.get("atb_value"))
@@ -57,6 +65,13 @@ def handle_modify_poise_value(bridge: TraceBridge, event: dict[str, Any], ts_ms:
         event.get("orig_template_int_id"),
         owner_hint=owner_hint,
     )
+    if bridge.event_sink is not None:
+        data = skill_data("poise", event)
+        data.update(attacker=attacker if attacker != "?" else None,
+                    source=source_skill or event.get("template_str_id") or None,
+                    original_source=original_source_skill or event.get("orig_template_str_id") or None)
+        bridge._emit_structured(ts_ms, "poise", data, event)
+        return
     seq = _intish(event.get("seq_id")) or 0
     client_tick = _intish(event.get("client_tick_tms")) or 0
     template_int_id = _intish(event.get("template_int_id"))
@@ -107,30 +122,28 @@ def handle_battle_state(bridge: TraceBridge, event: dict[str, Any], ts_ms: int) 
             bridge._write_dungeon_context(ts_ms, bridge._current_dungeon_context)
             bridge._battle_dungeon_context_emitted = True
         if is_war_echo_continuation:
-            bridge._line(
-                ts_ms,
-                (
-                    "BATTLE_PHASE_START "
-                    f"seq={seq} source=BattleOpModifyBattleState "
-                    f"gameId={bridge._activity_id()}"
-                ),
-            )
+            if bridge.event_sink is not None:
+                bridge._emit_structured(ts_ms, 'battle_phase', {'operation_seq': seq,
+                    'source': 'BattleOpModifyBattleState', 'game_id': bridge._activity_id()}, event)
+            else:
+                bridge._line(
+                    ts_ms,
+                    (
+                        "BATTLE_PHASE_START "
+                        f"seq={seq} source=BattleOpModifyBattleState "
+                        f"gameId={bridge._activity_id()}"
+                    ),
+                )
             return
         timer_source = "PacketBattleState" if raw_client_tick is not None else "BattleOpModifyBattleState"
         official = 1 if raw_client_tick is not None else 0
-        bridge._line(
-            ts_ms,
-            f"GAME_TIMER_START seq={seq} source={timer_source} startMs={client_tick} expireMs=0 official={official}",
-        )
+        if bridge.event_sink is not None:
+            bridge._emit_structured(ts_ms, 'battle_timer', {'phase': 'start', 'operation_seq': seq,
+                'source': timer_source, 'start_ms': client_tick, 'expire_ms': 0, 'official': bool(official)}, event)
+        else:
+            bridge._line(ts_ms, f"GAME_TIMER_START seq={seq} source={timer_source} startMs={client_tick} expireMs=0 official={official}")
     elif not is_in_battle and bridge._battle_active and bridge._official_timer_required():
-        bridge._line(
-            ts_ms,
-            (
-                "OFFICIAL_TIMER_AWAIT source=BattleOpModifyBattleState "
-                f"gameId={bridge._activity_id()} "
-                f"officialStartSeen={1 if bridge._official_timer_active else 0}"
-            ),
-        )
+        bridge._write_official_timer_await(ts_ms, 'BattleOpModifyBattleState', event)
         bridge._clear_packet_battle_window()
     elif not is_in_battle and bridge._battle_active:
         bridge._battle_active = False
@@ -152,25 +165,35 @@ def handle_battle_state(bridge: TraceBridge, event: dict[str, Any], ts_ms: int) 
             timer_source = "BattleOpModifyBattleState"
             official = 0
             elapsed_ms = wall_elapsed_ms
-        packet_elapsed_token = (
-            f" packetElapsedMs={packet_elapsed_ms}"
-            if packet_elapsed_ms is not None and packet_elapsed_ms >= 0
-            else ""
-        )
-        wall_elapsed_token = (
-            f" wallElapsedMs={wall_elapsed_ms}"
-            if wall_elapsed_ms > 0 and wall_elapsed_ms != elapsed_ms
-            else ""
-        )
-        bridge._line(
-            ts_ms,
-            (
-                f"GAME_TIMER_END seq={seq} source={timer_source} "
-                f"elapsedMs={elapsed_ms} startMs={start_tick} endMs={client_tick} "
-                f"expireMs=0 sane={1 if elapsed_ms > 0 else 0} official={official}"
-                f"{packet_elapsed_token}{wall_elapsed_token}"
-            ),
-        )
+        if bridge.event_sink is not None:
+            data = {'phase': 'end', 'operation_seq': seq, 'source': timer_source, 'elapsed_ms': elapsed_ms,
+                    'start_ms': start_tick, 'end_ms': client_tick, 'expire_ms': 0,
+                    'sane': elapsed_ms > 0, 'official': bool(official)}
+            if packet_elapsed_ms is not None and packet_elapsed_ms >= 0:
+                data['packet_elapsed_ms'] = packet_elapsed_ms
+            if wall_elapsed_ms > 0 and wall_elapsed_ms != elapsed_ms:
+                data['wall_elapsed_ms'] = wall_elapsed_ms
+            bridge._emit_structured(ts_ms, 'battle_timer', data, event)
+        else:
+            packet_elapsed_token = (
+                f" packetElapsedMs={packet_elapsed_ms}"
+                if packet_elapsed_ms is not None and packet_elapsed_ms >= 0
+                else ""
+            )
+            wall_elapsed_token = (
+                f" wallElapsedMs={wall_elapsed_ms}"
+                if wall_elapsed_ms > 0 and wall_elapsed_ms != elapsed_ms
+                else ""
+            )
+            bridge._line(
+                ts_ms,
+                (
+                    f"GAME_TIMER_END seq={seq} source={timer_source} "
+                    f"elapsedMs={elapsed_ms} startMs={start_tick} endMs={client_tick} "
+                    f"expireMs=0 sane={1 if elapsed_ms > 0 else 0} official={official}"
+                    f"{packet_elapsed_token}{wall_elapsed_token}"
+                ),
+            )
         bridge._battle_start_ts_ms = None
         bridge._battle_start_client_tick_ms = None
         bridge._battle_dungeon_context_emitted = False

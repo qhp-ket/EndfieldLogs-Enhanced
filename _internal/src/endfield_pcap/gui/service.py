@@ -33,6 +33,8 @@ class ServiceController:
         self._stop_requested = threading.Event()
         self._lifecycle = CaptureLifecycle.STOPPED
         self._lifecycle_lock = threading.Lock()
+        self.recording = False
+        self.recording_pending = False
 
     @property
     def lifecycle(self) -> CaptureLifecycle:
@@ -58,11 +60,13 @@ class ServiceController:
         service = self._service
         if self.lifecycle != CaptureLifecycle.RUNNING or service is None:
             return CaptureWritingState(WritingKind.UNCERTAIN)
+        if not getattr(service, 'recording', True):
+            return CaptureWritingState(WritingKind.IDLE)
         bridge = getattr(service, 'trace_bridge', None)
         paths = (getattr(service, 'current_log_path', None), getattr(bridge, 'trace_file', None),
                  getattr(self.running_config, 'trace_file', None))
         active = tuple(dict.fromkeys(Path(path).resolve() for path in paths if path))
-        return CaptureWritingState(WritingKind.ACTIVE if active else WritingKind.UNCERTAIN, active)
+        return CaptureWritingState(WritingKind.ACTIVE if active else WritingKind.IDLE, active)
 
     def start(self) -> None:
         if threading.get_ident() != self._owner:
@@ -76,6 +80,9 @@ class ServiceController:
         # Service construction fills generated trace/status paths. Isolate it
         # from persisted settings so every restart creates a fresh capture.
         self.running_config = deepcopy(self.config)
+        self.running_config.recording_on_start = False
+        self.running_config.trace_file = self.running_config.status_file = None
+        self.recording = self.recording_pending = False
         observer = ServiceObserver(
             on_state_change=self._on_state,
             on_runtime_metrics=lambda metrics, pcap_stats, flow: self.queue.put(
@@ -140,6 +147,23 @@ class ServiceController:
                 self._lifecycle = CaptureLifecycle.STOPPING
         if self._service is not None:
             self._service.request_stop()
+
+    def toggle_recording(self):
+        if threading.get_ident() != self._owner:
+            raise RuntimeError('记录启停只能由控制线程发起')
+        service = self._service
+        if self.recording_pending or self.lifecycle != CaptureLifecycle.RUNNING or service is None or service.loop is None:
+            return
+        active = not self.recording
+        self.recording_pending = True
+        def change():
+            try:
+                session, trace = service.set_recording(active)
+                self.queue.put(('recording_changed', dict(active=active, trace=str(trace) if trace else None)))
+                service.loop.create_task(service._broadcast(dict(type='recording_state', recording=active)))
+            except Exception as exc:
+                self.queue.put(('recording_error', str(exc)))
+        service.loop.call_soon_threadsafe(change)
 
     def _on_full_snapshot(self, message):
         self.queue.put(('analysis_snapshot', message))

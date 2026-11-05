@@ -29,8 +29,9 @@ def test_capture_public_writing_state_reports_startup_and_active_paths(monkeypat
     controller._lifecycle = CaptureLifecycle.STARTING
     assert controller.writing_state().kind == WritingKind.UNCERTAIN
     trace, raw = tmp_path/'capture.log', tmp_path/'session.ndjson'
-    controller._service = SimpleNamespace(current_log_path=raw, trace_bridge=SimpleNamespace(trace_file=trace))
+    controller._service = SimpleNamespace(recording=True, current_log_path=raw, config=SimpleNamespace(trace_file=trace))
     controller._lifecycle = CaptureLifecycle.RUNNING
+    controller.running_config = controller._service.config
     state = controller.writing_state()
     assert state.kind == WritingKind.ACTIVE and set(state.paths) == {trace, raw}
     assert not state.permits_rename(trace) and not state.permits_rename(raw)
@@ -83,6 +84,70 @@ def test_controller_waits_for_ready_and_cleanup_before_stopped(monkeypatch, tmp_
         assert controller.queue.get(timeout=2) == ('stopped', None)
     finally:
         ready.set(); release_cleanup.set(); controller.stop(); controller.join()
+
+
+def test_new_recording_runs_on_capture_owner_and_delivers_both_paths(monkeypatch, tmp_path):
+    owners = []
+    class Service:
+        def __init__(self, config, observer):
+            self.observer = observer
+            self.loop = None
+        def set_full_analysis_required(self, required): pass
+        def request_stop(self): self.loop.call_soon_threadsafe(self.done.set)
+        async def run(self):
+            self.loop = asyncio.get_running_loop()
+            self.done = asyncio.Event()
+            owners.append(threading.get_ident())
+            self.observer.on_state_change(ServiceState.LIVE, 'synthetic', None)
+            await self.done.wait()
+        async def _broadcast(self, message): pass
+        def set_recording(self, active):
+            assert active
+            owners.append(threading.get_ident())
+            return tmp_path/'session_v002.ndjson', tmp_path/'trace_v002.jsonl'
+    monkeypatch.setattr(gui_service, 'DamageLogService', Service)
+    config = default_service_config()
+    config.trace_file = None
+    controller = gui_service.ServiceController(config)
+    try:
+        controller.start()
+        assert controller.queue.get(timeout=3)[0] == 'state'
+        assert controller.running_config.recording_on_start is False
+        controller.toggle_recording()
+        assert controller.queue.get(timeout=3) == ('recording_changed', dict(active=True, trace=str(tmp_path/'trace_v002.jsonl')))
+        assert len(owners) == 2 and owners[0] == owners[1] != threading.get_ident()
+    finally:
+        controller.stop(); controller.join()
+
+
+def test_recording_button_requires_ready_capture_only(main_window, monkeypatch):
+    window = main_window
+    controller = window.service_controller
+    calls = []
+    monkeypatch.setattr(controller, 'toggle_recording', lambda: calls.append(True))
+    controller._lifecycle = CaptureLifecycle.RUNNING
+    controller.running_config = default_service_config()
+    monkeypatch.setattr(controller, 'is_running', lambda: True)
+    try:
+        window.current_session_id = 'synthetic'
+        controller.running_config.trace_enabled = True
+        controller.running_config.trace_format = 'legacy'
+        window._update_service_status()
+        assert window.home_page.recording_btn.isEnabled()
+        controller.running_config.trace_format = 'jsonl'
+        window._update_service_status()
+        assert window.home_page.recording_btn.isEnabled()
+        window.home_page.recording_btn.click()
+        assert calls == [True]
+        window.current_session_id = None
+        window._update_service_status()
+        assert window.home_page.recording_btn.isEnabled()
+        controller.recording_pending = True
+        window._update_service_status()
+        assert not window.home_page.recording_btn.isEnabled()
+    finally:
+        controller._lifecycle = CaptureLifecycle.STOPPED
+        monkeypatch.setattr(controller, 'is_running', lambda: False)
 
 
 def test_stop_during_construction_survives_late_ready_callback(monkeypatch):

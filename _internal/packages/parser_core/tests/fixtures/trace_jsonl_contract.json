@@ -1,0 +1,22 @@
+{
+  "provenance": "手工编写的非敏感协议样本；不是从新实现生成的计算参考。",
+  "records": [
+    {
+      "format": "endfield.trace", "version": 1, "recording_id": "synthetic-recording", "volume": 1, "previous_volume": null,
+      "generator": {"language": "python", "version": "0.2.1"},
+      "timezone": {"id": "Asia/Shanghai", "offset_minutes": 480},
+      "resources": {"runtime_version": "synthetic-v1"}
+    },
+    {
+      "seq": 1, "captured_at_ms": 1793412000123, "client_tick_ms": 0, "type": "damage",
+      "source": {"session_id": "synthetic-session", "operation_seq": 0, "owner_id": "18446744073709551615", "generation": 0, "action_id": 14, "detail_index": 0},
+      "data": {"actors": {"attacker_id": "18446744073709551615", "target_id": "9007199254740993"},
+               "amounts": {"raw_value": 123.45678901234567, "is_crit": false, "enemy_hp_after": 0},
+               "evidence": {"report_present": false, "modifiers": [], "attributes": {}, "debug": null}, "label": "中文／技能"}
+    },
+    {
+      "seq": 2, "captured_at_ms": 1793411999999, "type": "buff_blackboard", "source": {},
+      "data": {"buff_id": "9007199254740993", "values": {"rate": -0.0}, "unparsed": {"counter": 123456789012345678901234567890}}
+    }
+  ]
+}

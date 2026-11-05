@@ -60,6 +60,10 @@ class SettingsActions:
         self.settings_page.gui_hotkey_edit.setKeySequence(QKeySequence(self.app_config.toggle_gui_hotkey))
         self.settings_page.gui_hotkey_edit.blockSignals(False)
         self._update_gui_shortcut()
+        self.settings_page.recording_hotkey_edit.blockSignals(True)
+        self.settings_page.recording_hotkey_edit.setKeySequence(QKeySequence(self.app_config.toggle_recording_hotkey))
+        self.settings_page.recording_hotkey_edit.blockSignals(False)
+        self._update_recording_shortcut()
 
     def _refresh_log_dir_size(self) -> None:
         self.settings_page.set_log_size(_directory_size(self.app_config.service.log_dir))
@@ -131,6 +135,8 @@ class SettingsActions:
         self._apply_gui_theme(mode)
 
     def _apply_overlay_hotkey(self, *_args) -> None:
+        if self.settings_page.hotkey_edit.hasFocus():
+            return
         hotkey = self.settings_page.hotkey()
         if self._update_overlay_shortcut(hotkey):
             if hotkey != self.app_config.toggle_overlays_hotkey:
@@ -146,6 +152,9 @@ class SettingsActions:
 
 
     def _bind_settings_events(self) -> None:
+        for edit in (self.settings_page.hotkey_edit, self.settings_page.gui_hotkey_edit, self.settings_page.recording_hotkey_edit):
+            edit.captureChanged.connect(self._hotkey_capture_changed)
+        self.settings_page.recording_hotkey_edit.editingFinished.connect(self._apply_recording_hotkey)
         self.settings_page.gui_hotkey_edit.editingFinished.connect(self._apply_gui_hotkey)
         self.settings_page.start_capture_switch.checkedChanged.connect(self._set_start_capture_on_launch)
         self.settings_page.start_input_switch.checkedChanged.connect(self._set_start_input_on_launch)
@@ -163,7 +172,18 @@ class SettingsActions:
         self.app_config.start_capture_on_launch = bool(enabled)
         save_app_config(self.app_config, self.config_path)
 
+    def _apply_recording_hotkey(self):
+        if self.settings_page.recording_hotkey_edit.hasFocus():
+            return
+        key = self.settings_page.recording_hotkey_edit.keySequence().toString(QKeySequence.SequenceFormat.PortableText)
+        if key and self._update_recording_shortcut(key):
+            self.app_config.toggle_recording_hotkey = key
+            save_app_config(self.app_config, self.config_path)
+        self.settings_page.recording_hotkey_edit.setKeySequence(QKeySequence(self.app_config.toggle_recording_hotkey))
+
     def _apply_gui_hotkey(self):
+        if self.settings_page.gui_hotkey_edit.hasFocus():
+            return
         key=self.settings_page.gui_hotkey_edit.keySequence().toString(QKeySequence.SequenceFormat.PortableText)
         if key and self._update_gui_shortcut(key):
             self.app_config.toggle_gui_hotkey=key
@@ -173,5 +193,5 @@ class SettingsActions:
         self.settings_page.gui_hotkey_edit.blockSignals(False)
 
     def _set_start_input_on_launch(self, enabled):
-        self.app_config.start_input_recording_on_launch = bool(enabled)
-        save_app_config(self.app_config, self.config_path)
+        if self.independent_controller.input_enabled != bool(enabled):
+            self.independent_presenter.toggle_input()

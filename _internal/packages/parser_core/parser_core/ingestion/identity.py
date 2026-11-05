@@ -60,6 +60,25 @@ def _collect_party_actor_ids(raw_line: str) -> set[str]:
     return actor_ids
 
 
+def squad_bindings(members):
+    """Apply the legacy member identity policy to separate template/ID fields."""
+    bindings = []
+    for template, identity in members:
+        bindings.extend((match.group(2), match.group(1)) for match in _SQUAD_MEMBER_RE.finditer(template))
+        names = list(_CHAR_KEY_RE.finditer(template))
+        raw_id = str(identity)
+        prefix = re.match(r'\d+', raw_id)
+        if names and names[-1].end() == len(template) and prefix:
+            bindings.append((prefix.group(), names[-1].group(1)))
+        bindings.extend((match.group(2), match.group(1)) for match in _SQUAD_MEMBER_RE.finditer(raw_id))
+    return bindings
+
+
+def apply_squad(ingestion, bindings):
+    ingestion.party_actor_ids.update(identity for identity, _ in bindings)
+    ingestion.squad_actor_keys = dict(bindings) if len({identity for identity, _ in bindings}) == len(bindings) else {}
+
+
 def _recover_enemy_target_from_mislabeled_actor(
     fields: dict[str, str],
     *,

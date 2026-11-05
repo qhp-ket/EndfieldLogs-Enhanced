@@ -107,7 +107,7 @@ class SettingsPage(InterfacePage):
         self.start_input_switch = SwitchButton(service_wrapper)
         self.start_input_switch.setOnText('开')
         self.start_input_switch.setOffText('关')
-        service_form.addRow('启动时记录输入', self.start_input_switch)
+        service_form.addRow('启用输入记录（随伤害日志启停）', self.start_input_switch)
 
         log_card = HeaderCardWidget("日志文件路径", self)
         self.content_layout.addWidget(log_card)
@@ -148,6 +148,18 @@ class SettingsPage(InterfacePage):
         hotkey_form.addRow('切换主界面',self.gui_hotkey_edit)
         hotkey_form.addRow('',self.gui_hotkey_hint)
         hotkey_form.addRow('',self.gui_hotkey_status)
+        self.recording_hotkey_edit = SingleHotkeyEdit(hotkey_wrapper)
+        self.recording_hotkey_hint = CaptionLabel('与首页开始／停止记录按钮相同。默认 Ctrl+I。', hotkey_wrapper)
+        self.recording_hotkey_status = CaptionLabel('', hotkey_wrapper)
+        hotkey_form.addRow('启停记录', self.recording_hotkey_edit)
+        hotkey_form.addRow('', self.recording_hotkey_hint)
+        hotkey_form.addRow('', self.recording_hotkey_status)
+        for edit, hint in ((self.hotkey_edit, self.hotkey_hint), (self.gui_hotkey_edit, self.gui_hotkey_hint),
+                           (self.recording_hotkey_edit, self.recording_hotkey_hint)):
+            hint.setWordWrap(True)
+            original = hint.text()
+            edit.captureChanged.connect(lambda active, label=hint, value=original:
+                label.setText('正在录入：请直接按下组合键；离开此处后结束录入。' if active else value))
 
         battle_card = HeaderCardWidget("战斗行为", self)
         self.content_layout.addWidget(battle_card)

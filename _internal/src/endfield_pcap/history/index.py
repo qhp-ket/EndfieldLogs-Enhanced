@@ -18,7 +18,7 @@ def record_key(record: CombatRecord) -> str:
 
 
 class HistoryIndex:
-    VERSION = 1
+    VERSION = 2
 
     def __init__(self, directory: Path):
         self.directory = directory
@@ -59,6 +59,14 @@ class HistoryIndex:
         path = path.resolve()
         stat = path.stat()
         signature = [stat.st_mtime_ns, stat.st_size]
+        structured = trace and path.suffix.lower() == '.jsonl'
+        session = not trace and path.suffix.lower() == '.ndjson'
+        if structured:
+            from endfield_pcap.history.structured import trace_source_signature
+            signature = trace_source_signature(path)
+        elif session:
+            from endfield_pcap.history.session_volumes import session_source_signature
+            signature = session_source_signature(path)
         kind = 'trace' if trace else 'ndjson'
         digest = hashlib.sha256((kind + str(path)).encode('utf-8')).hexdigest()
         cache = self.directory / (digest + '.json')
@@ -68,7 +76,7 @@ class HistoryIndex:
                     and payload['signature'] == signature and payload['kind'] == kind):
                 records = []
                 for row in payload['records']:
-                    row['file_path'] = path
+                    row['file_path'] = Path(row['file_path']) if structured or session else path
                     row['players'] = [CombatPlayerSummary(**player) for player in row['players']]
                     if trace:
                         row['source_signature'] = tuple(row['source_signature'])
@@ -78,12 +86,14 @@ class HistoryIndex:
             pass  # Missing, outdated or damaged indexes can always be rebuilt.
         records = load_trace_records(path) if trace else _parse_log_file(path)
         after = path.stat()
-        if [after.st_mtime_ns, after.st_size] != signature:
+        after_signature = (trace_source_signature(path) if structured else session_source_signature(path)
+                           if session else [after.st_mtime_ns, after.st_size])
+        if after_signature != signature:
             raise ValueError('日志正在变化，请稍后刷新记录')
         rows = []
         for record in records:
             row = asdict(record)
-            row['file_path'] = str(path)
+            row['file_path'] = str(record.file_path)
             row.pop('snapshot', None)
             rows.append(row)
         payload = dict(version=self.VERSION, source=str(path), signature=signature, kind=kind, records=rows)

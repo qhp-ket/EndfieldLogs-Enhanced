@@ -14,6 +14,7 @@ class AppConfig:
     gui_font_percent: int = 115
     toggle_overlays_hotkey: str = "Ctrl+O"
     toggle_gui_hotkey: str = "Ctrl+Shift+O"
+    toggle_recording_hotkey: str = "Ctrl+I"
     imported_trace_files: list[Path] = field(default_factory=list)
     hidden_history_records: list[str] = field(default_factory=list)
     overlay_migration_count: int = 0

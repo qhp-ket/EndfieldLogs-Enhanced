@@ -16,8 +16,9 @@ def main_window(app, monkeypatch, tmp_path):
     config.service.log_dir = tmp_path
     config.theme_mode = "dark"
     monkeypatch.setattr(gui_main.MainWindow, "_ensure_game_directory_ready", lambda self: True)
-    monkeypatch.setattr(gui_main.MainWindow, "_update_overlay_shortcut", lambda self: None)
+    monkeypatch.setattr(gui_main.MainWindow, "_update_overlay_shortcut", lambda self,*args: None)
     monkeypatch.setattr(gui_main.MainWindow, "_update_gui_shortcut", lambda self,*args: None)
+    monkeypatch.setattr(gui_main.MainWindow, "_update_recording_shortcut", lambda self,*args: None)
     monkeypatch.setattr(gui_main.MainWindow, '_schedule_update_check', lambda self: None)
     gui_main.setTheme(gui_main._theme_from_mode(config.theme_mode))
     window = gui_main.MainWindow(config, tmp_path / "settings.json")

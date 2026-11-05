@@ -16,13 +16,12 @@ class BattleContext:
         is_pass = bool(event.get("is_pass"))
         if is_calc and is_pass:
             self._challenge_pass_confirmed = True
-            self._line(
-                ts_ms,
-                (
-                    f"BATTLE_RESULT source={event.get('source') or 'DUNGEON_CONTEXT'} "
-                    f"dungeonId={dungeon_id} isCalc=1 isPass=1"
-                ),
-            )
+            if self.event_sink is not None:
+                from parser_core.ingestion.structured_stage import stage_data
+                self._emit_structured(ts_ms, 'battle_result', stage_data('battle_result', event, dungeon_id,
+                    str(event.get('source') or 'DUNGEON_CONTEXT')), event)
+            else:
+                self._line(ts_ms, f"BATTLE_RESULT source={event.get('source') or 'DUNGEON_CONTEXT'} dungeonId={dungeon_id} isCalc=1 isPass=1")
         elif not self._battle_active and not self._official_timer_active:
             self._challenge_pass_confirmed = False
         self._write_dungeon_context(ts_ms, self._current_dungeon_context)
@@ -30,6 +29,11 @@ class BattleContext:
     def _write_dungeon_context(self, ts_ms: int, context: dict[str, Any]) -> None:
         dungeon_id = str(context.get("dungeon_id") or context.get("dungeonId") or "").strip()
         if not dungeon_id:
+            return
+        if self.event_sink is not None:
+            from parser_core.ingestion.structured_stage import stage_data
+            self._emit_structured(ts_ms, 'dungeon', stage_data('dungeon', context, dungeon_id,
+                str(context.get('source') or 'packet')), context)
             return
         parts = [
             "DUNGEON_CONTEXT",
@@ -63,6 +67,11 @@ class BattleContext:
         tag_ids = [int(tag_id) for tag_id in raw_tag_ids if _intish(tag_id)]
         if not dungeon_id and not tag_ids:
             return
+        if self.event_sink is not None:
+            from parser_core.ingestion.structured_stage import stage_data
+            self._emit_structured(ts_ms, 'contracts', stage_data('contracts', event, dungeon_id,
+                str(event.get('source') or 'packet')), event)
+            return
         parts = [
             "CONTRACT_TAGS",
             f"dungeonId={dungeon_id or 'unknown'}",
@@ -81,6 +90,10 @@ class BattleContext:
         self._line(ts_ms, " ".join(parts))
 
     def _handle_reset_battle_status(self, event: dict[str, Any], ts_ms: int) -> None:
+        if self.event_sink is not None:
+            from parser_core.ingestion.structured_context import context_data
+            self._emit_structured(ts_ms, 'battle_reset', context_data('battle_reset', event), event)
+            return
         reason = event.get("reason")
         inst_id = event.get("inst_id")
         battle_inst_id = event.get("battle_inst_id")
@@ -105,6 +118,10 @@ class BattleContext:
             self._official_timer_game_id = game_id
             raw_start_ts_ms = _intish(event.get("challenge_start_ts"))
             self._official_timer_start_ts_ms = raw_start_ts_ms if raw_start_ts_ms and raw_start_ts_ms > 0 else ts_ms
+            if self.event_sink is not None:
+                from parser_core.ingestion.structured_timer import official_timer_data
+                self._emit_structured(ts_ms, 'official_timer', official_timer_data(event, 'start', game_id, event_type), event)
+                return
             parts = [
                 "OFFICIAL_TIMER_START",
                 "source=SC_GAME_MECHANICS_SYNC_CHALLENGE_START",
@@ -123,6 +140,14 @@ class BattleContext:
             return
         if event_type == "SC_GAME_MECHANICS_SYNC_CHALLENGE_COMPLETE":
             self._challenge_pass_confirmed = bool(event.get("is_pass"))
+            if self.event_sink is not None:
+                from parser_core.ingestion.structured_timer import official_timer_data
+                self._emit_structured(ts_ms, 'official_timer', official_timer_data(event, 'end', game_id, event_type), event)
+                self._clear_packet_battle_window()
+                self._official_timer_expected = self._official_timer_active = False
+                self._official_timer_start_ts_ms = self._official_timer_observed_start_ts_ms = None
+                self._official_timer_game_id = ''
+                return
             parts = [
                 "OFFICIAL_TIMER_END",
                 "source=SC_GAME_MECHANICS_SYNC_CHALLENGE_COMPLETE",
@@ -148,57 +173,61 @@ class BattleContext:
             self._official_timer_observed_start_ts_ms = None
             self._official_timer_game_id = ""
             return
-        labels = {
-            "CS_GAME_MECHANICS_NTF_INST_PREPARE_FINISH": "GAME_MECHANICS_PREPARE_FINISH",
-            "CS_GAME_MECHANICS_REQ_START": "GAME_MECHANICS_REQ_START",
-            "CS_GAME_MECHANICS_REQ_STOP": "GAME_MECHANICS_REQ_STOP",
-            "SC_GAME_MECHANICS_MODIFY_INST_TIME_FREEZE": "GAME_MECHANICS_TIME_FREEZE",
-            "SC_GAME_MECHANICS_SYNC_ENTER_GAME_INST": "GAME_INST_ENTER",
-            "SC_GAME_MECHANICS_SYNC_LEAVE_GAME_INST": "GAME_INST_LEAVE",
-            "SC_GAME_MECHANICS_SYNC_RESTART_GAME_INST": "GAME_INST_RESTART",
-        }
-        label = labels.get(event_type, event_type)
-        parts = [label, f"source={event_type}"]
-        if game_id:
-            parts.append(f"gameId={game_id}")
-        for source_key, output_key in (
-            ("game_inst_id", "gameInstId"),
-            ("game_unique_id", "gameUniqueId"),
-            ("is_hunter_mode", "isHunterMode"),
-            ("interactive_obj_id", "interactiveObjId"),
-            ("npc_proxy_id", "npcProxyId"),
-            ("npc_obj_id", "npcObjId"),
-        ):
-            value = event.get(source_key)
-            if value is not None and value != "":
-                if source_key == "is_hunter_mode":
-                    parts.append(f"{output_key}={1 if bool(value) else 0}")
-                else:
-                    parts.append(f"{output_key}={value}")
-        if event_type == "SC_GAME_MECHANICS_MODIFY_INST_TIME_FREEZE":
-            freezes = event.get("time_freeze_infos")
-            if isinstance(freezes, list):
-                parts.append(f"count={len(freezes)}")
-                freeze_tokens: list[str] = []
-                total_freeze_ms = 0
-                for freeze in freezes:
-                    if not isinstance(freeze, dict):
-                        continue
-                    time_key = _intish(freeze.get("time_key")) or 0
-                    freeze_ms = _intish(freeze.get("total_freeze_time_in_ms")) or 0
-                    total_freeze_ms = max(total_freeze_ms, freeze_ms)
-                    freeze_tokens.append(f"{time_key}:{freeze_ms}")
-                if freeze_tokens:
-                    parts.append(f"freezeInfos=[{','.join(freeze_tokens)}]")
-                    parts.append(f"totalFreezeMs={total_freeze_ms}")
-        self._line(ts_ms, " ".join(parts))
-
+        if self.event_sink is not None:
+            from parser_core.ingestion.structured_context import context_data, MECHANICS
+            kind = MECHANICS[event_type][0]
+            self._emit_structured(ts_ms, kind, context_data(kind, event, source=event_type, game_id=game_id), event)
+        else:
+            labels = {
+                "CS_GAME_MECHANICS_NTF_INST_PREPARE_FINISH": "GAME_MECHANICS_PREPARE_FINISH",
+                "CS_GAME_MECHANICS_REQ_START": "GAME_MECHANICS_REQ_START",
+                "CS_GAME_MECHANICS_REQ_STOP": "GAME_MECHANICS_REQ_STOP",
+                "SC_GAME_MECHANICS_MODIFY_INST_TIME_FREEZE": "GAME_MECHANICS_TIME_FREEZE",
+                "SC_GAME_MECHANICS_SYNC_ENTER_GAME_INST": "GAME_INST_ENTER",
+                "SC_GAME_MECHANICS_SYNC_LEAVE_GAME_INST": "GAME_INST_LEAVE",
+                "SC_GAME_MECHANICS_SYNC_RESTART_GAME_INST": "GAME_INST_RESTART",
+            }
+            label = labels.get(event_type, event_type)
+            parts = [label, f"source={event_type}"]
+            if game_id:
+                parts.append(f"gameId={game_id}")
+            for source_key, output_key in (
+                ("game_inst_id", "gameInstId"),
+                ("game_unique_id", "gameUniqueId"),
+                ("is_hunter_mode", "isHunterMode"),
+                ("interactive_obj_id", "interactiveObjId"),
+                ("npc_proxy_id", "npcProxyId"),
+                ("npc_obj_id", "npcObjId"),
+            ):
+                value = event.get(source_key)
+                if value is not None and value != "":
+                    if source_key == "is_hunter_mode":
+                        parts.append(f"{output_key}={1 if bool(value) else 0}")
+                    else:
+                        parts.append(f"{output_key}={value}")
+            if event_type == "SC_GAME_MECHANICS_MODIFY_INST_TIME_FREEZE":
+                freezes = event.get("time_freeze_infos")
+                if isinstance(freezes, list):
+                    parts.append(f"count={len(freezes)}")
+                    freeze_tokens: list[str] = []
+                    total_freeze_ms = 0
+                    for freeze in freezes:
+                        if not isinstance(freeze, dict):
+                            continue
+                        time_key = _intish(freeze.get("time_key")) or 0
+                        freeze_ms = _intish(freeze.get("total_freeze_time_in_ms")) or 0
+                        total_freeze_ms = max(total_freeze_ms, freeze_ms)
+                        freeze_tokens.append(f"{time_key}:{freeze_ms}")
+                    if freeze_tokens:
+                        parts.append(f"freezeInfos=[{','.join(freeze_tokens)}]")
+                        parts.append(f"totalFreezeMs={total_freeze_ms}")
+            self._line(ts_ms, " ".join(parts))
         if event_type == "SC_GAME_MECHANICS_SYNC_RESTART_GAME_INST":
-            self._record_missing_official_timer(ts_ms, boundary=event_type)
-            self._emit_timer_reset(ts_ms, source=event_type)
+            self._record_missing_official_timer(ts_ms, boundary=event_type, origin=event)
+            self._emit_timer_reset(ts_ms, source=event_type, origin=event)
         elif event_type == "SC_GAME_MECHANICS_SYNC_LEAVE_GAME_INST":
-            self._record_missing_official_timer(ts_ms, boundary=event_type)
-            self._emit_timer_reset(ts_ms, source=event_type)
+            self._record_missing_official_timer(ts_ms, boundary=event_type, origin=event)
+            self._emit_timer_reset(ts_ms, source=event_type, origin=event)
 
     def _handle_week_raid_settlement(self, event: dict[str, Any], ts_ms: int) -> None:
         game_id = str(event.get("game_id") or "").strip()
@@ -212,6 +241,21 @@ class BattleContext:
         if not has_active_run:
             return
         total_playtime = _intish(event.get("total_playtime"))
+        if self.event_sink is not None:
+            data = {'phase': 'end', 'source': 'SC_SYNC_WEEK_RAID_SETTLEMENT', 'game_id': game_id, 'is_pass': True}
+            if total_playtime is not None and total_playtime >= 0:
+                data['pass_time'] = total_playtime
+            for key in ('bp_score', 'danger_meter'):
+                value = _intish(event.get(key))
+                if value is not None:
+                    data[key] = value
+            self._emit_structured(ts_ms, 'official_timer', data, event)
+            self._challenge_pass_confirmed = True
+            self._clear_packet_battle_window()
+            self._official_timer_expected = self._official_timer_active = False
+            self._official_timer_start_ts_ms = self._official_timer_observed_start_ts_ms = None
+            self._official_timer_game_id = ''
+            return
         parts = [
             "OFFICIAL_TIMER_END",
             "source=SC_SYNC_WEEK_RAID_SETTLEMENT",
@@ -255,7 +299,7 @@ class BattleContext:
         self._battle_start_client_tick_ms = None
         self._battle_dungeon_context_emitted = False
 
-    def _record_missing_official_timer(self, ts_ms: int, *, boundary: str) -> bool:
+    def _record_missing_official_timer(self, ts_ms: int, *, boundary: str, origin: dict | None = None) -> bool:
         if not self._battle_active and not self._official_timer_expected and not self._official_timer_active:
             return False
         activity_id = self._activity_id()
@@ -264,16 +308,18 @@ class BattleContext:
             if self._official_timer_expected or self._official_timer_active
             else "BATTLE_TIMER_MISSING"
         )
-        parts = [
-            label,
-            f"boundary={boundary}",
-            f"packetBattleActive={1 if self._battle_active else 0}",
-            f"officialExpected={1 if self._official_timer_expected else 0}",
-            f"officialStartSeen={1 if self._official_timer_active else 0}",
-        ]
-        if activity_id:
-            parts.append(f"gameId={activity_id}")
-        self._line(ts_ms, " ".join(parts))
+        if self.event_sink is not None:
+            data = {'phase': 'missing', 'boundary': boundary, 'packet_battle_active': self._battle_active,
+                    'official_expected': self._official_timer_expected, 'official_start_seen': self._official_timer_active}
+            if activity_id:
+                data['game_id'] = activity_id
+            self._emit_structured(ts_ms, 'official_timer' if label == 'OFFICIAL_TIMER_MISSING' else 'battle_timer_missing', data, origin or {})
+        else:
+            parts = [label, f"boundary={boundary}", f"packetBattleActive={1 if self._battle_active else 0}",
+                     f"officialExpected={1 if self._official_timer_expected else 0}", f"officialStartSeen={1 if self._official_timer_active else 0}"]
+            if activity_id:
+                parts.append(f"gameId={activity_id}")
+            self._line(ts_ms, " ".join(parts))
         self._clear_packet_battle_window()
         self._official_timer_expected = False
         self._official_timer_active = False
@@ -283,11 +329,17 @@ class BattleContext:
         self._challenge_pass_confirmed = False
         return True
 
-    def _emit_timer_reset(self, ts_ms: int, *, source: str, scene_num_id: int | None = None) -> None:
-        parts = ["GAME_TIMER_RESET", f"source={source}"]
-        if scene_num_id is not None:
-            parts.append(f"scene={scene_num_id}")
-        self._line(ts_ms, " ".join(parts))
+    def _emit_timer_reset(self, ts_ms: int, *, source: str, scene_num_id: int | None = None, origin: dict | None = None) -> None:
+        if self.event_sink is not None:
+            data = {'phase': 'reset', 'source': source}
+            if scene_num_id is not None:
+                data['scene_num_id'] = scene_num_id
+            self._emit_structured(ts_ms, 'battle_timer', data, origin or {})
+        else:
+            parts = ["GAME_TIMER_RESET", f"source={source}"]
+            if scene_num_id is not None:
+                parts.append(f"scene={scene_num_id}")
+            self._line(ts_ms, " ".join(parts))
         self._battle_active = False
         self._battle_start_ts_ms = None
         self._battle_start_client_tick_ms = None
@@ -305,11 +357,12 @@ class BattleContext:
         event: dict[str, Any],
         ts_ms: int,
     ) -> None:
-        self._record_missing_official_timer(ts_ms, boundary=event_type)
+        self._record_missing_official_timer(ts_ms, boundary=event_type, origin=event)
         self._emit_timer_reset(
             ts_ms,
             source=event_type,
             scene_num_id=_intish(event.get("scene_num_id")),
+            origin=event,
         )
 
     def _handle_scene_battle_state(
@@ -319,17 +372,18 @@ class BattleContext:
         ts_ms: int,
     ) -> None:
         in_battle = bool(event.get("in_battle"))
-        self._line(
-            ts_ms,
-            f"SCENE_BATTLE_STATE source={event_type} inBattle={1 if in_battle else 0}",
-        )
+        if self.event_sink is not None:
+            from parser_core.ingestion.structured_context import context_data
+            self._emit_structured(ts_ms, 'scene_battle', context_data('scene_battle', event, source=event_type), event)
+        else:
+            self._line(ts_ms, f"SCENE_BATTLE_STATE source={event_type} inBattle={1 if in_battle else 0}")
         if not in_battle and self._official_timer_required() and self._battle_active:
-            self._line(
-                ts_ms,
-                (
-                    "OFFICIAL_TIMER_AWAIT "
-                    f"source={event_type} gameId={self._activity_id()} "
-                    f"officialStartSeen={1 if self._official_timer_active else 0}"
-                ),
-            )
+            self._write_official_timer_await(ts_ms, event_type, event)
             self._clear_packet_battle_window()
+
+    def _write_official_timer_await(self, ts_ms: int, source: str, origin: dict) -> None:
+        if self.event_sink is not None:
+            self._emit_structured(ts_ms, 'official_timer', {'phase': 'await', 'source': source,
+                'game_id': self._activity_id(), 'official_start_seen': self._official_timer_active}, origin)
+        else:
+            self._line(ts_ms, f"OFFICIAL_TIMER_AWAIT source={source} gameId={self._activity_id()} officialStartSeen={1 if self._official_timer_active else 0}")

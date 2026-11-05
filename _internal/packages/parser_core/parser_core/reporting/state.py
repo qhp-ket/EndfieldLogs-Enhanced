@@ -61,6 +61,10 @@ class ReportState:
     timer_window_valid: bool
     unresolved_buff_actions: list[dict[str, Any]]
     unresolved_hits: list[dict[str, Any]]
+    has_official_timer_evidence: bool = False
+    official_timer_evidence: dict[str, Any] | None = None
+    evidence_count: int | None = None
+    reference_timezone_offset_minutes: int | None = None
 
     @classmethod
     def from_snapshot(cls, snapshot: Mapping[str, Any]) -> ReportState:
@@ -112,4 +116,8 @@ class ReportState:
             timer_window_valid=snapshot['timer_window_valid'],
             unresolved_buff_actions=snapshot['unresolved_buff_actions'],
             unresolved_hits=snapshot['unresolved_hits'],
+            has_official_timer_evidence=snapshot.get('has_official_timer_evidence', False),
+            official_timer_evidence=snapshot.get('official_timer_evidence'),
+            evidence_count=snapshot.get('evidence_count'),
+            reference_timezone_offset_minutes=snapshot.get('reference_timezone_offset_minutes'),
         )

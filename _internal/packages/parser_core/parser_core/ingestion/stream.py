@@ -8,10 +8,12 @@ from parser_core.ingestion.dynamic_evidence import consume_dynamic_observation
 from parser_core.ingestion.entities import consume_entity_observation
 from parser_core.ingestion.fields import _parse_hint_timestamp_ms
 from parser_core.ingestion.fields import _parse_prefixed_timestamp_ms
+from parser_core.ingestion.fields import _extract_fields
 from parser_core.ingestion.hits import consume_hit_and_buff_lifecycle
 from parser_core.ingestion.identity import _SQUAD_MEMBER_RE
 from parser_core.ingestion.identity import _apply_short_actor_aliases
 from parser_core.ingestion.identity import _collect_party_actor_ids
+from parser_core.ingestion.identity import apply_squad
 from parser_core.ingestion.identity import _infer_context_enemy_hint
 from parser_core.ingestion.loadout import consume_character_skills
 from parser_core.ingestion.loadout import consume_loadout_group
@@ -52,10 +54,12 @@ def _raw_battle_ingestion(
     while True:
         batch = yield ingestion.snapshot()
         for line_no, raw_line in batch:
+            ingestion.evidence_count = max(ingestion.evidence_count, line_no)
             if "GAME_TIMER_RESET source=CAPTURE_SESSION_START" in raw_line:
                 ingestion.critical_stats_by_actor.clear()
             ts_ms = _parse_prefixed_timestamp_ms(raw_line)
             if ts_ms is None:
+                ingestion.official_timer_collector.observe_legacy(line_no, raw_line, None, _extract_fields)
                 continue
             # Legacy trace timestamps are time-of-day, not dated instants. Express
             # them in one fixed modulo-24h coordinate system for this segment.
@@ -70,10 +74,11 @@ def _raw_battle_ingestion(
             if ingestion.first_context_ms is None:
                 ingestion.first_context_ms = ts_ms
             ingestion.last_context_ms = ts_ms
+            ingestion.official_timer_collector.observe_legacy(line_no, raw_line, ts_ms, _extract_fields)
             ingestion.party_actor_ids.update(_collect_party_actor_ids(raw_line))
             if " SQUAD " in raw_line:
                 members = [(match.group(2), match.group(1)) for match in _SQUAD_MEMBER_RE.finditer(raw_line)]
-                ingestion.squad_actor_keys = dict(members) if len({pair[0] for pair in members}) == len(members) else {}
+                apply_squad(ingestion, members)
 
             if consume_entity_observation(ingestion, raw_line, line_no, ts_ms):
                 continue

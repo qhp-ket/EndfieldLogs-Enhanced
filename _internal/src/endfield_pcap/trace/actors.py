@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import Any
+from parser_core.ingestion.loadout_wire import loadout_data
 from endfield_pcap.trace.formatting import (
     _UNKNOWN_ENEMY_KEY,
     _intish,
@@ -10,6 +11,37 @@ from endfield_pcap.trace.formatting import (
 
 
 class ActorEvents:
+    def _write_squad(self, ts_ms, members, origin):
+        if self.event_sink is not None:
+            self._emit_structured(ts_ms, 'squad', {'members': members}, origin)
+        else:
+            labels = [f"{row['template']}_{row['entity_id']}" for row in members]
+            self._line(ts_ms, f"SQUAD size={len(members)} members=[{' '.join(labels)}]")
+
+    def _write_actor_mapping(self, ts_ms, entity_id, template, source, skill, origin):
+        if self.event_sink is not None:
+            self._emit_structured(ts_ms, 'actor_mapping', {'entity_id': entity_id, 'template': template,
+                                  'mapping_source': source, 'skill': skill}, origin)
+        else:
+            self._line(ts_ms, f"ACTOR_MAP id={entity_id} template={template} source={source} skill={skill}")
+
+    @staticmethod
+    def _has_entity_attributes(attrs):
+        return isinstance(attrs, list) and any(isinstance(row, dict) and _intish(row.get('attr_type')) is not None for row in attrs)
+
+    def _write_entity_stats(self, row, ts_ms, entity_id, template, kind, origin):
+        if not self._has_entity_attributes(row.get('attrs')) and row.get('level') is None and row.get('hp') is None:
+            return
+        if self.event_sink is not None:
+            data = {'entity_id': entity_id, 'template': template, 'kind': kind}
+            data.update({output: row[key] for key, output in (('attrs', 'attributes'), ('level', 'level'), ('hp', 'hp')) if key in row})
+            self._emit_structured(ts_ms, 'entity_stats', data, origin)
+            return
+        attrs = _entity_attr_tokens(row.get('attrs'))
+        self._line(ts_ms, f"ENTITY_STATS id={entity_id} template={template} kind={kind} "
+                   f"level={row.get('level') if row.get('level') is not None else 'unknown'} "
+                   f"hp={row.get('hp') if row.get('hp') is not None else 'unknown'} attrs=[{' '.join(attrs)}]")
+
     def _handle_scene_info_skills(self, event: dict[str, Any], ts_ms: int) -> None:
         # SC_SELF_SCENE_INFO_SKILLS 携带每个角色的技能清单（skill_inst_id → template id）。
         # 施放包（SkillStartCast）只带 inst id，没有这份映射时零伤害技能（辅助大招等）
@@ -17,6 +49,7 @@ class ActorEvents:
         owner_template = str(event.get("owner_templateid") or "")
         owner_hint = self._character_from_template(owner_template) or ""
         skill_level_tokens: list[str] = []
+        skill_levels = []
         for skill in event.get("skills") or []:
             if not isinstance(skill, dict):
                 continue
@@ -45,10 +78,15 @@ class ActorEvents:
             )
             if token_id:
                 skill_level_tokens.append(f"{token_id}:{level}")
+                skill_levels.append({'skill': token_id, 'level': level})
         if owner_template and skill_level_tokens:
             signature = (owner_template, tuple(skill_level_tokens))
             if signature not in self._char_skills_emitted:
                 self._char_skills_emitted.add(signature)
+                if self.event_sink is not None:
+                    self._emit_structured(ts_ms, 'character_skills', {'template': owner_template,
+                        'entity_id': _intish(event.get('owner_inst_id')) or None, 'skills': skill_levels}, event)
+                    return
                 self._line(
                     ts_ms,
                     (
@@ -70,36 +108,26 @@ class ActorEvents:
                 self.id_to_name[battle_id] = template
             if obj_id and template:
                 self.id_to_name[obj_id] = template
-                members.append(f"{template}_{battle_id}")
+                members.append({'template': template, 'entity_id': battle_id})
                 self.actor_alias_by_raw_id[obj_id] = template
             if battle_id and template:
                 self.actor_alias_by_raw_id[battle_id] = template
-                attrs = _entity_attr_tokens(item.get("attrs"))
-                if attrs or item.get("level") is not None or item.get("hp") is not None:
-                    self._line(
-                        ts_ms,
-                        (
-                            f"ENTITY_STATS id={battle_id} template={template} kind=character "
-                            f"level={item.get('level') if item.get('level') is not None else 'unknown'} "
-                            f"hp={item.get('hp') if item.get('hp') is not None else 'unknown'} "
-                            f"attrs=[{' '.join(attrs)}]"
-                        ),
-                    )
+                self._write_entity_stats(item, ts_ms, battle_id, template, 'character', event)
         if members:
             self._has_scene_squad = True
-            self._line(ts_ms, f"SQUAD size={len(members)} members=[{' '.join(members)}]")
+            self._write_squad(ts_ms, members, event)
 
     def _handle_loadout(self, event: dict[str, Any], ts_ms: int) -> None:
         rows = event.get("rows")
         if not isinstance(rows, list) or not rows:
             return
         members = [
-            f"{row.get('char')}_{row.get('char_inst_id')}"
+            {'template': str(row.get('char')), 'entity_id': row.get('char_inst_id')}
             for row in rows
             if isinstance(row, dict) and row.get("char") and row.get("char_inst_id")
         ]
         if members and not self._has_scene_squad:
-            self._line(ts_ms, f"SQUAD size={len(members)} members=[{' '.join(members)}]")
+            self._write_squad(ts_ms, members, event)
         self._refresh_loadout_skill_owners(rows)
         reason = str(event.get("reason") or "packet")
         if reason == "SC_SELF_SCENE_INFO":
@@ -117,7 +145,11 @@ class ActorEvents:
             for row in rows
             if isinstance(row, dict) and row.get("char_inst_id")
         ]
-        self._line(ts_ms, f"LOADOUT reason={reason} slotCount={len(rows)} memberCount={len(rows)} roster=[{' '.join(roster)}]")
+        if self.event_sink is not None:
+            self._emit_structured(ts_ms, 'loadout_group', {'reason': reason, 'slot_count': len(rows), 'member_count': len(rows),
+                'roster': [{'entity_id': row['char_inst_id']} for row in rows if isinstance(row, dict) and row.get('char_inst_id')]}, event)
+        else:
+            self._line(ts_ms, f"LOADOUT reason={reason} slotCount={len(rows)} memberCount={len(rows)} roster=[{' '.join(roster)}]")
         for row in rows:
             if not isinstance(row, dict):
                 continue
@@ -129,6 +161,10 @@ class ActorEvents:
                 self.id_to_name[char_inst_id] = char
             if char and char_inst_id:
                 self.actor_alias_by_raw_id[char_inst_id] = char
+            if self.event_sink is not None:
+                self._emit_structured(ts_ms, 'loadout_slot', loadout_data(row), event)
+                self._emit_structured(ts_ms, 'loadout_stats', loadout_data(row, stats=True), event)
+                continue
             potential = int(_intish(row.get("potential")) or 0)
             weapon_inst_id = int(_intish(row.get("weapon_inst_id")) or 0)
             weapon_template = str(row.get("weapon_template") or "unknown_weapon")
@@ -243,18 +279,9 @@ class ActorEvents:
                 self.id_to_name[battle_id] = template
             if obj_id and template:
                 self.id_to_name[obj_id] = template
-            attrs = _entity_attr_tokens(item.get("attrs"))
-            if battle_id and template and (attrs or item.get("level") is not None or item.get("hp") is not None):
+            if battle_id and template:
                 kind = str(item.get("kind") or "object")
-                self._line(
-                    ts_ms,
-                    (
-                        f"ENTITY_STATS id={battle_id} template={template} kind={kind} "
-                        f"level={item.get('level') if item.get('level') is not None else 'unknown'} "
-                        f"hp={item.get('hp') if item.get('hp') is not None else 'unknown'} "
-                        f"attrs=[{' '.join(attrs)}]"
-                    ),
-                )
+                self._write_entity_stats(item, ts_ms, battle_id, template, kind, event)
 
     def _handle_sync_attr(self, event: dict[str, Any], ts_ms: int) -> None:
         battle_id = _intish(event.get("battle_inst_id"))
@@ -270,9 +297,13 @@ class ActorEvents:
             self.actor_alias_by_raw_id[battle_id] = template
         if obj_id and template and template != "unknown":
             self.id_to_name[obj_id] = template
-        attrs = _entity_attr_tokens(event.get("attrs"))
-        if not attrs:
+        if not self._has_entity_attributes(event.get('attrs')):
             return
+        if self.event_sink is not None:
+            self._emit_structured(ts_ms, 'entity_attributes', {'entity_id': entity_id, 'object_id': obj_id,
+                                  'template': template, 'attributes': event['attrs']}, event)
+            return
+        attrs = _entity_attr_tokens(event.get("attrs"))
         self._line(
             ts_ms,
             (

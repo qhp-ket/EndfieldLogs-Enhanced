@@ -12,7 +12,7 @@ def consume_skill_observation(ingestion: IngestionState, raw_line: str, line_no:
         fields = _extract_fields(raw_line)
         # Evidence projection only: retain observed values, never integrate
         # recovery speed or infer unobserved consumption/initial energy.
-        ingestion.atb_observations.append({
+        apply_atb_observation(ingestion, {
             "ts_ms": ts_ms, "line_no": line_no,
             "character_key": _extract_character_key(fields.get("owner"), ""),
             "owner_actor_id": fields.get("ownerId"),
@@ -23,56 +23,49 @@ def consume_skill_observation(ingestion: IngestionState, raw_line: str, line_no:
             "reason": fields.get("reason"), "source": fields.get("source"),
             "original_source": fields.get("origSource"),
         })
-        if str(fields.get("reason") or "") == "AddValue" and _safe_positive_rate(fields.get("delta")) is not None:
-            atb_char = _extract_character_key(fields.get("owner"), "")
-            if atb_char:
-                ingestion.atb_gain_ms_by_char[atb_char].append(ts_ms)
         return True
 
     if " SKILL_CAST_START " in raw_line:
         fields = _extract_fields(raw_line)
         cast_skill = str(fields.get("skill") or "")
-        cast_character_key = _extract_character_key(fields.get("owner"), cast_skill)
-        cast_record = {
-            "ts_ms": ts_ms,
-            "line_no": line_no,
-            "skill": cast_skill,
-            "owner": fields.get("owner"),
-            "owner_id": fields.get("ownerId"),
-            "skill_inst_id": fields.get("inst"),
-            "skill_source": fields.get("skillSource") or fields.get("skill_source"),
-            "source_character_key": cast_character_key,
-            "end_ts_ms": None,
-        }
-        ingestion.skill_casts.append(cast_record)
-        inst_key = str(cast_record.get("skill_inst_id") or "")
-        if inst_key:
-            ingestion.active_skill_casts_by_inst[inst_key] = cast_record
-        if cast_character_key:
-            if ingestion.first_party_action_ms is None and not _is_generic_runtime_skill_id(cast_skill):
-                ingestion.first_party_action_ms = ts_ms
-            rows = ingestion.recent_skill_casts_by_char[cast_character_key]
-            rows.append(
-                {
-                    "ts_ms": ts_ms,
-                    "skill": cast_skill,
-                    "owner": fields.get("owner"),
-                    "skill_inst_id": fields.get("inst"),
-                    "skill_source": fields.get("skillSource") or fields.get("skill_source"),
-                }
-            )
-            del rows[:-16]
+        apply_skill_start(ingestion, ts_ms, line_no, cast_skill, fields.get("owner"), fields.get("ownerId"),
+                          fields.get("inst"), fields.get("skillSource") or fields.get("skill_source"))
         return True
 
     if " SKILL_CAST_END " in raw_line:
         fields = _extract_fields(raw_line)
-        inst_key = str(fields.get("inst") or "")
-        cast_record = ingestion.active_skill_casts_by_inst.pop(inst_key, None) if inst_key else None
-        if cast_record is not None:
-            cast_record["end_ts_ms"] = ts_ms
-            cast_record["end_line_no"] = line_no
+        apply_skill_end(ingestion, fields.get("inst"), ts_ms, line_no)
         return True
     return False
+
+
+def apply_atb_observation(ingestion, observation):
+    ingestion.atb_observations.append(observation)
+    character = observation["character_key"]
+    if character and observation["reason"] == "AddValue" and _safe_positive_rate(observation["delta"]) is not None:
+        ingestion.atb_gain_ms_by_char[character].append(observation["ts_ms"])
+
+
+def apply_skill_start(ingestion, ts_ms, line_no, skill, owner, owner_id, instance, source):
+    character = _extract_character_key(owner, skill)
+    record = {"ts_ms": ts_ms, "line_no": line_no, "skill": skill, "owner": owner, "owner_id": owner_id,
+              "skill_inst_id": instance, "skill_source": source, "source_character_key": character, "end_ts_ms": None}
+    ingestion.skill_casts.append(record)
+    if instance:
+        ingestion.active_skill_casts_by_inst[instance] = record
+    if character:
+        if ingestion.first_party_action_ms is None and not _is_generic_runtime_skill_id(skill):
+            ingestion.first_party_action_ms = ts_ms
+        rows = ingestion.recent_skill_casts_by_char[character]
+        rows.append({"ts_ms": ts_ms, "skill": skill, "owner": owner, "skill_inst_id": instance, "skill_source": source})
+        del rows[:-16]
+
+
+def apply_skill_end(ingestion, instance, ts_ms, line_no):
+    record = ingestion.active_skill_casts_by_inst.pop(instance, None) if instance else None
+    if record is not None:
+        record["end_ts_ms"] = ts_ms
+        record["end_line_no"] = line_no
 
 
 def _is_generic_runtime_skill_id(skill_key: str | None) -> bool:

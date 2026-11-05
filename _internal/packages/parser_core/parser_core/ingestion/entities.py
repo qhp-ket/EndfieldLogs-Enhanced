@@ -14,6 +14,28 @@ from parser_core.critical_context import update_critical_observation
 from parser_core.ingestion.state import IngestionState
 
 
+def entity_stats_snapshot(template, kind, level, observations, *, timestamp_ms, attribute_list_present):
+    """Fold already decoded attribute observations using the shared conflict rules."""
+    attrs, basic_attrs, seen, invalid, invalid_tokens = {}, {}, set(), set(), []
+    for attr_type, value, basic_value, invalid_token in observations:
+        if attr_type is None:
+            if invalid_token is not None:
+                invalid_tokens.append(invalid_token)
+            continue
+        if attr_type in seen or value is None:
+            invalid.add(attr_type)
+            attrs.pop(attr_type, None)
+            basic_attrs.pop(attr_type, None)
+        elif attr_type not in invalid:
+            attrs[attr_type] = value
+            if basic_value is not None:
+                basic_attrs[attr_type] = basic_value
+        seen.add(attr_type)
+    return {'template': template, 'kind': kind, 'level': level, 'attrs': attrs, 'basic_attrs': basic_attrs,
+            'ts_ms': timestamp_ms, 'invalid_attr_types': sorted(invalid), 'invalid_attr_tokens': invalid_tokens,
+            'attribute_list_present': attribute_list_present}
+
+
 def _parse_entity_stats_snapshot(raw_line: str) -> tuple[str, dict[str, Any]] | None:
     if " ENTITY_STATS " not in raw_line:
         return None
@@ -21,45 +43,22 @@ def _parse_entity_stats_snapshot(raw_line: str) -> tuple[str, dict[str, Any]] | 
     entity_id = str(fields.get("id") or "")
     if not re.fullmatch(r"[1-9]\d*", entity_id):
         return None
-    attrs: dict[int, float] = {}
-    basic_attrs: dict[int, float] = {}
-    seen_attr_types: set[int] = set()
-    invalid_attr_types: set[int] = set()
-    invalid_attr_tokens: list[str] = []
+    observations = []
     attrs_match = re.search(r"\battrs=\[(?P<attrs>[^\]]*)\]", raw_line)
     attrs_blob = attrs_match.group("attrs") if attrs_match else ""
     for token in attrs_blob.split():
         attr_type_text, separator, raw_values = token.partition(":")
         if not separator:
-            invalid_attr_tokens.append(token)
+            observations.append((None, None, None, token))
             continue
         attr_type = _coerce_optional_int(attr_type_text)
         raw_value, basic_separator, raw_basic = raw_values.partition('/')
         value = _coerce_optional_float(raw_value)
-        if attr_type is None:
-            invalid_attr_tokens.append(token)
-            continue
-        if attr_type in seen_attr_types or value is None:
-            invalid_attr_types.add(attr_type)
-            attrs.pop(attr_type, None)
-            basic_attrs.pop(attr_type, None)
-        elif attr_type not in invalid_attr_types:
-            attrs[attr_type] = value
-            basic_value = _coerce_optional_float(raw_basic) if basic_separator else None
-            if basic_value is not None:
-                basic_attrs[attr_type] = basic_value
-        seen_attr_types.add(attr_type)
-    return entity_id, {
-        "template": fields.get("template"),
-        "kind": fields.get("kind"),
-        "level": _coerce_optional_int(fields.get("level")),
-        "attrs": attrs,
-        "basic_attrs": basic_attrs,
-        "ts_ms": _parse_prefixed_timestamp_ms(raw_line),
-        "invalid_attr_types": sorted(invalid_attr_types),
-        "invalid_attr_tokens": invalid_attr_tokens,
-        "attribute_list_present": attrs_match is not None,
-    }
+        basic_value = _coerce_optional_float(raw_basic) if basic_separator else None
+        observations.append((attr_type, value, basic_value, token if attr_type is None else None))
+    return entity_id, entity_stats_snapshot(fields.get('template'), fields.get('kind'),
+        _coerce_optional_int(fields.get('level')), observations,
+        timestamp_ms=_parse_prefixed_timestamp_ms(raw_line), attribute_list_present=attrs_match is not None)
 
 
 def _entity_stats_snapshot_at(
@@ -139,21 +138,26 @@ def _attach_attacker_entity_stats(hit: dict[str, Any], snapshot: dict[str, Any] 
     hit["attacker_stats_invalid_attr_types"] = list(snapshot.get("invalid_attr_types") or [])
 
 
+def apply_entity_snapshot(ingestion: IngestionState, entity_id: str, snapshot: dict,
+                          line_no: int, ts_ms: int, *, partial=False) -> None:
+    snapshot['ts_ms'] = ts_ms
+    if not partial:
+        snapshot['line_no'] = line_no
+        ingestion.entity_stats_timelines[entity_id].append((ts_ms, snapshot))
+    update_critical_observation(ingestion.critical_stats_by_actor, entity_id, snapshot, line_no, partial=partial)
+
+
 def consume_entity_observation(ingestion: IngestionState, raw_line: str, line_no: int, ts_ms: int) -> bool:
     entity_stats_snapshot = _parse_entity_stats_snapshot(raw_line)
     if entity_stats_snapshot is not None:
         entity_id, snapshot = entity_stats_snapshot
-        snapshot["ts_ms"] = ts_ms
-        snapshot["line_no"] = line_no
-        ingestion.entity_stats_timelines[entity_id].append((ts_ms, snapshot))
-        update_critical_observation(ingestion.critical_stats_by_actor, entity_id, snapshot, line_no)
+        apply_entity_snapshot(ingestion, entity_id, snapshot, line_no, ts_ms)
         return True
 
     if " ENTITY_ATTR_UPDATE " in raw_line:
         update = _parse_entity_stats_snapshot(raw_line.replace(" ENTITY_ATTR_UPDATE ", " ENTITY_STATS ", 1))
         if update is not None:
             entity_id, snapshot = update
-            snapshot["ts_ms"] = ts_ms
-            update_critical_observation(ingestion.critical_stats_by_actor, entity_id, snapshot, line_no, partial=True)
+            apply_entity_snapshot(ingestion, entity_id, snapshot, line_no, ts_ms, partial=True)
         return True
     return False

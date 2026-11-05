@@ -14,6 +14,13 @@ CLOCK_EVENTS = {'GAME_CLOCK_TICK', 'CS_PING', 'SC_PING', 'CS_GAME_TIME_FREEZE_ST
 def write_clock_observation(bridge: TraceBridge, event: dict[str, Any], event_type: str, ts_ms: int | None) -> None:
     if ts_ms is None:
         return
+    if bridge.event_sink is not None:
+        from parser_core.ingestion.structured_clock import clock_data
+        observation = clock_data(event, event_type)
+        if observation is not None:
+            kind, data = observation
+            bridge._append_structured(ts_ms, kind, data, event)
+        return
     if event_type == "GAME_CLOCK_TICK":
         tick = _intish(event.get("tick_ms"))
         seq = _intish(event.get("seq_id"))
@@ -103,23 +110,35 @@ def write_keyword_update(bridge: TraceBridge, event: dict[str, Any], ts_ms: int)
             elif seq == previous[0] and previous[1] != final_rate:
                 bridge._keyword_value_serials[cache_key] = (seq, None)
                 bridge.buff_values_by_uid[uid].pop('rate', None)
-    bridge._line(ts_ms, ('BUFF_KEYWORD_UPDATE_UNRESOLVED ' if errors else 'BUFF_KEYWORD_UPDATE ')
-               + json.dumps(observation, ensure_ascii=False, separators=(',', ':'), allow_nan=False))
-
+    if bridge.event_sink is not None:
+        from parser_core.ingestion.buff_packet_wire import packet_data
+        bridge._emit_structured(ts_ms, 'buff_keyword', packet_data(observation), event)
+    else:
+        bridge._line(ts_ms, ('BUFF_KEYWORD_UPDATE_UNRESOLVED ' if errors else 'BUFF_KEYWORD_UPDATE ')
+                   + json.dumps(observation, ensure_ascii=False, separators=(',', ':'), allow_nan=False))
 
 def write_buff_enable(bridge: TraceBridge, event: dict[str, Any], ts_ms: int) -> None:
     states = event.get('states')
     if isinstance(states, dict):
         for uid, enabled in states.items():
-            bridge._line(ts_ms, 'BUFF_ENABLE ' + json.dumps({
+            observation = {
                 'schemaVersion': 1, 'buffUid': str(uid), 'enabled': enabled,
                 'ownerId': str(event.get('owner_id')) if event.get('owner_id') is not None else None,
                 'operationSeq': event.get('seq_id'), 'clientTickMs': event.get('client_tick_tms'),
                 'generation': event.get('generation'),
-            }, separators=(',', ':')))
+            }
+            if bridge.event_sink is not None:
+                from parser_core.ingestion.buff_packet_wire import packet_data
+                bridge._emit_structured(ts_ms, 'buff_enable', packet_data(observation), event)
+            else:
+                bridge._line(ts_ms, 'BUFF_ENABLE ' + json.dumps(observation, separators=(',', ':')))
 
 
 def write_entity_value(bridge: TraceBridge, event: dict[str, Any], ts_ms: int) -> None:
+    if bridge.event_sink is not None:
+        from parser_core.ingestion.structured_entity import entity_value_data
+        bridge._emit_structured(ts_ms, 'entity_value', entity_value_data(event), event)
+        return
     entity_inst_id = _intish(event.get("entity_inst_id"))
     hp = _floatish(event.get("hp"))
     ultimatesp = _floatish(event.get("ultimatesp"))

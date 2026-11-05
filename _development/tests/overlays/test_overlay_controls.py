@@ -280,7 +280,9 @@ def test_numeric_dimensions_drag_font_and_lock_are_independent(main_window, app)
     native._handle_mouse_move(QPoint(659, 359), origin + QPoint(40, 20), Qt.MouseButton.LeftButton)
     native._handle_mouse_release(QPoint(659, 359))
     app.processEvents()
-    assert (page.width_edit.value(), page.height_edit.value()) == (660, 360)
+    assert (page.width_edit.value(), page.height_edit.value()) == (native.width(), native.height())
+    natural = native.canvas.natural_size
+    assert abs(native.width()-native.height()*natural.width()/natural.height()) < 2
     before = window._selected_overlay().geometry
     page.font_size_slider.setValue(150)
     assert window._selected_overlay().geometry == before
@@ -346,7 +348,9 @@ def test_drag_updates_window_immediately_and_saves_once_on_release(main_window, 
         native.mouseMoveEvent(event)
         app.processEvents()
         if resize:
-            assert native.size()==before.size()+QSize(delta.x(),delta.y())
+            natural = native.canvas.natural_size
+            assert native.width() > before.width() and native.height() > before.height()
+            assert abs(native.width()-native.height()*natural.width()/natural.height()) < 2
         else:
             assert native.pos()==before.topLeft()+delta
         assert not saves and not refreshes

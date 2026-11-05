@@ -17,8 +17,6 @@ class IndependentServicesPresenter(QObject):
         self.home.input_settings_btn.clicked.connect(self.show_input_settings)
         self.home.vision_overlays_btn.clicked.connect(show_overlays)
         overlay_page.vision_settings_btn.clicked.connect(self.show_vision_settings)
-        if settings.current.start_input_recording_on_launch:
-            QTimer.singleShot(0, self, self.start_input)
 
     def start_input(self):
         try:
@@ -57,7 +55,9 @@ class IndependentServicesPresenter(QObject):
         self.home.input_status.setToolTip(value.get('path', '') +
             f'\n文件记录 {value.get("count", 0)} 条（含元数据）\n原始报告计数：{value.get("raw_received", {})}'
             f'\n管理员权限：{value.get("administrator", False)}\n采集健康状态：{value.get("capture_health", {})}')
-        self.home.input_service_btn.setText('停止记录输入' if state.input_running else '开始记录输入')
+        self.home.input_service_btn.setText('禁用输入记录' if self.controller.input_enabled else '启用输入记录')
+        if self.controller.input_enabled and not state.input_running and status != 'error':
+            self.home.input_status.setText('已启用 · 等待开始记录伤害日志')
         if self.home.vision_status.text() != state.visual_status:
             self.home.vision_status.setText(state.visual_status)
 

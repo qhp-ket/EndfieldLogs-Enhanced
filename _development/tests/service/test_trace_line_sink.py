@@ -12,10 +12,8 @@ def test_sink_gets_exact_disk_lines_after_each_write_including_pending_order(tmp
         # The callback sees a closed/flushed write, with identical LF bytes.
         assert path.read_bytes() == "".join(received).encode("utf-8")
     bridge = TraceBridge(path, line_sink=sink)
-    bridge._pending_buff_start_ts_ms = 1000
-    bridge._pending_buff_start_order = [9007199254740993]
-    bridge._pending_buff_start_rows[9007199254740993] = (
-        "buff_fixture", "chr_0004_pelica", "chr_0035_liino",
+    bridge._write_buff_start(
+        1000, "buff_fixture", 9007199254740993, "chr_0004_pelica", "chr_0035_liino",
         {"blackboard": {"atk_up": {"float_value": 0.2}}},
     )
     bridge._line(2000, 'HP_V2 #1 hit=120 skill="fixture"')

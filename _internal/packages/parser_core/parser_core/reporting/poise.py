@@ -13,10 +13,16 @@ def _parse_poise_damage_event(raw_line: str, ts_ms: int, line_no: int) -> dict[s
     if not _POISE_RE.search(raw_line):
         return None
     fields = _extract_fields(raw_line)
-    if str(fields.get("type") or "") != "PoiseDamage":
+    return poise_damage_observation(ts_ms, line_no, str(fields.get("type") or ""),
+        _coerce_optional_float(fields.get("value")), _coerce_optional_float(fields.get("cur")),
+        str(fields.get("source") or ""), _coerce_int(fields.get("sourceInt"), default=0) or None,
+        str(fields.get("origSource") or ""), _coerce_int(fields.get("origSourceInt"), default=0) or None)
+
+
+def poise_damage_observation(ts_ms, line_no, modify_type, value, current, source, source_int, orig_source, orig_source_int):
+    if modify_type != "PoiseDamage":
         return None
-    source = str(fields.get("source") or "").strip()
-    orig_source = str(fields.get("origSource") or "").strip()
+    source, orig_source = source.strip(), orig_source.strip()
     if source in {"", "unknown"}:
         source = orig_source
     if source in {"", "unknown"}:
@@ -25,12 +31,12 @@ def _parse_poise_damage_event(raw_line: str, ts_ms: int, line_no: int) -> dict[s
         "line_no": line_no,
         "ts_ms": ts_ms,
         "type": "PoiseDamage",
-        "value": _coerce_optional_float(fields.get("value")),
-        "current_value": _coerce_optional_float(fields.get("cur")),
+        "value": value,
+        "current_value": current,
         "source": source,
-        "source_int": _coerce_int(fields.get("sourceInt"), default=0) or None,
+        "source_int": source_int,
         "orig_source": orig_source if orig_source not in {"", "unknown"} else None,
-        "orig_source_int": _coerce_int(fields.get("origSourceInt"), default=0) or None,
+        "orig_source_int": orig_source_int,
     }
 
 

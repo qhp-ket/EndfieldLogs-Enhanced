@@ -18,8 +18,16 @@ _OFFICIAL_TIMER_END_RE = re.compile(r"\bOFFICIAL_TIMER_END\b")
 _OFFICIAL_TIMER_START_RE = re.compile(r"\bOFFICIAL_TIMER_START\b")
 
 def consume_timer_observation(ingestion: IngestionState, raw_line: str, line_no: int, ts_ms: int) -> bool:
-    if _OFFICIAL_TIMER_START_RE.search(raw_line):
-        fields = _extract_fields(raw_line)
+    for marker, pattern in (('OFFICIAL_TIMER_START', _OFFICIAL_TIMER_START_RE), ('LIVE_TIMER_TICK', _LIVE_TIMER_TICK_RE),
+                            ('OFFICIAL_TIMER_END', _OFFICIAL_TIMER_END_RE), ('GAME_TIMER_START', _GAME_TIMER_START_RE),
+                            ('GAME_TIMER_END', _GAME_TIMER_END_RE)):
+        if pattern.search(raw_line):
+            return apply_timer_observation(ingestion, marker, _extract_fields(raw_line), ts_ms)
+    return False
+
+
+def apply_timer_observation(ingestion: IngestionState, marker: str, fields: dict[str, Any], ts_ms: int) -> bool:
+    if marker == 'OFFICIAL_TIMER_START':
         ingestion.set_dungeon_context(fields.get("gameId") or fields.get("game_id"))
         # A new explicit challenge start opens a new timer scope. A prior
         # attempt's completion and elapsed time cannot certify this one.
@@ -40,8 +48,7 @@ def consume_timer_observation(ingestion: IngestionState, raw_line: str, line_no:
         ingestion.timer_start_seen = True
         return True
 
-    if _LIVE_TIMER_TICK_RE.search(raw_line):
-        fields = _extract_fields(raw_line)
+    if marker == 'LIVE_TIMER_TICK':
         elapsed_ms = _coerce_int(fields.get("elapsedMs"), default=0)
         if elapsed_ms > 0:
             ingestion.live_timer_elapsed_ms = elapsed_ms
@@ -50,8 +57,7 @@ def consume_timer_observation(ingestion: IngestionState, raw_line: str, line_no:
             ingestion.game_timer_window_elapsed_ms = elapsed_ms
         return True
 
-    if _OFFICIAL_TIMER_END_RE.search(raw_line):
-        fields = _extract_fields(raw_line)
+    if marker == 'OFFICIAL_TIMER_END':
         ingestion.set_dungeon_context(fields.get("gameId") or fields.get("game_id"))
         ingestion.official_timer_end_ms = ts_ms
         if _coerce_int(fields.get("isPass"), default=0) == 1:
@@ -67,16 +73,14 @@ def consume_timer_observation(ingestion: IngestionState, raw_line: str, line_no:
             ingestion.timer_end_seen = True
         return True
 
-    if _GAME_TIMER_START_RE.search(raw_line):
-        fields = _extract_fields(raw_line)
+    if marker == 'GAME_TIMER_START':
         start_ms = _coerce_int(fields.get("startMs"), default=0)
         if ingestion.official_timer_start_ms is None and _timer_is_authoritative(fields) and start_ms >= 0:
             ingestion.game_timer_start_ms = ts_ms
             ingestion.timer_start_seen = True
         return True
 
-    if _GAME_TIMER_END_RE.search(raw_line):
-        fields = _extract_fields(raw_line)
+    if marker == 'GAME_TIMER_END':
         timer_is_authoritative = _timer_is_authoritative(fields)
         if timer_is_authoritative and _coerce_int(fields.get("isPass"), default=0) == 1:
             ingestion.challenge_pass_confirmed = True
@@ -112,23 +116,27 @@ def _timer_is_authoritative(fields: dict[str, Any]) -> bool:
 
 
 def consume_stage_context(ingestion: IngestionState, raw_line: str, line_no: int, ts_ms: int) -> bool:
-    if " DUNGEON_CONTEXT " in raw_line:
-        fields = _extract_fields(raw_line)
+    for marker in ('DUNGEON_CONTEXT', 'BATTLE_RESULT', 'CONTRACT_TAGS'):
+        if f' {marker} ' in raw_line:
+            return apply_stage_context(ingestion, marker, _extract_fields(raw_line))
+    return False
+
+
+def apply_stage_context(ingestion: IngestionState, marker: str, fields: dict[str, Any], *, tag_ids=None) -> bool:
+    if marker == 'DUNGEON_CONTEXT':
         ingestion.set_dungeon_context(fields.get("dungeonId") or fields.get("dungeon_id"))
         return True
 
-    if " BATTLE_RESULT " in raw_line:
-        fields = _extract_fields(raw_line)
+    if marker == 'BATTLE_RESULT':
         ingestion.set_dungeon_context(fields.get("dungeonId") or fields.get("dungeon_id"))
         if _coerce_int(fields.get("isPass"), default=0) == 1:
             ingestion.challenge_pass_confirmed = True
             ingestion.completion_source = str(fields.get("source") or "battle_result")
         return True
 
-    if " CONTRACT_TAGS " in raw_line:
-        fields = _extract_fields(raw_line)
+    if marker == 'CONTRACT_TAGS':
         ingestion.set_dungeon_context(fields.get("dungeonId") or fields.get("dungeon_id"))
-        parsed_tag_ids = _parse_contract_tag_ids(fields.get("tagIds") or fields.get("tag_ids"))
+        parsed_tag_ids = _parse_contract_tag_ids(fields.get("tagIds") or fields.get("tag_ids")) if tag_ids is None else tag_ids
         if parsed_tag_ids:
             ingestion.contract_tag_ids = parsed_tag_ids
         if fields.get("score") is not None:

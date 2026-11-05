@@ -19,10 +19,14 @@ class TraceCombatRecord(CombatRecord):
     source_byte_end: int = 0
     last_hit_hint: str = ''
     reference_date: str = ''
+    source_volumes: list[dict] = field(default_factory=list)
 
 
 def load_trace_records(path: Path) -> list[TraceCombatRecord]:
     path = path.resolve()
+    if path.suffix.lower() == '.jsonl':
+        from endfield_pcap.history.structured import load_structured_records
+        return load_structured_records(path)
     stat = path.stat()
     signature = (stat.st_mtime_ns, stat.st_size)
     raw = path.read_bytes()
@@ -63,6 +67,9 @@ def load_trace_records(path: Path) -> list[TraceCombatRecord]:
 
 
 def trace_record_snapshot(record: TraceCombatRecord) -> dict:
+    if record.source_volumes:
+        from endfield_pcap.history.structured import structured_record_snapshot
+        return structured_record_snapshot(record)
     stat = record.file_path.stat()
     if (stat.st_mtime_ns, stat.st_size) != tuple(record.source_signature):
         raise ValueError('原始 trace 日志已变化，请刷新记录后重新加载')

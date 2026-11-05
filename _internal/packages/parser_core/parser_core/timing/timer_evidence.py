@@ -14,58 +14,86 @@ END_SOURCES = {'SC_GAME_MECHANICS_SYNC_CHALLENGE_COMPLETE', 'SC_SYNC_WEEK_RAID_S
 FREEZE_SOURCE = 'SC_GAME_MECHANICS_MODIFY_INST_TIME_FREEZE'
 
 
-def collect_timer_evidence(text: str, parse_fields: Callable, parse_time: Callable,
-                           observed_times: dict[int, int] | None = None, *, indexed_lines=None) -> dict[str, Any] | None:
-    state = None
-    for line_no, raw in (enumerate(text.splitlines(), 1) if indexed_lines is None else indexed_lines):
-        if not any(label in raw for label in ('OFFICIAL_TIMER_', 'GAME_TIMER_', 'GAME_INST_')) and 'GAME_MECHANICS_TIME_FREEZE' not in raw:
-            continue
-        fields = parse_fields(raw)
+class TimerEvidenceCollector:
+    """Single-owner lifecycle state shared by text compatibility and direct events."""
+    def __init__(self):
+        self.evidence = None
+
+    def observe_legacy(self, line_no, raw, stamp, parse_fields):
+        if not any(label in raw for label in ('OFFICIAL_TIMER_', 'GAME_TIMER_', 'GAME_INST_', 'GAME_MECHANICS_TIME_FREEZE')):
+            return
+        markers = {label for label in ('GAME_TIMER_RESET', 'OFFICIAL_TIMER_START', 'OFFICIAL_TIMER_END',
+                   'GAME_MECHANICS_TIME_FREEZE', 'GAME_INST_RESTART', 'GAME_INST_LEAVE', 'GAME_TIMER_START', 'GAME_TIMER_END')
+                   if label + ' ' in raw}
+        self.observe_fields(line_no, markers, parse_fields(raw), stamp)
+
+    def observe_event(self, evidence_index, event):
+        from parser_core.ingestion.structured_timer import TIMER_TYPES, timer_observation
+        from parser_core.ingestion.structured_context import context_timer_observation
+        if event.type in TIMER_TYPES:
+            observation = timer_observation(event)
+        elif event.type in ('game_instance', 'game_mechanics'):
+            observation = context_timer_observation(event)
+        else:
+            return
+        marker, fields = observation
+        self.observe_fields(evidence_index, {marker}, fields, event.captured_at_ms)
+
+    def observe_fields(self, line_no, markers, fields, stamp):
         game_id = fields.get('gameId') or fields.get('game_id')
-        stamp = observed_times.get(line_no) if observed_times is not None else parse_time(raw)
-        if 'GAME_TIMER_RESET ' in raw and fields.get('source') == 'CAPTURE_SESSION_START':
-            if state is not None:
-                state = {'version': 1, 'start': None, 'complete': None, 'events': [], 'conflicts': []}
-            continue
-        if 'OFFICIAL_TIMER_START ' in raw:
+        if 'GAME_TIMER_RESET' in markers and fields.get('source') == 'CAPTURE_SESSION_START':
+            if self.evidence is not None:
+                self.evidence = {'version': 1, 'start': None, 'complete': None, 'events': [], 'conflicts': []}
+            return
+        if 'OFFICIAL_TIMER_START' in markers:
             start = {'line': line_no, 'observedMs': stamp, 'gameId': game_id,
                      'source': fields.get('source'), 'challengeStartTs': fields.get('challengeStartTs')}
-            prior = (state or {}).get('start') or {}
+            prior = (self.evidence or {}).get('start') or {}
             if (prior.get('gameId') == game_id and start['challengeStartTs'] not in (None, '', '0')
                     and prior.get('challengeStartTs') == start['challengeStartTs'] and prior.get('source') == start['source']
-                    and not any(event.get('kind') == 'boundary' for event in state['events'])):
-                continue  # exact repeated challenge identity, not a time-proximity merge
-            state = {'version': 1, 'start': start, 'complete': None, 'events': [], 'conflicts': []}
-            continue
-        if 'OFFICIAL_TIMER_END ' in raw:
-            if state is not None and state.get('start') and game_id != state['start'].get('gameId'):
-                continue  # another game's result cannot close this challenge
-            if state is None:
-                state = {'version': 1, 'start': None, 'complete': None, 'events': [], 'conflicts': []}
+                    and not any(event.get('kind') == 'boundary' for event in self.evidence['events'])):
+                return  # exact repeated challenge identity, not a time-proximity merge
+            self.evidence = {'version': 1, 'start': start, 'complete': None, 'events': [], 'conflicts': []}
+            return
+        if 'OFFICIAL_TIMER_END' in markers:
+            if self.evidence is not None and self.evidence.get('start') and game_id != self.evidence['start'].get('gameId'):
+                return  # another game's result cannot close this challenge
+            if self.evidence is None:
+                self.evidence = {'version': 1, 'start': None, 'complete': None, 'events': [], 'conflicts': []}
             complete = {'line': line_no, 'observedMs': stamp, 'gameId': game_id,
                         'source': fields.get('source'), 'isPass': fields.get('isPass'),
                         'passTimeMs': fields.get('passTime')}
-            if state['complete'] is None:
-                state['complete'] = complete
-            elif any(state['complete'].get(k) != complete.get(k) for k in ('gameId', 'source', 'isPass', 'passTimeMs')):
-                state['conflicts'].append('conflicting_official_completion')
-            continue
-        if state is None or state['complete'] is not None:
-            continue  # no carry from another challenge or its post-completion cleanup
+            if self.evidence['complete'] is None:
+                self.evidence['complete'] = complete
+            elif any(self.evidence['complete'].get(k) != complete.get(k) for k in ('gameId', 'source', 'isPass', 'passTimeMs')):
+                self.evidence['conflicts'].append('conflicting_official_completion')
+            return
+        if self.evidence is None or self.evidence['complete'] is not None:
+            return  # no carry from another challenge or its post-completion cleanup
         event = {'line': line_no, 'observedMs': stamp, 'gameId': game_id, 'source': fields.get('source')}
-        if 'GAME_MECHANICS_TIME_FREEZE ' in raw:
+        if 'GAME_MECHANICS_TIME_FREEZE' in markers:
             event.update(kind='freeze', count=fields.get('count'), freezeInfos=fields.get('freezeInfos'))
-        elif any(label in raw for label in ('GAME_TIMER_RESET ', 'GAME_INST_RESTART ', 'GAME_INST_LEAVE ')):
+        elif markers.intersection(('GAME_TIMER_RESET', 'GAME_INST_RESTART', 'GAME_INST_LEAVE')):
             event['kind'] = 'boundary'
-        elif 'GAME_TIMER_START ' in raw:
+        elif 'GAME_TIMER_START' in markers:
             event.update(kind='battle_start', startMs=fields.get('startMs'))
-        elif 'GAME_TIMER_END ' in raw:
+        elif 'GAME_TIMER_END' in markers:
             event.update(kind='battle_end', startMs=fields.get('startMs'), endMs=fields.get('endMs'),
                          packetElapsedMs=fields.get('packetElapsedMs'))
         else:
+            return
+        self.evidence['events'].append(event)
+
+
+def collect_timer_evidence(text: str, parse_fields: Callable, parse_time: Callable,
+                           observed_times: dict[int, int] | None = None, *, indexed_lines=None) -> dict[str, Any] | None:
+    collector = TimerEvidenceCollector()
+    for line_no, raw in (enumerate(text.splitlines(), 1) if indexed_lines is None else indexed_lines):
+        if not any(label in raw for label in ('OFFICIAL_TIMER_', 'GAME_TIMER_', 'GAME_INST_', 'GAME_MECHANICS_TIME_FREEZE')):
             continue
-        state['events'].append(event)
-    return state
+        stamp = observed_times.get(line_no) if observed_times is not None else parse_time(raw)
+        collector.observe_legacy(line_no, raw, stamp, parse_fields)
+    return collector.evidence
 
 
 def validate_timer_evidence(evidence: Any, *, duration_ms: int, game_id: str | None) -> list[str]:

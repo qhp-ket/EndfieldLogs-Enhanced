@@ -36,6 +36,12 @@ class OverlayManager:
         self._live_summary = None
         self._summary_presentation = None
         self._retired_summary_streams = set()
+        self._recording = False
+
+    def set_recording(self, active):
+        self._recording = bool(active)
+        for window in self._windows.values():
+            window.canvas.receive(dict(type='recording_state', recording=self._recording))
 
     def apply_analysis_summary(self, message, *, take_ownership=False):
         if not isinstance(message, dict) or message.get('type') != 'analysis_summary':
@@ -143,6 +149,7 @@ class OverlayManager:
                     )
                 )
                 self._windows[entry.id] = window
+                window.canvas.receive(dict(type='recording_state', recording=self._recording))
                 if self._analysis_snapshot is not None:
                     window.apply_analysis_snapshot(self._analysis_snapshot)
                 if not self._history_mode and self._summary_presentation is not None:

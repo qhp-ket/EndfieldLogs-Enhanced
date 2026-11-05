@@ -71,6 +71,7 @@ def test_single_capture_button_saved_port_and_nonblocking_stop(main_window, app,
     class Controller:
         def __init__(self):
             self.running = False
+            self.recording = self.recording_pending = False
             self.queue = window.service_controller.queue
             self.lifecycle = gui_service.CaptureLifecycle.STOPPED
             self.running_config = None

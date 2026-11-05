@@ -17,7 +17,8 @@ from app_test_support.ui.qt import EVIDENCE, snapshot_message
 
 
 def test_chinese_dictionary_resolves_variants_and_leaves_unknown_skills_visible():
-    assert len(dictionary()['groups']) == 140
+    # New characters extend the catalog without invalidating existing names.
+    assert len(dictionary()['groups']) >= 140
     assert skill_label('chr_0032_lizhiyan_normal_skill').name == '摧玉网格'
     assert skill_label('chr_0032_lizhiyan_normal_skill_projhit_2').name == '摧玉网格 · 弹体命中·2'
     assert skill_label('chr_0004_pelica_attack_2').name.endswith('②')

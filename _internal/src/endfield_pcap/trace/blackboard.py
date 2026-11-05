@@ -6,6 +6,7 @@ import re
 from dataclasses import dataclass
 from typing import Any, TYPE_CHECKING
 from endfield_pcap.trace.formatting import _intish, _floatish, _trace_string
+from parser_core.ingestion.blackboard_wire import blackboard_data
 if TYPE_CHECKING:
     from endfield_pcap.trace.bridge import TraceBridge
 
@@ -89,8 +90,12 @@ def write_read_skill_setting(context: ActionEvidence) -> None:
         and identity["environmentInstId"] not in (None, "0") else None)
     if errors:
         identity["validationErrors"] = errors
-    bridge._line(ts_ms, ("BB_READ_SKILL_SETTING_UNRESOLVED " if errors else "BB_READ_SKILL_SETTING ")
-               + json.dumps(identity, ensure_ascii=False, separators=(",", ":"), allow_nan=False))
+    if bridge.event_sink is not None:
+        from parser_core.ingestion.buff_packet_wire import packet_data
+        bridge._emit_structured(ts_ms, 'blackboard_skill_setting', packet_data(identity), event)
+    else:
+        bridge._line(ts_ms, ("BB_READ_SKILL_SETTING_UNRESOLVED " if errors else "BB_READ_SKILL_SETTING ")
+                   + json.dumps(identity, ensure_ascii=False, separators=(",", ":"), allow_nan=False))
     return
 
 
@@ -142,8 +147,12 @@ def write_attribute_refresh(context: ActionEvidence) -> None:
         and identity["environmentInstId"] not in (None, "0") else None)
     if errors:
         identity["validationErrors"] = errors
-    bridge._line(ts_ms, ("BUFF_ATTR_REFRESH_UNRESOLVED " if errors else "BUFF_ATTR_REFRESH ")
-               + json.dumps(identity, ensure_ascii=False, separators=(",", ":"), allow_nan=False))
+    if bridge.event_sink is not None:
+        from parser_core.ingestion.buff_packet_wire import packet_data
+        bridge._emit_structured(ts_ms, 'buff_attribute_refresh', packet_data(identity), event)
+    else:
+        bridge._line(ts_ms, ("BUFF_ATTR_REFRESH_UNRESOLVED " if errors else "BUFF_ATTR_REFRESH ")
+                   + json.dumps(identity, ensure_ascii=False, separators=(",", ":"), allow_nan=False))
     return
 
 
@@ -172,14 +181,16 @@ def write_dynamic_value(context: ActionEvidence) -> bool:
             rows = bridge.recent_dynamic_bb_by_inst.setdefault(inst_id, [])
             rows.append((action_id, value))
             del rows[:-8]
-            bridge._write_blackboard_trace(
-                ts_ms,
-                "BB_MODIFY_DYNAMIC",
-                event,
-                action_id,
-                f"value={value!r} identity=" + json.dumps(
-                    identity, ensure_ascii=False, separators=(",", ":"), allow_nan=False),
-            )
+            if bridge.event_sink is not None:
+                from parser_core.ingestion.dynamic_wire import dynamic_data
+                owner = bridge._name_for_id(_intish(event.get('owner_id')))
+                bridge._emit_structured(ts_ms, 'blackboard_dynamic', dynamic_data(event, action_id, value,
+                    owner, bridge._trigger_skill_template(event, owner), identity), event)
+            else:
+                bridge._write_blackboard_trace(
+                    ts_ms, "BB_MODIFY_DYNAMIC", event, action_id,
+                    f"value={value!r} identity=" + json.dumps(
+                        identity, ensure_ascii=False, separators=(",", ":"), allow_nan=False))
     return False
 
 
@@ -200,21 +211,20 @@ def write_simple_calculation(context: ActionEvidence) -> None:
             del rows[:-12]
             value_a = _floatish(calc_action.get("client_value_a"))
             value_b = _floatish(calc_action.get("client_value_b"))
-            parts = [
-                f"key={target_key}",
-                f"final={final_value!r}",
-            ]
-            if value_a is not None:
-                parts.append(f"valueA={value_a!r}")
-            if value_b is not None:
-                parts.append(f"valueB={value_b!r}")
-            bridge._write_blackboard_trace(
-                ts_ms,
-                "BB_SIMPLE_CALC",
-                event,
-                action_id,
-                " ".join(parts),
-            )
+            if bridge.event_sink is not None:
+                values = dict(key=target_key, final_value=final_value)
+                if value_a is not None:
+                    values['value_a'] = value_a
+                if value_b is not None:
+                    values['value_b'] = value_b
+                _emit_blackboard(context, 'blackboard_calculation', values)
+            else:
+                parts = [f"key={target_key}", f"final={final_value!r}"]
+                if value_a is not None:
+                    parts.append(f"valueA={value_a!r}")
+                if value_b is not None:
+                    parts.append(f"valueB={value_b!r}")
+                bridge._write_blackboard_trace(ts_ms, "BB_SIMPLE_CALC", event, action_id, " ".join(parts))
 
 
 def write_multi_modify(context: ActionEvidence) -> None:
@@ -228,18 +238,20 @@ def write_multi_modify(context: ActionEvidence) -> None:
         key = str(modify_action.get("key") or "")
         value = _floatish(modify_action.get("value"))
         if key or value is not None:
-            parts = []
-            if key:
-                parts.append(f"key={key}")
-            if value is not None:
-                parts.append(f"value={value:.6g}")
-            bridge._write_blackboard_trace(
-                ts_ms,
-                "BB_MULTI_MODIFY",
-                event,
-                action_id,
-                " ".join(parts),
-            )
+            if bridge.event_sink is not None:
+                values = {}
+                if key:
+                    values['key'] = key
+                if value is not None:
+                    values['value'] = value
+                _emit_blackboard(context, 'blackboard_modify', values)
+            else:
+                parts = []
+                if key:
+                    parts.append(f"key={key}")
+                if value is not None:
+                    parts.append(f"value={value:.6g}")
+                bridge._write_blackboard_trace(ts_ms, "BB_MULTI_MODIFY", event, action_id, " ".join(parts))
 
 
 def write_preset(context: ActionEvidence) -> None:
@@ -252,13 +264,19 @@ def write_preset(context: ActionEvidence) -> None:
     if isinstance(preset_action, dict):
         modified_value = preset_action.get("modified_value")
         if modified_value:
-            bridge._write_blackboard_trace(
-                ts_ms,
-                "BB_SET_PRESET",
-                event,
-                action_id,
-                f"modifiedValue={_trace_string(modified_value)}",
-            )
+            if bridge.event_sink is not None:
+                _emit_blackboard(context, 'blackboard_preset', dict(modified_value=str(modified_value)))
+            else:
+                bridge._write_blackboard_trace(ts_ms, "BB_SET_PRESET", event, action_id,
+                                               f"modifiedValue={_trace_string(modified_value)}")
+
+
+def _emit_blackboard(context, kind, values):
+    bridge, event = context.bridge, context.event
+    owner = bridge._name_for_id(_intish(event.get('owner_id')))
+    bridge._emit_structured(context.ts_ms, kind, blackboard_data(event,
+        int(_intish(context.action.get('action_id')) or 0), owner,
+        bridge._trigger_skill_template(event, owner), **values), event)
 
 
 def consume_blackboard_action(bridge: TraceBridge, event: dict[str, Any], action: dict[str, Any],

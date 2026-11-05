@@ -6,6 +6,7 @@ from datetime import (
     datetime,
     time,
     timedelta,
+    timezone,
 )
 from decimal import Decimal, InvalidOperation
 from functools import lru_cache
@@ -337,9 +338,11 @@ def _duration_ms_from_seconds(value: str | None) -> int | None:
     return int(round(seconds * 1000))
 
 
-def _build_iso_datetime(reference_date: date, timestamp_ms: int, rollover_days: int = 0) -> str:
+def _build_iso_datetime(reference_date: date, timestamp_ms: int, rollover_days: int = 0, *, timezone_offset_minutes=None) -> str:
     midnight = datetime.combine(reference_date, time.min)
     result = midnight + timedelta(days=rollover_days, milliseconds=timestamp_ms)
+    if timezone_offset_minutes is not None:
+        return result.replace(tzinfo=timezone(timedelta(minutes=timezone_offset_minutes))).isoformat(timespec="milliseconds")
     return result.astimezone().isoformat(timespec="milliseconds")
 
 

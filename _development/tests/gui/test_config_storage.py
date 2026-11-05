@@ -6,6 +6,33 @@ import pytest
 from endfield_pcap.settings import codec as config, storage as config_storage
 
 
+def test_trace_format_defaults_to_jsonl_for_new_and_existing_profiles(tmp_path):
+    path = tmp_path / 'settings.json'
+    assert config.load_app_config(path).service.trace_format == 'jsonl'
+    path.write_text(json.dumps({'service': {'ws_port': 29325}}), encoding='utf8')
+    assert config.load_app_config(path).service.trace_format == 'jsonl'
+
+
+@pytest.mark.parametrize('trace_format', ['jsonl', 'legacy'])
+def test_explicit_trace_format_survives_save_and_reload(tmp_path, trace_format):
+    path = tmp_path / 'settings.json'
+    path.write_text(json.dumps({'service': {'trace_format': trace_format}}), encoding='utf8')
+    settings = config.load_app_config(path)
+    assert settings.service.trace_format == trace_format
+    config.save_app_config(settings, path)
+    assert config.load_app_config(path).service.trace_format == trace_format
+    payload = json.loads(path.read_text(encoding='utf8'))
+    assert payload['service']['trace_format'] == trace_format
+
+
+@pytest.mark.parametrize('invalid', ['unknown', '', None, 42])
+def test_invalid_trace_format_uses_jsonl_default(tmp_path, invalid):
+    path = tmp_path / 'settings.json'
+    payload = {'service': {'trace_format': invalid}}
+    path.write_text(json.dumps(payload), encoding='utf8')
+    assert config.load_app_config(path).service.trace_format == 'jsonl'
+
+
 def test_battle_table_widths_roundtrip_and_bounds(tmp_path):
     path = tmp_path/'settings.json'
     settings = config.load_app_config(path)

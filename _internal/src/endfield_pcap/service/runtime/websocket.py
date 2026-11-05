@@ -91,6 +91,7 @@ class WebSocketDelivery:
             "schema_version": 2,
             "service_version": __version__,
             "state": self.state.value,
+            "recording": self.recording,
             "session_id": self.active_session.session_id if self.active_session else None,
             "metrics": asdict(self.metrics),
         }

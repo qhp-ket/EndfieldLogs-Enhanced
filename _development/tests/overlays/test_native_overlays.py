@@ -47,6 +47,18 @@ def show(hosts, app, source='damage', **settings):
     return hosts._windows[current.id]
 
 
+def test_recording_status_is_visible_without_snapshot_and_during_history(hosts, app):
+    hosts.set_recording(True)
+    window = show(hosts, app)
+    module = window.canvas.modules[0]
+    assert module.recording and module.measure().data['status'].startswith('记录中')
+    hosts.show_history(dict(battle={'total_damage': 500}), '合成战斗')
+    historical = deepcopy(module.message)
+    hosts.set_recording(False)
+    assert not module.recording and module.measure().data['status'].startswith('未记录')
+    assert module.message == historical and module.message['source']['mode'] == 'history'
+
+
 def test_summary_history_reset_order_and_new_instances(hosts,app):
     window=show(hosts,app)
     first=damage();original=deepcopy(first)
@@ -143,11 +155,14 @@ def test_combo_four_slots_styles_state_colors_and_width(hosts,app,theme):
     assert window.height()>circular.height() and window.size()!=circular
     before_height=window.height();before_scale=window.canvas.scale
     window.resize(window.width()+120,window.height());app.processEvents()
-    assert window.height()==before_height
-    assert window.canvas.scale==pytest.approx(before_scale)
+    assert window.height()>before_height
+    assert window.canvas.scale>before_scale
+    natural=window.canvas.natural_size
+    assert abs(window.width()-window.height()*natural.width()/natural.height())<2
     width=window.width()
     window.resize(width,round(window.height()*1.2));app.processEvents()
-    assert window.canvas.scale>before_scale and window.width()==width
+    assert window.canvas.scale>before_scale and window.width()>width
+    assert abs(window.width()-window.height()*natural.width()/natural.height())<2
     assert window.grab().save(str(EVIDENCE/f'native-combo-bars-{theme}.png'))
     window.apply_entry(with_template_value(window.entry,'display_style','circles'));app.processEvents()
     assert not window.canvas.bars
@@ -168,7 +183,7 @@ def test_uid_black_cover_and_close_button(hosts,app,shape):
     window.resize(220,40);app.processEvents()
     image=window.canvas.grab().toImage()
     assert image.pixelColor(image.width()//2,image.height()//2).name()=='#000000'
-    assert window.canvas.uid_only and window.content_size is None
+    assert window.canvas.uid_only and window.content_size is not None
     before=window.close_button.grab().toImage()
     window.close_button._hovered=True;window.close_button.update()
     assert window.close_button.grab().toImage()!=before

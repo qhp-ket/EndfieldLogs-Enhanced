@@ -15,6 +15,7 @@ class DamageModule:
         self.message = {}
         self.settings, self.theme = {}, {}
         self.connected = True
+        self.recording = False
 
     @property
     def snapshot(self):
@@ -24,6 +25,10 @@ class DamageModule:
         self.settings, self.theme = settings, theme
 
     def receive(self, message):
+        if isinstance(message, dict) and message.get('type') == 'recording_state':
+            active = message.get('recording') is True
+            changed, self.recording = active != self.recording, active
+            return changed
         if not self.gate.accept(message, {'analysis_summary', 'analysis_snapshot'}, 1):
             return False
         changed = any(self.message.get(key) != message.get(key) for key in ('snapshot', 'source', 'error'))
@@ -101,6 +106,7 @@ class DamageModule:
         mode = '历史 · '+str(source.get('label') or '已加载') if source.get('mode') == 'history' else '实时'
         status = '分析异常' if self.message.get('error') else (mode+' // '+labels.get(quality.get('status'), '质量未知') if snapshot else 'STANDBY // 等待战斗数据')
         if not self.connected: status += ' / 连接断开'
+        status = ('记录中' if self.recording else '未记录') + ' · ' + status
         tip = '\n'.join(f"{dim}: {(quality.get(dim) or {}).get('status', 'unknown')} {', '.join(map(str, (quality.get(dim) or {}).get('reasons') or []))}" for dim in ('rdps','timing'))
         layout = Layout(QSizeF(natural_width, height), data=dict(font=normal, rows=rows, columns=columns,
             widths=widths, name_width=name_width, row_height=row_height, avatar=avatar, header=header_height,
@@ -191,4 +197,7 @@ class DamageModule:
             text(painter,QRectF(12,data['header']+data['heading'],rect.width()-24,data['row_height']),'等待战斗数据',colors['muted'])
         if industrial:
             painter.setFont(data['secondary_font'])
-        text(painter,QRectF(12,rect.height()-data['footer'],rect.width()-24,data['footer']),data['status'],colors['foreground'] if industrial else colors['muted'],Qt.AlignmentFlag.AlignCenter if industrial else None)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QColor('#e34b55' if self.recording else '#92969e'))
+        painter.drawEllipse(QRectF(12, rect.height()-data['footer']/2-3.5, 7, 7))
+        text(painter,QRectF(25,rect.height()-data['footer'],rect.width()-37,data['footer']),data['status'],colors['foreground'] if industrial else colors['muted'])

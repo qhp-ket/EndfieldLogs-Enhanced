@@ -17,7 +17,7 @@ def test_move_preserves_starting_size_after_transient_resize_and_release(app):
         manager.apply_entry(current)
         window = manager._windows[current.id]
         app.processEvents()
-        window.resize(800,380)
+        baseline = (window.width(), window.height())
         changes.clear()
         local = QPoint(80, 80)
         origin = window.mapToGlobal(local)
@@ -27,26 +27,28 @@ def test_move_preserves_starting_size_after_transient_resize_and_release(app):
         window.resize(914, 434)
         window._handle_mouse_move(local, origin + QPoint(30, 20), Qt.MouseButton.LeftButton)
         app.processEvents()
-        assert (window.width(), window.height()) == (800, 380)
+        assert (window.width(), window.height()) == baseline
         window.resize(700, 333)
         app.processEvents()
-        assert (window.width(), window.height()) == (800, 380)
+        assert (window.width(), window.height()) == baseline
         window.resize(914, 434)
         window._handle_mouse_release(local)
         app.processEvents()
-        assert (window.width(), window.height()) == (800, 380)
-        assert changes and {(e.geometry.width, e.geometry.height) for e in changes} == {(800, 380)}
-        assert manager._entries[current.id].geometry.width == 800
+        assert (window.width(), window.height()) == baseline
+        assert changes and {(e.geometry.width, e.geometry.height) for e in changes} == {baseline}
+        assert manager._entries[current.id].geometry.width == baseline[0]
         # A real edge resize after release must still work; no pending repair
         # may restore the old move size over this deliberate edit.
         corner = QPoint(window.width()-1, window.height()-1)
         origin = window.mapToGlobal(corner)
         window._handle_mouse_press(corner, origin)
-        window._handle_mouse_move(corner, origin + QPoint(60, 40), Qt.MouseButton.LeftButton)
+        window._handle_mouse_move(corner, origin - QPoint(60, 40), Qt.MouseButton.LeftButton)
         window._handle_mouse_release(corner)
         app.processEvents()
-        assert (window.width(), window.height()) == (860, 420)
-        assert manager._entries[current.id].geometry.width == 860
+        assert window.width() < baseline[0] and window.height() < baseline[1]
+        natural = window.canvas.natural_size
+        assert abs(window.width()-window.height()*natural.width()/natural.height()) < 2
+        assert manager._entries[current.id].geometry.width == window.width()
     finally:
         manager.close_all()
         app.processEvents()
@@ -73,6 +75,7 @@ def test_native_cross_screen_roundtrips_preserve_size_and_saved_geometry(app):
         window = manager._windows[current.id]
         QTest.qWait(100)
         hwnd = int(window.winId())
+        baseline = (window.width(), window.height())
         changes.clear()
         ratios = {window.devicePixelRatioF()}
         for _ in range(3):
@@ -88,15 +91,15 @@ def test_native_cross_screen_roundtrips_preserve_size_and_saved_geometry(app):
                     ratios.add(window.devicePixelRatioF())
                 window._handle_mouse_release(local)
                 QTest.qWait(100)
-                assert (window.width(), window.height()) == (800, 380)
+                assert (window.width(), window.height()) == baseline
                 assert int(window.winId()) == hwnd
                 saved = manager._entries[current.id]
-                assert (saved.geometry.width, saved.geometry.height) == (800, 380)
+                assert (saved.geometry.width, saved.geometry.height) == baseline
                 manager.apply_entry(saved)
                 QTest.qWait(30)
-                assert (window.width(), window.height()) == (800, 380)
+                assert (window.width(), window.height()) == baseline
         assert len(ratios) >= 2, 'test must cross a real DPI boundary'
-        assert changes and {(e.geometry.width, e.geometry.height) for e in changes} == {(800, 380)}
+        assert changes and {(e.geometry.width, e.geometry.height) for e in changes} == {baseline}
         assert window.canvas.scale > 0
     finally:
         manager.close_all()

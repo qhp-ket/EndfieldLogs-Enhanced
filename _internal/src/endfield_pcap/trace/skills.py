@@ -3,6 +3,7 @@ import json
 from typing import Any
 from endfield_pcap.trace.blackboard import consume_blackboard_action
 from endfield_pcap.trace.formatting import _intish, _floatish, _trace_string
+from parser_core.ingestion.skill_wire import skill_data
 
 
 class SkillEvents:
@@ -28,7 +29,7 @@ class SkillEvents:
         if src_inst_id and char_template:
             if self.id_to_name.get(src_inst_id) is None:
                 self.id_to_name[src_inst_id] = char_template
-                self._line(ts_ms, f"ACTOR_MAP id={src_inst_id} template={char_template} source=skill_attach skill={skill_template}")
+                self._write_actor_mapping(ts_ms, src_inst_id, char_template, 'skill_attach', skill_template, event)
 
     def _handle_skill_detach(self, event: dict[str, Any]) -> None:
         skill_inst_id = _intish(event.get("skill_inst_id"))
@@ -51,6 +52,12 @@ class SkillEvents:
             owner = char_template
         seq = _intish(event.get("seq_id")) or 0
         client_tick = _intish(event.get("client_tick_tms")) or 0
+        if self.event_sink is not None:
+            data = skill_data("skill_cast", event)
+            data.update(phase="start", owner=owner if owner != "?" else None,
+                        skill=skill, skill_source=self.skill_source_by_inst.get(skill_inst_id) or None)
+            self._emit_structured(ts_ms, "skill_cast", data, event)
+            return
         self._line(
             ts_ms,
             (
@@ -73,6 +80,12 @@ class SkillEvents:
         )
         seq = _intish(event.get("seq_id")) or 0
         client_tick = _intish(event.get("client_tick_tms")) or 0
+        if self.event_sink is not None:
+            data = skill_data("skill_cast", event)
+            data.update(phase="end", owner=owner if owner != "?" else None,
+                        skill=skill, skill_source=self.skill_source_by_inst.get(skill_inst_id) or None)
+            self._emit_structured(ts_ms, "skill_cast", data, event)
+            return
         self._line(
             ts_ms,
             (
@@ -97,7 +110,7 @@ class SkillEvents:
         if action_type == "BattleActionDamage" or "damage_action" in action:
             self._write_damage(ts_ms, event, action.get("damage_action") or {})
         if action_type == "BattleActionFinishBuff" or "finish_buff_action" in action:
-            self._write_finish_buffs(ts_ms, action.get("finish_buff_action") or {})
+            self._write_finish_buffs(ts_ms, action.get("finish_buff_action") or {}, event)
 
     def _trigger_skill_template(self, event: dict[str, Any], owner_name: str = "") -> str:
         skill = str(event.get("template_str_id") or "")
@@ -158,6 +171,10 @@ class SkillEvents:
             entity_id = _intish(detail.get("client_ability_entity_id"))
             source_id = _intish(detail.get("source_id")) or owner_id
             source = self._name_for_id(source_id)
+            if self.event_sink is not None:
+                from parser_core.ingestion.structured_entity import ability_spawn_data
+                self._emit_structured(ts_ms, 'ability_spawn', ability_spawn_data(event, detail, action_id, owner, source, skill), event)
+                continue
             pos = detail.get("init_pos") if isinstance(detail.get("init_pos"), dict) else {}
             rot = detail.get("rotation") if isinstance(detail.get("rotation"), dict) else {}
             pos_text = ",".join(
@@ -198,7 +215,7 @@ class SkillEvents:
             return
         if source_id and self.id_to_name.get(source_id) is None:
             self.id_to_name[source_id] = char_template
-            self._line(ts_ms, f"ACTOR_MAP id={source_id} template={char_template} source=launch_source skill={skill}")
+            self._write_actor_mapping(ts_ms, source_id, char_template, 'launch_source', skill, event)
         for detail in launch_action.get("details") or []:
             if not isinstance(detail, dict):
                 continue
@@ -210,13 +227,19 @@ class SkillEvents:
             trigger_skill = self._trigger_skill_template(event, self._name_for_id(_intish(event.get('owner_id'))))
             if (projectile_id and trigger_skill == 'buff_chr_0036_jsspsi_xianjing_inkhurteffect'
                     and (event.get('action') or {}).get('action_id') == 14):
-                self._line(ts_ms, 'INK_RELEASE ' + json.dumps({
+                observation = {
                     'schema_version': 1, 'template_key': trigger_skill, 'action_id': 14,
                     'session_id': event.get('session_id'), 'operation_seq': event.get('seq_id'),
                     'client_tick_ms': event.get('client_tick_tms'),
                     'buff_uid': str(event.get('inst_id')), 'owner_id': str(event.get('owner_id')),
                     'source_actor_id': str(source_id), 'projectile_id': str(projectile_id),
-                }, ensure_ascii=False, separators=(',', ':'), allow_nan=False))
+                }
+                if self.event_sink is not None:
+                    from parser_core.ingestion.blackboard_wire import release_data
+                    self._emit_structured(ts_ms, 'ink_release', release_data(observation), event)
+                else:
+                    self._line(ts_ms, 'INK_RELEASE ' + json.dumps(observation,
+                        ensure_ascii=False, separators=(',', ':'), allow_nan=False))
             if projectile_id and self.id_to_name.get(projectile_id) is None:
                 self.id_to_name[projectile_id] = char_template
-                self._line(ts_ms, f"ACTOR_MAP id={projectile_id} template={char_template} source=launch_projectile skill={skill}")
+                self._write_actor_mapping(ts_ms, projectile_id, char_template, 'launch_projectile', skill, event)

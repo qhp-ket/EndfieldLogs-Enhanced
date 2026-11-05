@@ -2,10 +2,12 @@
 from __future__ import annotations
 import json
 import re
-from typing import TYPE_CHECKING, Any
+from typing import Any, Protocol
 from endfield_pcap.trace.formatting import _intish, _floatish, _trace_string, _modifier_uid_tokens, _attr_info_tokens
-if TYPE_CHECKING:
-    from endfield_pcap.trace.bridge import TraceBridge
+class DamageEvidenceSink(Protocol):
+    hit_seq: int
+
+    def _line(self, ts_ms: int, body: str) -> None: ...
 
 
 def calculation_tokens(detail: dict[str, Any]) -> list[str]:
@@ -47,7 +49,7 @@ def packet_identity_tokens(event: dict[str, Any]) -> list[str]:
     return packet_identity_tokens
 
 
-def write_damage_evidence(bridge: TraceBridge, ts_ms: int, event: dict[str, Any],
+def write_damage_evidence(bridge: DamageEvidenceSink, ts_ms: int, event: dict[str, Any],
                           detail: dict[str, Any], detail_presence: dict[str, Any]) -> None:
     modifier_args = detail.get("modifier_args") if isinstance(detail.get("modifier_args"), dict) else {}
     atk_mods = _modifier_uid_tokens(modifier_args, "attacker_modifiers")

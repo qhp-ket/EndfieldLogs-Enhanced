@@ -101,6 +101,27 @@ def test_new_request_keeps_its_record_snapshot_and_cache_after_old_worker_finish
         loader.cleanup()
 
 
+def test_repeated_detail_click_promotes_pending_load_without_restarting_worker(tmp_path):
+    loader = GatedAnalysis()
+    controller, rows, _ = history(tmp_path, loader)
+    key = record_key(rows[0])
+    try:
+        controller.select([key], key)
+        assert controller.load([key])
+        assert loader.entered[1].wait(2)
+        generation, worker = controller._generation, loader.threads[1]
+        for _ in range(4):
+            assert controller.load([key], open_details=True)
+        assert controller._generation == generation and loader.threads[1] is worker
+        loader.finish(1)
+        accepted = controller.drain()
+        assert len(accepted) == 1 and accepted[0].open_details
+        assert controller.cached_snapshot(rows[0]) is loader.snapshots[1]
+    finally:
+        controller.close()
+        loader.cleanup()
+
+
 @pytest.mark.parametrize('action', ['live', 'remove', 'selection', 'close'])
 @pytest.mark.parametrize('completed', [False, True])
 def test_invalidated_history_never_restores_a_record_or_report(tmp_path, action, completed):

@@ -157,9 +157,19 @@ class BuffEvents:
         buff_uid = _intish(event.get("buff_inst_id"))
         if not buff_uid:
             return
+        self._write_buff_end(ts_ms, buff_uid, event)
+
+    def _write_buff_end(self, ts_ms: int, buff_uid: int, origin: dict | None = None) -> None:
         buff_id = self.buff_id_by_uid.get(buff_uid, "")
         self.buff_seq += 1
-        self._line(ts_ms, f'BUFF_END #{self.buff_seq} id="{buff_id}" uid={buff_uid}')
+        if self.event_sink is not None:
+            data = {'buff_seq': self.buff_seq, 'template': None if buff_id in ('', 'unknown_buff') else buff_id,
+                    'buff_inst_id': buff_uid}
+            if buff_id == 'unknown_buff':
+                data['template_status'] = 'unresolved'
+            self._emit_structured(ts_ms, 'buff_end', data, origin or {})
+        else:
+            self._line(ts_ms, f'BUFF_END #{self.buff_seq} id="{buff_id}" uid={buff_uid}')
         self.buff_id_by_uid.pop(buff_uid, None)
         self.buff_actor_ids_by_uid.pop(buff_uid, None)
         self.buff_values_by_uid.pop(buff_uid, None)
@@ -175,19 +185,28 @@ class BuffEvents:
         if type(trigger_type) is int and trigger_type == 2:
             # Current native CreateBuffAction.OnEnd emits these same detail
             # rows as an explicit finish list (BATTLE_TRIGGER_TYPE.End).
-            self._write_finish_buffs(ts_ms, {'finish_buffs': details})
+            self._write_finish_buffs(ts_ms, {'finish_buffs': details}, event)
             return
         if type(trigger_type) is not int or trigger_type != 0:
             for detail in details:
                 if not isinstance(detail, dict) or not _intish(detail.get('buff_inst_id')):
                     continue
-                self._line(ts_ms, 'BUFF_ACTION_UNRESOLVED '
-                           f'uid={_intish(detail.get("buff_inst_id"))} '
-                           f'seq={event.get("seq_id", "unknown")} '
-                           f'triggerType={trigger_type if type(trigger_type) is int else "unknown"} '
-                           f'actionId={_intish((event.get("action") or {}).get("action_id"))} '
-                           f'ownerId={_intish(detail.get("target_id"))} '
-                           f'srcId={_intish(detail.get("source_id"))}')
+                if self.event_sink is not None:
+                    data = {'buff_inst_id': _intish(detail.get('buff_inst_id')),
+                            'trigger_type': trigger_type if type(trigger_type) is int else None,
+                            'action_id': _intish((event.get('action') or {}).get('action_id')),
+                            'target_id': _intish(detail.get('target_id')), 'source_actor_id': _intish(detail.get('source_id'))}
+                    if 'seq_id' in event:
+                        data['operation_seq'] = event['seq_id']
+                    self._emit_structured(ts_ms, 'buff_unresolved', data, event)
+                else:
+                    self._line(ts_ms, 'BUFF_ACTION_UNRESOLVED '
+                               f'uid={_intish(detail.get("buff_inst_id"))} '
+                               f'seq={event.get("seq_id", "unknown")} '
+                               f'triggerType={trigger_type if type(trigger_type) is int else "unknown"} '
+                               f'actionId={_intish((event.get("action") or {}).get("action_id"))} '
+                               f'ownerId={_intish(detail.get("target_id"))} '
+                               f'srcId={_intish(detail.get("source_id"))}')
             return
         inferred_parent_id, inferred_children = self._infer_unresolved_parent_graph(event, details)
         if inferred_parent_id:
@@ -226,12 +245,16 @@ class BuffEvents:
                 'actionId': (event.get('action') or {}).get('action_id'),
                 'operationSeq': event.get('seq_id'), 'triggerType': trigger_type,
             }
-            self._line(ts_ms, 'BUFF_ORIGIN ' + json.dumps(origin, ensure_ascii=False, separators=(',', ':')))
+            if self.event_sink is not None:
+                from parser_core.ingestion.buff_packet_wire import packet_data
+                self._emit_structured(ts_ms, 'buff_origin', packet_data(origin), event)
+            else:
+                self._line(ts_ms, 'BUFF_ORIGIN ' + json.dumps(origin, ensure_ascii=False, separators=(',', ':')))
 
     def _infer_unresolved_parent_graph(self, event: dict[str, Any], details: list[Any]) -> tuple[str | None, dict[int, str]]:
         return None, {}
 
-    def _write_finish_buffs(self, ts_ms: int, finish_buff_action: Any) -> None:
+    def _write_finish_buffs(self, ts_ms: int, finish_buff_action: Any, origin: dict | None = None) -> None:
         if not isinstance(finish_buff_action, dict):
             return
         details = finish_buff_action.get("finish_buffs") or []
@@ -243,13 +266,7 @@ class BuffEvents:
             buff_uid = _intish(detail.get("buff_inst_id"))
             if not buff_uid:
                 continue
-            buff_id = self.buff_id_by_uid.get(buff_uid, "")
-            self.buff_seq += 1
-            self._line(ts_ms, f'BUFF_END #{self.buff_seq} id="{buff_id}" uid={buff_uid}')
-            self.buff_id_by_uid.pop(buff_uid, None)
-            self.buff_actor_ids_by_uid.pop(buff_uid, None)
-            self.buff_values_by_uid.pop(buff_uid, None)
-            self.buff_keys_by_uid.pop(buff_uid, None)
+            self._write_buff_end(ts_ms, buff_uid, origin)
 
     def _prefer_buff_start(self, previous_id: str, new_id: str) -> bool:
         if previous_id == new_id:
@@ -281,22 +298,31 @@ class BuffEvents:
             row = self._pending_buff_start_rows.get(buff_uid)
             if row is None:
                 continue
-            buff_id, owner, src, assigned_items = row
+            buff_id, owner, src, assigned_items, origin = row
             owner_id, source_id = self.buff_actor_ids_by_uid.get(buff_uid, (None, None))
             self.buff_seq += 1
-            self._append_line(
-                ts_ms,
-                (
-                    f'BUFF_START #{self.buff_seq} id="{buff_id}" uid={buff_uid} '
-                    f"owner={owner} src={src} ownerId={owner_id if owner_id is not None else 'unknown'} "
-                    f"srcId={source_id if source_id is not None else 'unknown'} "
-                    f"dur=unknown lifeT=unknown passed=unknown enh=unknown"
-                ),
-            )
             pairs = _blackboard_pairs(assigned_items)
-            if pairs:
-                body = " ".join(f"{key}={value:.6g}" for key, value in pairs)
-                self._append_line(ts_ms, f"BB[{buff_uid}]: {body}")
+            if self.event_sink is not None:
+                self._append_structured(ts_ms, 'buff_start', {'buff_seq': self.buff_seq,
+                    'template': None if buff_id == 'unknown_buff' else buff_id,
+                    'buff_inst_id': buff_uid, 'owner': None if owner == '?' else owner,
+                    'source': None if src == '?' else src, 'target_id': owner_id, 'source_actor_id': source_id}, origin)
+                if pairs:
+                    self._append_structured(ts_ms, 'buff_blackboard', {'buff_inst_id': buff_uid,
+                        'values': [{'key': key, 'value': value} for key, value in pairs]}, origin)
+            else:
+                self._append_line(
+                    ts_ms,
+                    (
+                        f'BUFF_START #{self.buff_seq} id="{buff_id}" uid={buff_uid} '
+                        f"owner={owner} src={src} ownerId={owner_id if owner_id is not None else 'unknown'} "
+                        f"srcId={source_id if source_id is not None else 'unknown'} "
+                        f"dur=unknown lifeT=unknown passed=unknown enh=unknown"
+                    ),
+                )
+                if pairs:
+                    body = " ".join(f"{key}={value:.6g}" for key, value in pairs)
+                    self._append_line(ts_ms, f"BB[{buff_uid}]: {body}")
         self._pending_buff_start_rows.clear()
         self._pending_buff_start_order.clear()
         self._pending_buff_start_ts_ms = None

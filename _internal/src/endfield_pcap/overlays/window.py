@@ -92,7 +92,7 @@ class OverlayWindow(QWidget):
         self._apply_initial_geometry()
         self.canvas.resize(self.size())
         self.setWindowOpacity(self.entry.opacity if self.desktop_visible else 0.0)
-        if not self.canvas.uid_only:
+        if self.canvas.modules:
             from endfield_pcap.overlays.content_size import ContentFitter
             self.content_size = ContentFitter(self)
             self.canvas.naturalSizeChanged.connect(self.content_size.fit)
@@ -110,7 +110,6 @@ class OverlayWindow(QWidget):
         self.setWindowTitle(entry.name)
         if self.content_size is not None and entry.geometry is None and previous.geometry is not None:
             self.content_size.scale = 1.
-            self.content_size.bar_width = None
             self.content_size.reset_position = True
             self.content_size.default_anchor = True
             self.content_size.pending = None
@@ -132,12 +131,7 @@ class OverlayWindow(QWidget):
         self.close_button.setVisible(not entry.click_through)
         self.close_button.update()
         self.canvas.apply_entry(entry)
-        if self.canvas.uid_only and self.content_size is not None:
-            self.canvas.naturalSizeChanged.disconnect(self.content_size.fit)
-            self.content_size.timer.stop()
-            self.content_size.deleteLater()
-            self.content_size = None
-        elif not self.canvas.uid_only and self.content_size is None:
+        if self.content_size is None:
             from endfield_pcap.overlays.content_size import ContentFitter
             self.content_size = ContentFitter(self)
             self.canvas.naturalSizeChanged.connect(self.content_size.fit)
@@ -149,7 +143,7 @@ class OverlayWindow(QWidget):
     def resizeEvent(self, event) -> None:  # noqa: N802
         self.canvas.resize(self.size())
         if self.content_size is not None:
-            self.content_size.window_resized()
+            self.content_size.window_resized(event.oldSize())
         self.close_button.move(
             max(0, self.width() - self.close_button.width() - 8),
             min(8, max(0, self.height() - self.close_button.height())),
@@ -415,4 +409,17 @@ class OverlayWindow(QWidget):
         if self._active_edges & Qt.Edge.BottomEdge:
             geometry.setHeight(max(min_height, geometry.height() + delta.y()))
 
-        self.setGeometry(geometry)
+        natural = self.canvas.natural_size
+        horizontal = bool(self._active_edges & (Qt.Edge.LeftEdge | Qt.Edge.RightEdge))
+        vertical = bool(self._active_edges & (Qt.Edge.TopEdge | Qt.Edge.BottomEdge))
+        original = self._resize_geometry
+        sx, sy = geometry.width()/natural.width(), geometry.height()/natural.height()
+        if horizontal and vertical:
+            scale = sx if abs(geometry.width()/original.width()-1) >= abs(geometry.height()/original.height()-1) else sy
+        else:
+            scale = sx if horizontal else sy
+        scale = max(scale, min_width/natural.width(), min_height/natural.height())
+        width, height = round(natural.width()*scale), round(natural.height()*scale)
+        left = original.right()-width+1 if self._active_edges & Qt.Edge.LeftEdge else original.left()
+        top = original.bottom()-height+1 if self._active_edges & Qt.Edge.TopEdge else original.top()
+        self.setGeometry(left, top, width, height)

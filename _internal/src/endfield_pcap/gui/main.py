@@ -183,6 +183,17 @@ class MainWindow(
                 self._update_service_status()
             elif event_type == 'trace_path':
                 self.independent_controller.set_trace(payload)
+            elif event_type == 'recording_changed':
+                self.service_controller.recording = payload['active']
+                self.service_controller.recording_pending = False
+                self.independent_controller.set_recording(payload['active'], payload['trace'])
+                self.overlay_manager.set_recording(payload['active'])
+                self.history_controller.refresh()
+                self._update_service_status()
+            elif event_type == 'recording_error':
+                self.service_controller.recording_pending = False
+                self._update_service_status()
+                InfoBar.warning('记录切换失败', str(payload), duration=6000, parent=self)
             elif event_type == "metrics":
                 data = payload if isinstance(payload, dict) else {}
                 self.current_metrics = data.get("metrics", RuntimeMetrics())
@@ -200,6 +211,8 @@ class MainWindow(
                 reason = (str(exc).splitlines() or [type(exc).__name__])[0][:180]
                 self._show_capture_error(f'抓包失败：{reason}')
             elif event_type == "stopped":
+                self.service_controller.recording = self.service_controller.recording_pending = False
+                self.overlay_manager.set_recording(False)
                 self.independent_controller.capture_stopped()
                 self._finish_service_stop()
 
@@ -271,6 +284,7 @@ class MainWindow(
         self.queue_timer.stop()
         self._unregister_overlay_hotkey()
         self._unregister_gui_hotkey()
+        self._unregister_recording_hotkey()
         try:
             self.settings_store.save()
         except OSError as error:

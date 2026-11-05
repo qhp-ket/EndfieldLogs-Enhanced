@@ -10,6 +10,8 @@ class GuiLifecycle:
     def _init_gui_lifecycle(self):
         self._gui_hotkey_registered=False
         self._registered_gui_hotkey=''
+        self._recording_hotkey_registered = False
+        self._registered_recording_hotkey = ''
         self._hidden_gui_windows=[]
         icon=self.windowIcon()
         if icon.isNull(): icon=self.style().standardIcon(QStyle.StandardPixmap.SP_ComputerIcon)

@@ -137,6 +137,8 @@ def load_app_config(path: Path | None = None) -> AppConfig:
                 else service_default.ws_browser_token),
             log_dir=path_value(service_payload.get("log_dir"), service_default.log_dir),
             log_level=str(service_payload.get("log_level", service_default.log_level)),
+            trace_format=(service_payload.get('trace_format') if service_payload.get('trace_format') in ('legacy', 'jsonl')
+                          else service_default.trace_format),
             game_exe=str(service_payload.get("game_exe", service_default.game_exe)),
             npcap_device=str(service_payload.get("npcap_device", service_default.npcap_device)),
             dll_dir=path_value(service_payload.get("dll_dir"), service_default.dll_dir),
@@ -168,6 +170,7 @@ def load_app_config(path: Path | None = None) -> AppConfig:
         battle_lane_configs=normalize_lane_configs(payload.get('battle_lane_configs')),
         toggle_overlays_hotkey=_normalize_hotkey(payload.get("toggle_overlays_hotkey")),
         toggle_gui_hotkey=str(payload.get('toggle_gui_hotkey') or 'Ctrl+Shift+O'),
+        toggle_recording_hotkey=str(payload.get('toggle_recording_hotkey') or 'Ctrl+I'),
         imported_trace_files=list(dict.fromkeys(p for value in imported_paths
             if (p := path_value(value, None)) is not None)),
         hidden_history_records=[value for value in payload.get('hidden_history_records', []) if isinstance(value, str)]
@@ -195,6 +198,7 @@ def save_app_config(config: AppConfig, path: Path | None = None) -> None:
                     "ws_browser_token": config.service.ws_browser_token,
                     "log_dir": str(config.service.log_dir),
                     "log_level": config.service.log_level,
+                    "trace_format": config.service.trace_format,
                     "game_exe": config.service.game_exe,
                     "npcap_device": config.service.npcap_device,
                     "dll_dir": str(config.service.dll_dir),
@@ -221,6 +225,7 @@ def save_app_config(config: AppConfig, path: Path | None = None) -> None:
                 "battle_lane_configs": normalize_lane_configs(config.battle_lane_configs),
                 "toggle_overlays_hotkey": _normalize_hotkey(config.toggle_overlays_hotkey),
                 "toggle_gui_hotkey": config.toggle_gui_hotkey,
+                "toggle_recording_hotkey": config.toggle_recording_hotkey,
                 "imported_trace_files": [str(path) for path in config.imported_trace_files],
                 "hidden_history_records": config.hidden_history_records,
             }, _distribution_root(), saving=True))

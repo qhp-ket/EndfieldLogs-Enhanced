@@ -39,7 +39,9 @@ def test_overlay_is_normal_nonactivating_window_after_clickthrough_changes(app):
         window._handle_mouse_press(local, origin)
         window._handle_mouse_move(local, origin + QPoint(40, 20), Qt.MouseButton.LeftButton)
         window._handle_mouse_release(local)
-        assert (window.width(), window.height()) == (640, 320)
+        natural = window.canvas.natural_size
+        assert window.width() > 600
+        assert abs(window.width()-window.height()*natural.width()/natural.height()) < 2
         window.close_button.click()
         assert closed == [current.id]
     finally:

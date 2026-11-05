@@ -93,9 +93,10 @@ class InputController:
             except (OSError,ValueError):
                 pass
 
-    def set_trace(self,path):
+    def set_trace(self,path, *, notify=True):
         self._trace = str(path) if path else None
-        self.command(command='trace',path=self._trace)
+        if notify:
+            self.command(command='trace',path=self._trace)
 
     def stop(self,wait=False):
         self.command(command='stop')

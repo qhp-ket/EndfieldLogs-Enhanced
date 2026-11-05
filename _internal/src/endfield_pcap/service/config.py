@@ -19,5 +19,7 @@ class ServiceConfig:
     trace_file: Path | None = None
     status_file: Path | None = None
     trace_enabled: bool = True
+    recording_on_start: bool = True  # CLI capture; the GUI always overrides this to False.
+    trace_format: str = 'jsonl'
     merge_multi_phase_enemy_battles: bool = False
     ws_browser_token: str = field(default_factory=lambda: secrets.token_urlsafe(32), repr=False)

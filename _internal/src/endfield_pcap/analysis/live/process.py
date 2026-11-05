@@ -7,11 +7,14 @@ import threading
 import time
 
 
-def _worker(connection, summary=False):
+def _worker(connection, summary=False, structured=False, timezone_offset_minutes=0):
     # This module deliberately imports neither Qt nor the capture service.
     from endfield_pcap.analysis.live.publisher import _new_live_parser
     from endfield_pcap.analysis.live.publisher import _transport_copy
-    initial_parser = _new_live_parser(summary=summary)
+    def make_parser():
+        return _new_live_parser(summary=summary, structured=structured,
+                                timezone_offset_minutes=timezone_offset_minutes)
+    initial_parser = make_parser()
     from parser_core import battle_log_parser
 
     # Load the existing official metadata caches before the first battle.
@@ -51,10 +54,12 @@ def _worker(connection, summary=False):
                 generation = command[1]
                 with state_lock:
                     if generation != state["generation"]:
-                        state.update(parser=_new_live_parser(summary=summary), generation=generation)
+                        state.update(parser=make_parser(), generation=generation)
                     parser = state["parser"]
                 if kind == "lines":
                     parser.feed_lines(command[2])
+                elif kind == "events":
+                    parser.feed_events(command[2])
                 elif kind == "calculate":
                     with state_lock:
                         state["request"] = (generation, parser, command[2])
@@ -112,15 +117,15 @@ def _worker(connection, summary=False):
 class SnapshotProcess:
     """One reader and one calculator, with ordered nonblocking input delivery.
 
-    The reader feeds new lines even while snapshot() runs, as the official
+    The reader feeds new input even while snapshot() runs, as the official
     overlay's trace reader does. The parent accepts results by generation.
     IPC can block only the sender thread, never the capture event loop.
     """
 
-    def __init__(self, *, summary=False):
+    def __init__(self, *, summary=False, structured=False, timezone_offset_minutes=0):
         context = multiprocessing.get_context("spawn")
         self.connection, child = context.Pipe()
-        self.process = context.Process(target=_worker, args=(child, summary), name="endfield-summary" if summary else "endfield-canonical-analysis", daemon=True)
+        self.process = context.Process(target=_worker, args=(child, summary, structured, timezone_offset_minutes), name="endfield-summary" if summary else "endfield-canonical-analysis", daemon=True)
         self.process.start()
         child.close()
         self.commands = queue.Queue()
@@ -136,8 +141,8 @@ class SnapshotProcess:
             while True:
                 command = pending if pending is not None else self.commands.get()
                 pending = None
-                if command[0] == "lines":
-                    # Coalesce only adjacent lines of the same generation.
+                if command[0] in ("lines", "events"):
+                    # Coalesce only adjacent input of the same kind and generation.
                     # Never reorder a reset boundary or a calculate request.
                     lines = list(command[2])
                     while len(lines) < 4096:
@@ -149,7 +154,7 @@ class SnapshotProcess:
                             pending = next_command
                             break
                         lines.extend(next_command[2])
-                    command = ("lines", command[1], lines)
+                    command = (command[0], command[1], lines)
                 self.connection.send(command)
                 if command[0] == "stop":
                     return
@@ -160,6 +165,9 @@ class SnapshotProcess:
 
     def feed_line(self, generation, line):
         self.commands.put(("lines", generation, [line]))
+
+    def feed_events(self, generation, events):
+        self.commands.put(("events", generation, tuple(events)))
 
     def calculate(self, generation):
         if self.closed:
