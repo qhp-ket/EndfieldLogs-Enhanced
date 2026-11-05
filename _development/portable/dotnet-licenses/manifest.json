@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "files": [
+    {
+      "path": "Google-Protobuf-BSD.txt",
+      "source": "https://raw.githubusercontent.com/protocolbuffers/protobuf/2c74169b34066ceb8ddb6b882fcb3fb32d737a55/LICENSE",
+      "bytes": 1732,
+      "sha256": "6e5e117324afd944dcf67f36cf329843bc1a92229a8cd9bb573d7a83130fea7d"
+    },
+    {
+      "path": "CsWinRT-MIT.txt",
+      "source": "https://raw.githubusercontent.com/microsoft/CsWinRT/8649ee3eeb2445ca2a36d80d878ef60b96a6c65d/LICENSE",
+      "bytes": 1162,
+      "sha256": "9906940f61b1f0b533fa7d99baf55178b2808fbe113ea51dfbfad8572ccd5f2b"
+    },
+    {
+      "path": "Imazen-WebP-MIT.txt",
+      "source": "https://raw.githubusercontent.com/imazen/libwebp-net/462cd4a3bb76c171ff818cd16b0779614c3f8044/LICENSE.txt",
+      "bytes": 1057,
+      "sha256": "3a7b80c4abac066d63ec901d15312faf6a6cf86203471db42c2365348728bf51"
+    },
+    {
+      "path": "Google-libwebp-BSD.txt",
+      "source": "https://raw.githubusercontent.com/webmproject/libwebp/v1.6.0/COPYING",
+      "bytes": 1496,
+      "sha256": "5aec868f669e384a22372a4e8a1a6cd7d44c64cd451f960ca69cc170d1e13acf"
+    },
+    {
+      "path": "Google-libwebp-PATENTS.txt",
+      "source": "https://raw.githubusercontent.com/webmproject/libwebp/v1.6.0/PATENTS",
+      "bytes": 1436,
+      "sha256": "cc3273e0694ea5896145e0677699b53471b03ea43021ddc50e7923fbb9f5023c"
+    },
+    {
+      "path": "Microsoft-VC-Runtime.txt",
+      "source": "https://visualstudio.microsoft.com/wp-content/uploads/2021/09/Visual-C-Runtime-2015-2022-License-1.docx",
+      "bytes": 6690,
+      "sha256": "497276169b492ee04c46b9d05a104bee9c9580c9ed4546a9a357f4377f090f47",
+      "extraction": "word/document.xml paragraphs, all text runs in order",
+      "source_sha256": "f1e3d56ceb2ad68aae0711b910375009e651ac5530fa0760f0dea6e81e54fae1"
+    },
+    {
+      "path": "Vortice-Windows-MIT.txt",
+      "source": "https://raw.githubusercontent.com/amerkoleci/Vortice.Windows/9e609cb9439c9872aa1b339f177e40ec96f77239/LICENSE",
+      "bytes": 1090,
+      "sha256": "82bd4e84d144bebbb519ed05899f0ceaeaf2e0f95160ac32fd8cc388710c76d0"
+    },
+    {
+      "path": "Vortice-Mathematics-MIT.txt",
+      "source": "https://raw.githubusercontent.com/amerkoleci/Vortice.Mathematics/fa05ec6dcba48f3f7331791da6dc7f3d866b2ad6/LICENSE",
+      "bytes": 1090,
+      "sha256": "cf72351fa2e9f2eb181af7fd508dd73da1d84ba43575cb98f7af22f26a81af5e"
+    },
+    {
+      "path": "SharpGenTools-MIT.txt",
+      "source": "https://raw.githubusercontent.com/SharpGenTools/SharpGenTools/6990bcafe124a4c22515ad19cee5a081da8db67b/LICENSE.txt",
+      "bytes": 1101,
+      "sha256": "1cc7abd1e97575838535484bef6e4ab14e81681ddf7837672acede5fca1d4e30"
+    }
+  ]
+}

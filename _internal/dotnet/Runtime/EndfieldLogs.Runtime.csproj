@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../Core/EndfieldLogs.Core.csproj" />
+    <ProjectReference Include="../Capture/EndfieldLogs.Capture.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Overlays/Skins/*.json" LogicalName="EndfieldLogs.Skins.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Resources/skill_names_zh.json" LogicalName="EndfieldLogs.SkillNames.json" />
+    <InternalsVisibleTo Include="EndfieldLogs.Specs" />
+  </ItemGroup>
+</Project>

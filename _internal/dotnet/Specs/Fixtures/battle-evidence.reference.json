@@ -1,0 +1,10 @@
+{
+  "source_head": "c9f01b76ba80800c46f7e9b17bf7798f29f49147",
+  "cases": 44,
+  "dependencies": {
+    "_internal/src/endfield_pcap/analysis/battle/detail.py": "11f2cc672699c9917d5503cfe8aa59dfcb84c55224766db53bd2a14e9ca1405f",
+    "_internal/src/endfield_pcap/analysis/battle/enemy.py": "bc2e5bbd17af9d512a915ed513371f97967750cc7071ae4d4c252d3756b47336",
+    "_internal/src/endfield_pcap/data/skill_names.py": "0a2c6d77d9880523d4b0214b4e280ebba90e54c4b1bc7b5d781d9ca0606dcd9f",
+    "_internal/src/endfield_pcap/data/assets/skill_names_zh.json": "4157fb01a49742d16c3e9f84ff3b9ef153fc5343f46c911f6375e85c4e6f0dfa"
+  }
+}

@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <WindowsSdkPackageVersion>10.0.19041.57</WindowsSdkPackageVersion>
+    <UseWPF>true</UseWPF>
+    <OutputType>WinExe</OutputType>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>EndfieldLogs-Enhanced</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Runtime/EndfieldLogs.Runtime.csproj" />
+    <PackageReference Include="Imazen.WebP.NativeRuntime.win-x64" Version="[1.6.1]" />
+    <PackageReference Include="Vortice.Direct2D1" Version="[3.8.3]" />
+  </ItemGroup>
+  <PropertyGroup Condition="'$(PortableAppHost)' == 'true'">
+    <SelfContained>false</SelfContained>
+    <TargetLatestRuntimePatch>true</TargetLatestRuntimePatch>
+    <RollForward>Disable</RollForward>
+  </PropertyGroup>
+  <!-- A private, standard .NET installation is assembled separately from application files.
+       Search only that installation, regardless of global runtimes or DOTNET_ROOT. -->
+  <Target Name="CreatePortableAppHost" AfterTargets="Publish" Condition="'$(PortableAppHost)' == 'true'">
+    <CreateAppHost AppHostSourcePath="$(AppHostSourcePath)"
+                   AppHostDestinationPath="$(PublishDir)$(AssemblyName).exe"
+                   AppBinaryName="_internal/app/$(AssemblyName).dll"
+                   DotNetSearchLocations="AppRelative"
+                   AppRelativeDotNet="../dotnet"
+                   IntermediateAssembly="@(IntermediateAssembly->'%(FullPath)')"
+                   WindowsGraphicalUserInterface="true"
+                   Retries="$(CopyRetryCount)" RetryDelayMilliseconds="$(CopyRetryDelayMilliseconds)" />
+  </Target>
+</Project>

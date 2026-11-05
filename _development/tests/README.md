@@ -1,61 +1,31 @@
-# 测试分类与运行
+# 测试与验证
 
-计数按 pytest 参数展开用例统计。运行入口隔离 GUI 配置、Qt 缓存与输出，普通回归使用合成输入。
-
-## 应用测试
-
-`live` 运行整个应用测试集。以下目录相对本文件：
-
-| 目录 | 通过数 | 主要覆盖 |
-| --- | ---: | --- |
-| `battle/` | 69 | Qt/Web 分析、时间轴与技能、BUFF/技力/失衡、详情、头像及列宽 |
-| `gui/` | 78 | 启动选项、路径/配置迁移与恢复、字号滑条、浮窗排序、日志、凭据与正式版更新 |
-| `history/` | 30 | 索引、缓存、选择竞态、重命名回滚、文件引用和上传证明 |
-| `overlays/` | 78 | 启停/显隐、几何/DPI、Qt/JS、头像、伤害适配、连携样式、模板与 WS 凭据 |
-| `service/` | 121 | 摘要/完整发布、WS 认证/慢消费者、抓包句柄生命周期与故障传播、reset/退出隔离、订阅及 trace |
-| `resources/` | 85 | 数据投影、缺角色回退、头像访问边界、依赖锁/闭包、打包、版本及 ignore |
-| `independent/` | 98 | 输入后端/去重/前台/溢出、管道压力/退出兜底、JSONL、绑定与对齐、视觉像素/状态机、独立服务生命周期 |
-| `integration/` | 单独执行 | 可选外部资源的发行约束，默认跳过 |
-
-`app_test_support/` 提供共享支持：`ui/` 为 Qt/DOM/主窗夹具，`scenarios/` 构造日志和战斗状态，`runtime/` 模拟服务并加载维护工具。
-两个 `.cjs` harness 随对应 Python 用例验证实际渲染脚本。
-
-## 核心测试
-
-[parser_core 测试](../../_internal/packages/parser_core/tests/README.md)：
-
-| 目录 | 通过数 | 主要覆盖 |
-| --- | ---: | --- |
-| `allocation/` | 73 | rD 分配、守恒、顺序无关、乘区/抗性反事实及数值边界 |
-| `baseline/` | 159 | 武器/装备/技艺静态基线、精炼、来源去重和公式 |
-| `evidence/` | 222 | 精确命中、身份/目标、条件、动态属性、BUFF 和暴击证据 |
-| `live/` | 72 | 未决后缀、前缀复用、迟到回放、累计撤销、副本隔离和摘要 |
-| `mechanics/` | 220 | 动态腐蚀、笔意、连携包链及技能类别 |
-| `whitelist/` | 783 | 角色/武器/装备批准矩阵、元素/条件/来源约束 |
-| `reporting/` | 238 | 公共入口、质量、显示名、完整性和缺证据报告 |
-| `timing/` | 147 | 计时冲突、换场/跨日、rotation 及技能计划 |
-| `legacy/` | 109 项预期失败 | [断言与核对方法](../../_internal/packages/parser_core/tests/legacy/README.md) |
-
-uploader_core 共 22 项：20 项 payload/过滤/证明与边界，另有暴击历史、场景武器精炼各 1 项。
-
-## 运行与验证范围
-
-仓库根目录选择所需测试集：
+本分支的产品测试位于 `_internal/dotnet/Specs/`；命令行差分入口位于 `Tools/`，桌面专项检查位于 `Desktop/Verification/`。旧 Python／Qt 应用测试随其源码在 `main/python-qt` 分支维护。
 
 ```powershell
-python -B _development/run_tests.py live
-python -B _development/run_tests.py parser_core
-python -B _development/run_tests.py uploader_core
-python -B _development/run_tests.py app-battle
-python -B _development/run_tests.py app-overlays
-python -B _development/run_tests.py core-live
-python -B _development/run_tests.py legacy
+& _internal/dotnet/Verify.ps1
+& _internal/dotnet/Verify.ps1 -Suite history-index,live-engine -Group history-storage,history-analysis,live-engine
+python -B -m unittest discover -s _development/tests/resources -p "test_*.py"
 ```
 
-`app-目录名` / `core-目录名` 选择分类，可追加 pytest 参数如 `-k`。
-`legacy --runxfail --tb=short` 用于调查实际断言，该模式关闭 xfail，预期返回非零。
+`Verify.ps1` 按 NuGet 锁文件恢复，构建当前源码，并执行选中的契约组和固定差分。`-SkipBuild` 只接受当前源码与产物的有效构建回执；不要用旧回执跳过变化后的构建。`resources/` 是打包清单、资源缓存及基准身份工具的标准库单元测试，无需 PySide6 或 pytest。
 
-三个可选桌面用例分别依赖 Windows HWND、混合 DPI 双屏、WGC DLL/桌面会话。
-真实更新查询用例设置 `ENDFIELD_LIVE_UPDATE_TEST=1` 后运行 `app-integration -k live_updates`，验证正式 Release API 与 GUI 后台提示。
-外部资源检查按前提单独执行，跳过记录为未验证；实体手柄和实战画面另行实机验收。
-输出位于 `_development/verification/`，按改动选择测试见 [打包验证表](../docs/portable-packaging.md)。
+无窗口导航检查可单独运行：
+
+```powershell
+dotnet _internal/dotnet/Desktop/bin/Debug/net10.0-windows10.0.19041.0/EndfieldLogs-Enhanced.dll --check-navigation _development/verification/navigation.json
+```
+
+便携包根目录的 EXE 支持 `--check-portable-layout <输出.json>`，验证相对目录、自包含运行库和原生依赖加载；此入口不打开窗口、采集画面或注册输入钩子。
+
+`--check-product-startup <输出.json>` 从同一个产品初始化入口创建真实主窗口和服务组合，使用隔离配置检查导航、收起侧栏、深浅色、放大字号、配置保存及退出清理。窗口不激活、不接收输入；诊断明确关闭抓包、录制、浮窗、更新请求和全局快捷键，20 秒内结束。便携验收应从包根 EXE 执行，并核对结果中的进程、CoreCLR、WPF 和 Desktop 路径均位于包内。它不代替真实游戏、物理输入或 OBS 验收。
+
+`--check-overlay-lifetime <输出.json>` 短时创建桌面透明、不激活且穿透输入的原生浮窗，检查全部停用时释放绘图工厂、重新启用时恢复快照，以及关闭后隐藏仍保留窗口。它不捕获画面、不注入输入，也不测量性能或内存达标情况；仅在允许启动窗口时运行。
+
+`--probe-product`、`--probe-overlays` 及性能基准会创建实际窗口，部分还会捕获自有窗口；只在允许使用桌面时手动运行。它们不由普通 CI 执行。真实游戏、OBS、多屏 DPI、UAC、手柄和长期资源稳定性须另外验收，不能由无窗口测试替代。
+
+`benchmark_dotnet_interface.py` 的配对页面窗口不激活、穿透输入并位于普通窗口底层，通过控件接口操作；不会测试真实键盘焦点。脚本在启动前拒绝没有输入保护的旧 Desktop 程序；集成主窗口及实时回放需使用各自的专用工具。历史列表按实际界面的最新记录在前排序，在计时后的独立检查中核对 20 个停靠点的 DPI、页面客户区、实际裁切视口、可见记录、行高、字体及双行文本；物理尺寸和字体只允许 1 像素舍入差异，不匹配时保留诊断并拒绝生成性能汇总。有界负载串行运行，避免与构建及其他测量并发；遮挡状态下的绘制结果不能直接作为可见更新性能结论。
+
+配对输入可添加 `"history_display": {"viewport_dip": [720, 448], "row_min_height_dip": 64}`，在测试窗口中统一列表视口、最小行高及 1200×800 DIP 页面客户区；产品默认布局不变。自然行高超过所设下限时仍保留，并检查文字垂直裁切。布局设置在滚动计时之前完成，显示条件仍须通过上述实际检查；该模式的汇总不比较初次绑定耗时，原始绑定数据仅供诊断。
+
+CI 在本分支 push、PR 及手动触发时运行 C# 契约／固定差分、无窗口导航、仓库审计和打包工具测试，并始终上传验证日志。官网实际上传不属于测试步骤。

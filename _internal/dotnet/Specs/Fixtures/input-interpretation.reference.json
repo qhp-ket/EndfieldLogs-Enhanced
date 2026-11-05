@@ -1,0 +1,7 @@
+{
+  "source_head": "c9f01b76ba80800c46f7e9b17bf7798f29f49147",
+  "cases": 248,
+  "dependencies": {
+    "_internal/src/endfield_pcap/inputlog/interpret.py": "6b05425f4ff5e05f867218f1e2b4cc1f21031edd81715ae512a617f7b20953f4"
+  }
+}

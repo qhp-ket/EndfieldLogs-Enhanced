@@ -1,7 +1,7 @@
 # Snapshot Quality Contract v1
 
 `snapshot_quality` 投影 canonical 报告中的 rDPS 归因和计时证据。
-实现：`parser_core.snapshot_quality.build_snapshot_quality(report)`。
+实现：`_internal/dotnet/Core/Reporting/` 中的质量投影；字段保持 Python 固定参考的兼容契约。
 
 ## 入口与结构
 

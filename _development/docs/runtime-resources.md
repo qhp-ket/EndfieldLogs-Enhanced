@@ -3,7 +3,7 @@
 ## 精简数据
 
 源码附带 `runtime-data.zip`（约 5.8 MB），恢复后约 16.9 MB。
-`Setup-Dev.cmd` 或 `prepare_resources.py` 离线恢复并校验，开发规则取当前源码；已有资源不匹配时人工核对。
+`prepare_resources.py --offline` 离线恢复并校验，开发规则取当前源码；已有资源不匹配时人工核对。
 便携版直接携带恢复后的数据。
 
 完整输入用于维护提取规则，位于本地 `_development/raw-resources/_internal/`。

@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../Core/EndfieldLogs.Core.csproj" />
+    <ProjectReference Include="../Native/EndfieldLogs.Native.csproj" />
+    <ProjectReference Include="../Protocol/EndfieldLogs.Protocol.csproj" />
+  </ItemGroup>
+</Project>

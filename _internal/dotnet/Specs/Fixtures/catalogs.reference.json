@@ -1,0 +1,16 @@
+{
+  "cases": 698,
+  "source_head": "dbada749e3e967cf80c7a330042eaae18f302a09",
+  "dependencies": {
+    "_internal/packages/parser_core/parser_core/ingestion/fields.py": "0f99659e3de8f247bfb8394d1043798a22aec0d486dac1cbd13aecb1d2a289ea",
+    "_internal/packages/parser_core/parser_core/ingestion/identity.py": "1740f7de7fbda6d54feccedb1ffba13aa2106d43efea98ec45bbc8a1d5e6e65e",
+    "_internal/packages/parser_core/parser_core/catalog/resources.py": "0b2ab2738d8fc9cd83aa3ef3cea9ce1ec84573e2bd53d56e43954f6e2912c33b",
+    "_internal/packages/parser_core/parser_core/catalog/names.py": "aa7e732a71eeb4bede14513dbe661958120cac6b4eee203b3cc6a13e6e1ec093",
+    "_internal/packages/parser_core/parser_core/catalog/display.py": "89bcb8c0e342136bada0ce0512743244831436aa730eaaf8c98794cb48c3f69b",
+    "_internal/packages/parser_core/parser_core/catalog/packet_semantics.py": "fc8b6baa19036a99f1c6def8c6ee28c48b17583367cea68eac686ad094f6dd5d",
+    "_internal/packages/parser_core/parser_core/catalog/buff_templates.py": "dd80225a66f355bd1c1ec8e1fab8a224e7ed9f7ce7de2ff53228ba39b2387a0e",
+    "_internal/packages/parser_core/parser_core/catalog/skill_damage.py": "4a24c111a3d2a469c31b093cc08bf34a386da5118c1b4ff222e082820d1438ff",
+    "_internal/packages/parser_core/parser_core/ingestion/skill_identity.py": "7752a2bf49edd3c3ce94f96e7047b12485ded349b3e0b252bdc48ead00d09dc0",
+    "_internal/packages/parser_core/parser_core/catalog/dungeons.py": "99a2f5189fddb2acfee328fbe368b2dce057489e9b9fb8fee46c2bd8c3a3c016"
+  }
+}

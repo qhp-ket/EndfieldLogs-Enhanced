@@ -1,0 +1,5 @@
+# Optional developer tools only; the C# product has no Python runtime dependency.
+# Portrait generation:
+Pillow
+# Process-tree performance comparison:
+psutil

@@ -1,0 +1,8 @@
+{
+  "sdk": {
+    "version": "10.0.403",
+    "rollForward": "disable",
+    "allowPrerelease": false,
+    "paths": ["../../../.toolchains/dotnet", "$host$"]
+  }
+}

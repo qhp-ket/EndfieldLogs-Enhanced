@@ -1,24 +1,13 @@
-# 开发指南
+# C# 开发指南
 
-- [源码目录导航](../_internal/src/README.md)：功能分组、侧栏操作、服务和浮窗的修改入口。
+本目录维护 C#／WPF 客户端的构建、资源与验证工具。Python／Qt 产品源码在 `main/python-qt` 分支维护，不在本分支保留副本。
 
-- [环境准备](docs/development-environment.md)：零环境、部分环境、完整环境的复用与安装。
-- [外部资源](docs/runtime-resources.md)：运行数据、官网 uploader 与上传兼容。
-- [GUI 启动](docs/gui-launch.md)、[浮窗模板](docs/overlay-templates.md)。
-- [输入记录与连携图像识别](docs/independent-services.md)：独立服务、校准、历史输入证据及故障边界。
-- [本地战斗分析](docs/local-battle-analysis.md)、[trace 导入与贡献口径](docs/trace-import-and-rdps.md)。
-- [界面组件位置](docs/battle-analysis-components.md)：控件、字号、时间轴和网页资产。
-- [实时摘要接口](docs/live-summary-publisher.md)、[质量契约](docs/snapshot-quality-contract.md)。
-- [版本与打包](docs/portable-packaging.md)。
-- [许可与再分发](docs/licensing.md)：GPLv3 组合程序、上游 MIT、对应源码及外部资源的边界。
+- [开发环境](docs/development-environment.md)：SDK、资源及启动命令。
+- [架构与验证范围](docs/csharp-migration.md)：各模块职责、差分基准及尚未完成的实机验收。
+- [运行资源](docs/runtime-resources.md)、[原生皮肤](docs/overlay-templates.md)。
+- [JSONL 协议](docs/trace-jsonl.md)、[简报质量契约](docs/snapshot-quality-contract.md)。
+- [打包](docs/portable-packaging.md)、[许可](docs/licensing.md)、[测试](tests/README.md)。
 
-`tests/` 为应用回归，核心回归位于 `_internal/packages/*/tests/`；[测试分类与运行](tests/README.md)说明各目录覆盖范围、预期失败、跳过条件和分类运行命令。
-`tools/` 只入库当前维护工具；下载、缓存、性能实验、历史实施记录与验证产物留在本地。
+`_internal/dotnet/Specs/` 保存 C# 契约测试和固定差分夹具；`tools/dotnet_reference/` 用于从显式指定、哈希校验的 Python 参考生成差分输入。它们是开发工具，不随本体运行，也不要求在本分支安装 Qt。
 
-```powershell
-python -B _development/run_tests.py live
-python -B _development/run_tests.py parser_core
-python -B _development/run_tests.py uploader_core
-```
-
-普通回归使用合成数据，可选官网兼容检查需准备源码副本。
+验证结果、性能记录、临时程序、缓存和候选包不入库。不要用旧测量结果代表已经变化的源码。

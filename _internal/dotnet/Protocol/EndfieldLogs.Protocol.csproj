@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="Google.Protobuf" Version="[3.36.2]" />
+    <PackageReference Include="Grpc.Tools" Version="[2.85.0]" PrivateAssets="All" GeneratePathProperty="true" />
+    <EmbeddedResource Include="Schema/manifest.json" LogicalName="EndfieldLogs.Protocol.SchemaManifest.json" />
+  </ItemGroup>
+  <Import Project="Schema/files.props" />
+  <Target Name="GenerateProtocol"
+          Inputs="$(MSBuildProjectFullPath);Schema/protocol.pb;Schema/files.props;$(PkgGrpc_Tools)\tools\windows_x64\protoc.exe"
+          Outputs="$(IntermediateOutputPath)protocol.stamp">
+    <MakeDir Directories="$(IntermediateOutputPath)Generated" />
+    <Exec Command="&quot;$(PkgGrpc_Tools)\tools\windows_x64\protoc.exe&quot; --descriptor_set_in=&quot;$(MSBuildProjectDirectory)\Schema\protocol.pb&quot; --csharp_out=&quot;$(IntermediateOutputPath)Generated&quot; %(ProtocolRoot.Identity)" />
+    <Touch Files="$(IntermediateOutputPath)protocol.stamp" AlwaysCreate="true" />
+  </Target>
+  <Target Name="IncludeProtocolGenerated" BeforeTargets="CoreCompile" DependsOnTargets="GenerateProtocol">
+    <ItemGroup><Compile Include="$(IntermediateOutputPath)Generated\*.cs" /></ItemGroup>
+  </Target>
+</Project>

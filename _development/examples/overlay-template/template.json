@@ -1,20 +1,45 @@
 {
-  "schema_version": 1,
-  "name": "自定义快照示例",
-  "entry": "index.html",
-  "subscriptions": ["analysis_snapshot"],
-  "font_mode": "css",
-  "window": {"min_width": 240, "min_height": 120, "default_width": 400, "default_height": 200},
+  "schema_version": 2,
+  "name": "伤害与连携",
+  "window": {
+    "min_width": 320,
+    "min_height": 160,
+    "default_width": 800,
+    "default_height": 500
+  },
+  "modules": [
+    {
+      "type": "damage",
+      "settings": {
+        "bar_mode": "rdps"
+      },
+      "setting_bindings": {
+        "avatar_size_percent": "size"
+      }
+    },
+    {
+      "type": "combo_skill",
+      "settings": {
+        "display_style": "bars"
+      }
+    }
+  ],
+  "layout": {
+    "direction": "vertical"
+  },
+  "theme": {
+    "background": "#20252d",
+    "spacing": 8,
+    "padding": 4
+  },
   "settings": [
     {
-      "key": "metric",
-      "label": "展示指标",
-      "type": "select",
-      "default": "total_damage",
-      "options": [
-        {"value": "total_damage", "label": "团队 DMG"},
-        {"value": "total_dps", "label": "团队 DPS"}
-      ]
+      "key": "size",
+      "label": "伤害头像大小",
+      "type": "slider",
+      "min": 50,
+      "max": 300,
+      "default": 100
     }
   ]
 }

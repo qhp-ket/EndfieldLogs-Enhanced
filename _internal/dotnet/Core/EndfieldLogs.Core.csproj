@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <InternalsVisibleTo Include="EndfieldLogs.Specs" />
+    <InternalsVisibleTo Include="EndfieldLogs.Tools" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,7 @@
+{
+  "cases": 245,
+  "source_head": "dbada749e3e967cf80c7a330042eaae18f302a09",
+  "dependencies": {
+    "_internal/packages/parser_core/parser_core/effects/action_index.py": "17d7ed27f9c268ef6bf33a37ace9bb33f693cf9f3d7d960390bd11fd558c1150"
+  }
+}

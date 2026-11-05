@@ -1,0 +1,18 @@
+{
+  "captured_at_ms": 28801000,
+  "timezone_offset_minutes": 0,
+  "setup": [
+    "[08:00:01.000] HP_V2 #7 src=chr_0001_alpha atk=chr_0001_alpha tgt=eny_0001_target hit=100 eHP=1000",
+    "[08:00:01.000] BUFF_START uid=71 id=buff_test owner=eny_0001_target ownerId=22 src=chr_0001_alpha srcId=11"
+  ],
+  "observations": [
+    {"type":"damage_raw", "line":"[08:00:01.000] DPD_RAW #0007 probe=legacy calc=1.2345678901234567e+02 atkScale=1.0000000000000001 blocked=0 damageType=0x02 decorateMask=0x00 collider=\"body zone\" atkZones=[1.000, unknown, -0.0, 1e-3] defZones=[2.50]"},
+    {"type":"damage_baseline", "line":"[08:00:01.000] BASELINE #0007 1=0.33333333333333331 1=1.2345678901234567 2=-0.0 -1=9e-3"},
+    {"type":"legacy_attribute_modifier", "line":"[08:00:01.000] ATTR_MOD buff=\"buff_test\" i=0 attrType=2 modType=0 formula=6 useKey=1 val=0.050000000000000003 bbKey=\"atk_up\""},
+    {"type":"legacy_damage_modifier", "line":"[08:00:01.000] DMG_MOD buff=\"buff_test\" i=1 attrType=14 useKey=0 val=0.1 val=0.25 bbKey=\"damage up\""},
+    {"type":"identity_inference", "line":"[08:00:01.000] IDENTITY_INFERENCE actorId=00011 template=eny_0001_target source=damage_target"},
+    {"type":"clock_tick", "line":"[08:00:01.000] GAME_TIMER_TICK tickMs=0 seq=0 elapsedMs=2500 note=\"legacy clock\""},
+    {"type":"clock_tick", "line":"[08:00:01.000] HEARTBEAT tickMs=2500 seq=2"},
+    {"type":"damage_raw", "line":"[08:00:01.000] DPD_RAW #999 calc=99 atkScale=1 blocked=0 damageType=unknown decorateMask=unknown collider=\"\" atkZones=[] defZones=[]"}
+  ]
+}

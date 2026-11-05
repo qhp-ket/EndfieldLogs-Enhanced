@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0": {
+      "Google.Protobuf": {
+        "type": "Transitive",
+        "resolved": "3.36.2",
+        "contentHash": "Ci1q1iJg74qAE5riTA2FbMS0wPbpruPQI/JQ9DrAsRo2VsSxgt1e/pmxGxgrci+pXJEgrSYg2vPl8rrStZkclQ=="
+      },
+      "endfieldlogs.capture": {
+        "type": "Project",
+        "dependencies": {
+          "EndfieldLogs.Core": "[0.2.1-csharp.1, )",
+          "EndfieldLogs.Native": "[0.2.1-csharp.1, )",
+          "EndfieldLogs.Protocol": "[0.2.1-csharp.1, )"
+        }
+      },
+      "endfieldlogs.core": {
+        "type": "Project"
+      },
+      "endfieldlogs.native": {
+        "type": "Project"
+      },
+      "endfieldlogs.protocol": {
+        "type": "Project",
+        "dependencies": {
+          "Google.Protobuf": "[3.36.2, 3.36.2]"
+        }
+      },
+      "endfieldlogs.runtime": {
+        "type": "Project",
+        "dependencies": {
+          "EndfieldLogs.Capture": "[0.2.1-csharp.1, )",
+          "EndfieldLogs.Core": "[0.2.1-csharp.1, )"
+        }
+      }
+    },
+    "net10.0/win-x64": {}
+  }
+}

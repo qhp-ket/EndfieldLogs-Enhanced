@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/Runtime/">
+    <Project Path="Core/EndfieldLogs.Core.csproj" />
+    <Project Path="Protocol/EndfieldLogs.Protocol.csproj" />
+    <Project Path="Native/EndfieldLogs.Native.csproj" />
+    <Project Path="Capture/EndfieldLogs.Capture.csproj" />
+    <Project Path="Runtime/EndfieldLogs.Runtime.csproj" />
+    <Project Path="Desktop/EndfieldLogs.Desktop.csproj" />
+  </Folder>
+  <Folder Name="/Verification/">
+    <Project Path="Specs/EndfieldLogs.Specs.csproj" />
+    <Project Path="Tools/EndfieldLogs.Tools.csproj" />
+  </Folder>
+</Solution>
