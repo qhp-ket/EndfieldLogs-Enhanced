@@ -19,13 +19,13 @@ internal static class LiveEngineCases
         {
             var input = (EvidenceObject)EvidenceJson.Parse(test!["config_json"]!.GetValue<string>());
             var minutes = (int)((EvidenceInteger)input.Get("offset_minutes")).Value;
+            var zone = TimeZoneInfo.CreateCustomTimeZone("fixed-fixture", TimeSpan.FromMinutes(minutes), "fixed-fixture", "fixed-fixture");
             if (!analyses.TryGetValue(minutes, out var analysis))
             {
-                var zone = TimeZoneInfo.CreateCustomTimeZone("fixed-fixture", TimeSpan.FromMinutes(minutes), "fixed-fixture", "fixed-fixture");
                 analyses[minutes] = analysis = BattleReportAnalysis.Load(resources.Files, zone);
             }
             LiveBattleEngine engine = new(ingestion, analysis, DateOnly.ParseExact(((EvidenceText)input.Get("date")).Value,
-                "yyyy-MM-dd", CultureInfo.InvariantCulture));
+                "yyyy-MM-dd", CultureInfo.InvariantCulture), zone);
             JsonArray actual = [];
             foreach (var step in ((EvidenceArray)input.Get("steps")).Items.Cast<EvidenceObject>())
             {
