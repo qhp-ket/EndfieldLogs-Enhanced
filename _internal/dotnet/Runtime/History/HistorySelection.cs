@@ -8,7 +8,13 @@ using EndfieldLogs.Runtime.Tracing;
 
 namespace EndfieldLogs.Runtime.History;
 
-public sealed record SelectedHistoryEvents(IReadOnlyList<TraceEvent> Events, int Offset);
+public sealed record SelectedHistoryEvents(IReadOnlyList<TraceEvent> Events, int Offset)
+{
+    // Time-only replay unfolds midnight relative to its first event, not first hit.
+    public DateOnly ReferenceDate => Events.Count > 0
+        ? DateOnly.FromDateTime(DateTimeOffset.FromUnixTimeMilliseconds(Events[0].CapturedAtMs).ToOffset(TimeSpan.FromMinutes(Offset)).DateTime)
+        : throw new InvalidDataException("所选记录没有可供分析的事件");
+}
 
 /// <summary>One indexed battle and its original prefix context. Never carries earlier damage.</summary>
 public static class HistorySelection

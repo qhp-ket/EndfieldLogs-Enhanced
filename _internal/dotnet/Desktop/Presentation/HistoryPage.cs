@@ -156,7 +156,7 @@ internal sealed class HistoryPage : DockPanel
     private void Export()
     {
         if (history.SelectedRecords.LastOrDefault() is not { } row) return;
-        SaveFileDialog dialog = new() { Title = "导出所选战斗 · 官网兼容日志", Filter = "战斗日志|*.log", FileName = $"{Path.GetFileNameWithoutExtension(row.FilePath)}-战斗{row.RecordIndex}-官网兼容.log", AddExtension = true, DefaultExt = ".log" };
+        SaveFileDialog dialog = new() { Title = "导出所选战斗 · 官网兼容日志", Filter = "战斗日志|*.log", FileName = TraceExportService.DefaultBattleFileName(row), AddExtension = true, DefaultExt = ".log" };
         if (dialog.ShowDialog(Window.GetWindow(this)) == true)
             track(ExportAsync(row, dialog.FileName));
     }

@@ -8,10 +8,12 @@
 dotnet restore _internal/dotnet/EndfieldLogs.slnx --locked-mode
 dotnet build _internal/dotnet/Desktop/EndfieldLogs.Desktop.csproj -t:Rebuild -c Release -r win-x64 -p:DebugType=None -p:DebugSymbols=false -p:PortableAppHost=true
 dotnet publish _internal/dotnet/Desktop/EndfieldLogs.Desktop.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=false -p:PublishTrimmed=false -p:DebugType=None -p:DebugSymbols=false -p:PortableAppHost=true -o _development/verification/dotnet/candidate-publish
-python -B _development/tools/build_dotnet_portable.py --publish-directory _development/verification/dotnet/candidate-publish --target _releases/Endfield-Logs-Enhanced-0.2.1-csharp.1-windows-x64
+python -B _development/tools/build_dotnet_portable.py --publish-directory _development/verification/dotnet/candidate-publish --target _releases/Endfield-Logs-Enhanced-0.3.0-csharp-windows-x64
 ```
 
 `PortableAppHost=true` 调用 SDK 的 `CreateAppHost` 任务，把入口程序集设为 `_internal/app/EndfieldLogs-Enhanced.dll`，框架搜索限制为相对应用目录的 `../dotnet`。SDK 固定具体框架补丁版本，禁止版本滚动。打包器从同版本 NuGet runtime pack 收集私有运行库，依据 SDK `RuntimeList.xml` 仅选择桌面框架的 WPF profile，并同步投影其 deps 资产索引，不附带 WinForms 专用组件。包内完整提供本体所需运行库；普通开发构建仍使用原有布局，没有额外常驻启动进程。
+
+0.3.0 预发布的 C# 文件名带 `-csharp-`，Python／Qt 本体使用 `Endfield-Logs-Enhanced-0.3.0-windows-x64.zip`；应用版本均为 `0.3.0`。两版分别从对应分支的已提交源码构建并记录 commit，GitHub Release 标记为预发布，不替代稳定版；源码标签分别为 `v0.3.0`（Python／Qt）和 `v0.3.0-csharp`（C#）。每个 ZIP 附 `.sha256`，本地保留原始 ZIP 和干净解压目录。
 
 已有开发构建输出时也执行上述 `Rebuild`，避免依赖项目沿用不同调试符号参数的增量产物。无 Git 的包内源码独立重建必须与最终发布文件逐字节比较；仅比较源码哈希不足以证明发布程序集使用了相同构建参数。
 

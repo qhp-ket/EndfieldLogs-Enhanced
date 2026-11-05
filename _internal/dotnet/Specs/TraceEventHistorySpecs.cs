@@ -25,6 +25,7 @@ internal static class TraceEventHistorySpecs
         var folder = Directory.CreateTempSubdirectory("endfield-event-history-");
         try
         {
+            MidnightSelections(check, folder.FullName);
             var start = new DateTimeOffset(2026, 10, 31, 23, 59, 59, TimeSpan.FromHours(8)).ToUnixTimeMilliseconds();
             TraceEvent[] events = [
                 Event(1, start - 500, "dungeon", """{"dungeon_id":"synthetic","source":"packet"}"""),
@@ -87,5 +88,67 @@ internal static class TraceEventHistorySpecs
                 "Rebuilding an appended structured index preserves existing stable battle keys");
         }
         finally { folder.Delete(recursive: true); }
+    }
+
+    private static void MidnightSelections(Action<bool, string> check, string root)
+    {
+        foreach (var offset in new[] { 480, -300 })
+        foreach (var structured in new[] { true, false })
+        foreach (var afterMidnight in new[] { false, true })
+        {
+            var origin = afterMidnight
+                ? new DateTimeOffset(2026, 11, 6, 0, 0, 30, TimeSpan.FromMinutes(offset))
+                : new DateTimeOffset(2026, 11, 5, 23, 59, 59, TimeSpan.FromMinutes(offset));
+            var stamp = origin.ToUnixTimeMilliseconds();
+            var path = Path.Combine(root, $"trace_20261105-midnight-{offset}-{structured}-{afterMidnight}" + (structured ? ".jsonl" : ".ndjson"));
+            if (structured)
+            {
+                TraceEvent[] events = [
+                    Event(1, stamp - 40000, "official_timer", """{"phase":"start","source":"synthetic","game_id":"old","challenge_start_ts":1}"""),
+                    Damage(2, stamp - 39000),
+                    Event(3, stamp - 38000, "official_timer", """{"phase":"end","source":"synthetic","game_id":"old","pass_time":2000,"is_pass":true}"""),
+                    Event(4, stamp, "official_timer", """{"phase":"start","source":"synthetic","game_id":"new","challenge_start_ts":2}"""),
+                    Damage(5, stamp + 1100),
+                    Event(6, stamp + 2000, "official_timer", """{"phase":"end","source":"synthetic","game_id":"new","pass_time":2000,"is_pass":true}"""),
+                ];
+                TraceHeader header = new($"midnight-{offset}-{afterMidnight}", 1, null, "csharp", "test", "recorded", offset, new Dictionary<string, string>());
+                using TraceJsonlWriter writer = new(File.Create(path), header);
+                foreach (var item in events) writer.Write(item);
+            }
+            else
+            {
+                string Start(long time, string id) => $$"""{"type":"SC_GAME_MECHANICS_SYNC_CHALLENGE_START","timestamp_ms":{{time}},"game_id":"{{id}}","challenge_start_ts":123}""";
+                string End(long time, string id) => $$"""{"type":"SC_GAME_MECHANICS_SYNC_CHALLENGE_COMPLETE","timestamp_ms":{{time}},"game_id":"{{id}}","is_pass":true,"pass_time":2000}""";
+                string Hit(long time) => $$$$"""{"type":"BattleOpTriggerAction","timestamp_ms":{{{{time}}}},"owner_id":11,"inst_id":77,"action":{"action_type":"BattleActionDamage","damage_action":{"attacker_id":11,"details":[{"target_id":33,"value":-100,"cur_hp":900}]}}}""";
+                string[] rows = [
+                    $$"""{"type":"session_volume","schema_version":1,"recording_id":"midnight-{{offset}}-{{afterMidnight}}","session_id":"test","trace_recording_id":"trace","volume":1,"trace_volume":1,"event_offset":0,"timezone_offset_minutes":{{offset}},"previous_volume":null}""",
+                    $$"""{"type":"SC_SELF_SCENE_INFO","timestamp_ms":{{stamp - 41000}},"char_list":[{"id":101,"battle_inst_id":11,"templateid":"chr_0001_test"}]}""",
+                    $$"""{"type":"SC_OBJECT_ENTER_VIEW","timestamp_ms":{{stamp - 41000}},"objects":[{"battle_inst_id":33,"templateid":"eny_0001_test"}]}""",
+                    $$"""{"type":"BattleOpSkillAttach","timestamp_ms":{{stamp - 41000}},"skill_inst_id":77,"src_inst_id":11,"template_str_id":"chr_0001_test_normal_skill"}""",
+                    Start(stamp - 40000, "old"), Hit(stamp - 39000), End(stamp - 38000, "old"),
+                    Start(stamp, "new"), Hit(stamp + 1100), End(stamp + 2000, "new"),
+                ];
+                File.WriteAllText(path, string.Join('\n', rows) + "\n", new UTF8Encoding(false));
+            }
+            var records = new HistoryCatalog().Read(path, structured);
+            check(records.Count == 2 && records[^1].ReferenceDate == "2026-11-06",
+                "Midnight history keeps two distinct battles and the selected first-hit identity");
+            HistoryAnalyzer analyzer = new(new ResourceFiles(root));
+            var battle = (EvidenceObject)analyzer.Analyze(records[^1]).Get("battle");
+            DateTimeOffset Time(EvidenceObject data, string key) => DateTimeOffset.Parse(((EvidenceText)data.Get(key)).Value, System.Globalization.CultureInfo.InvariantCulture);
+            check(Time(battle, "battle_start_at") == origin && Time(battle, "battle_end_at") == origin.AddSeconds(2)
+                && EvidenceJson.PythonEquals(battle.Get("total_damage"), new EvidenceInteger(100)),
+                $"Selected {(structured ? "JSONL" : "session")} replay uses the pre-midnight timer date in offset {offset}, excluding previous hits");
+            var exported = Path.Combine(root, TraceExportService.DefaultBattleFileName(records[^1]));
+            TraceExportService.ExportBattle(records[^1], exported);
+            var imported = new HistoryCatalog().Read(exported, true);
+            var actual = (EvidenceObject)analyzer.Analyze(imported.Single()).Get("battle");
+            check(TraceExportService.LoadIntegrity(exported).Verified
+                && Time(actual, "battle_start_at").DateTime == origin.DateTime
+                && Time(actual, "battle_end_at").DateTime == origin.AddSeconds(2).DateTime
+                && EvidenceJson.PythonEquals(actual.Get("total_damage"), new EvidenceInteger(100))
+                && EvidenceJson.PythonEquals(actual.Get("duration_ms"), battle.Get("duration_ms")),
+                $"Single-battle compatible {(structured ? "JSONL" : "session")} export preserves midnight dates, damage and proof in offset {offset}");
+        }
     }
 }

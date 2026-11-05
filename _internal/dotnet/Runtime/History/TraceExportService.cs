@@ -12,6 +12,10 @@ namespace EndfieldLogs.Runtime.History;
 /// <summary>Read-only raw source and atomic snapshot export, compatible with the existing official uploader.</summary>
 public static partial class TraceExportService
 {
+    // Filename dates override mtime on import; neither the source recording date
+    // nor the first-hit date necessarily matches the selected replay's origin.
+    public static string DefaultBattleFileName(HistoryRecord record) => $"trace_战斗{record.RecordIndex}-官网兼容.log";
+
     private static readonly UTF8Encoding Utf8 = new(false, true);
     [GeneratedRegex(@"^\[\d{2}:\d{2}:\d{2}\.\d{3}\] HP_V2\s+#\d+\b", RegexOptions.Multiline)]
     private static partial Regex DamageLine();
@@ -95,6 +99,7 @@ public static partial class TraceExportService
             || record.SessionSource?.Volumes.Any(volume => string.Equals(PhysicalPaths.Resolve(volume.FilePath), PhysicalPaths.Resolve(destination), StringComparison.OrdinalIgnoreCase)) == true)
             throw new InvalidOperationException("请另存导出文件，不能覆盖原始日志分卷");
         string text;
+        var sourceDate = DateTimeOffset.FromUnixTimeMilliseconds(record.StartedAtMs).UtcDateTime;
         if (record.IsTrace && record.StructuredSource is null)
         {
             if (!HistoryCatalog.SourcesUnchanged(record)) throw new InvalidDataException("原始 trace 已变化，请刷新记录后重新导出");
@@ -115,7 +120,21 @@ public static partial class TraceExportService
             var selected = HistorySelection.Read(record, identities);
             if (fresh.SourcePrefixSha256 != record.SourcePrefixSha256) selected = HistorySelection.Read(fresh, identities);
             record = fresh;
-            text = string.Concat(selected.Events.SelectMany(item => TraceLegacyExporter.Lines(item, selected.Offset)));
+            StringBuilder body = new();
+            foreach (var item in selected.Events)
+            {
+                var lines = TraceLegacyExporter.Lines(item, selected.Offset).ToArray();
+                if (lines.Length == 0) continue;
+                if (body.Length == 0)
+                {
+                    // Legacy lines have no date/zone. Store their first recorded
+                    // wall date as machine-local mtime, before midnight rollover.
+                    sourceDate = DateTimeOffset.FromUnixTimeMilliseconds(item.CapturedAtMs)
+                        .ToOffset(TimeSpan.FromMinutes(selected.Offset)).DateTime.ToUniversalTime();
+                }
+                foreach (var line in lines) body.Append(line);
+            }
+            text = body.ToString();
         }
         if (!DamageLine().IsMatch(text)) throw new InvalidDataException("所选战斗没有可导出的伤害证据");
         EvidenceObject meta = new(new Dictionary<string, EvidenceValue>
@@ -124,7 +143,7 @@ public static partial class TraceExportService
             ["scope"] = new EvidenceText("selected_battle"), ["battle_index"] = new EvidenceInteger(record.RecordIndex),
             ["source_start_line"] = new EvidenceInteger(record.SourceStartLine), ["source_end_line"] = new EvidenceInteger(record.SourceEndLine),
         });
-        return WriteExport(source, destination, text, meta, sourceDate: DateTimeOffset.FromUnixTimeMilliseconds(record.StartedAtMs).UtcDateTime);
+        return WriteExport(source, destination, text, meta, sourceDate: sourceDate);
     }
 
     private static EvidenceObject WriteExport(string source, string destination, string rawContent, EvidenceObject meta,

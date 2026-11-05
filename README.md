@@ -2,9 +2,11 @@
 
 《明日方舟：终末地》的第三方战斗日志客户端，基于 ZMDLogs / Endfield Logs 源码开发。
 提供实时伤害浮窗、图像识别连携 CD、输入记录及本地战斗分析，界面和文档使用中文。
-此分支为 C#／WPF 迁移候选：主界面、战斗分析和浮窗采用 Windows 原生实现，便携包自带 .NET／WPF 运行时。
+此分支为 0.3.0 C#／WPF 预发布本体：主界面、战斗分析和浮窗采用 Windows 原生实现，便携包自带 .NET／WPF 运行时。
 Python／Qt 维护版位于 `main/python-qt`。候选包的验证结果与剩余限制见 [迁移说明](_development/docs/csharp-migration.md)。
 本文中的「官网版」指 ZMDLogs 发行版。
+
+0.3.0 同时提供 Python／Qt 和 C#／WPF 两种本体，请完整解压其中一种。C# 版仍有 WGC 反复重启后句柄增长及纯浮窗私有内存超出 Qt 对照容差的已知限制；真实游戏、OBS、管理员输入和混合 DPI 按实机验收，不将本次预发布视为这些项目全部通过。
 
 相关项目：[ZMDLogs 官网](https://zmdlogs.com/)、[AKEData 网站](https://www.akedata.wiki/)、[AKEData 仓库](https://github.com/NagiYume/AKEDatabase)。
 
@@ -72,6 +74,8 @@ GUI 启动默认未记录。首页「伤害日志」中启动抓包后，点击�
 
 当前源码新录制默认使用 `trace_*.jsonl`，历史日志仍可读取。在战斗日志页选中一场，点击「导出官网兼容日志…」生成 `.log` 后再上传；多选时导出最后选中的一场，保留该场完整证据及必要上下文，不包含其他场次。JSONL 连续分卷应一起保留。配置中的显式 `service.trace_format: "legacy"` 继续有效。
 
+历史分析与单场导出均保留必要的战前角色／敌人属性。跨午夜战斗按录制时区和回放起点还原日期；默认导出名为 `trace_战斗N-官网兼容.log`，不沿用源录制日期。重新导入兼容日志会优先读取文件名中的 `YYYYMMDD`，否则采用文件修改日期，因此请保留默认名称及修改时间，避免将整份录制的日期写入单场文件名。
+
 **旧格式 `trace_*.log` 连同 `.log.status.json` 可直接用于 ZMDLogs 官网版 uploader。**
 官网 uploader 独立打包，文件从校验过的官方 ZIP 原样提取；输入文件仅用于本地分析。
 上传前提见 [运行资源](_development/docs/runtime-resources.md)。
@@ -106,7 +110,7 @@ Git 采用源码白名单，个人状态、真实日志、原始数据、安装�
 | 采集与日志 | Npcap → TCP 重组 → 解密／分帧 → protobuf → 业务会话 → trace | `Native/`、`Capture/`、`Protocol/`、`Runtime/Capture/`、`Runtime/Tracing/` |
 | 实时伤害／贡献 | trace 增量摄取 → 基线／效果／逐击归因 → 简报或完整报告 → 本机发布 | `Core/Ingestion/`、`Core/Reporting/`、`Core/Realtime/`、`Runtime/Realtime/` |
 | 历史与战斗分析 | 文件范围索引 → 选中后后台分析 → 原生时间轴及证据详情 | `Runtime/History/`、`Desktop/Presentation/` |
-| 浮窗 | v2 JSON 皮肤 → 最小数据订阅 → WPF 绘制 → 分层原生窗口 | `Runtime/Overlays/`、`Desktop/Overlays/`、`Native/Windows/` |
+| 浮窗 | v2 JSON 皮肤 → 最小数据订阅 → Direct2D／DirectWrite 绘制 → 原生窗口 | `Runtime/Overlays/`、`Desktop/Overlays/`、`Native/Windows/` |
 | 连携 CD | 游戏 HWND → WGC → HUD 像素 → 四槽识别与角色绑定 → 浮窗 | `Native/Windows/`、`Runtime/Vision/`、`Runtime/Services/` |
 | 输入记录 | 独立提权进程 → Raw Input／兼容采集、SDL3 → JSONL → 每场绑定及操作解释 | `Native/Input/`、`Runtime/Input/`、`Desktop/Presentation/` |
 | 官网上传 | 原始 trace／status 与兼容证明 → 独立官网 uploader | `Core/Integrity/`、`Runtime/Tracing/`、`Runtime/History/` |

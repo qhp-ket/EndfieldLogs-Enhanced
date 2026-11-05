@@ -2,6 +2,10 @@
 
 本规范用于 Python 与 C# 的共同事件边界。当前源码新录制默认使用 JSONL；新配置、未声明格式的已有配置及无效格式均使用该默认值。显式 `service.trace_format: "legacy"` 或 `"jsonl"` 按原选择读取、保存，旧 `.log` 仍可分析及导出。inputlog 格式不变。默认切换的源码修改和专项回归不代表整机性能、资源及最终候选验收已经通过。
 
+GUI 默认未记录；首页按钮或 `Ctrl+I` 启停 session、trace 及启用的输入侧录，每次开始创建新文件组。历史分析和单场导出共用 `HistorySelection`：按原有规则补入必要的角色、敌人属性等前文，排除前场伤害，回放日期取首个回放事件在录制时区的日期，首击 Unix 时间仍用于记录身份。
+
+兼容正文只有时分秒。导出修改日期对应首条实际输出事件的录制本地日期；界面调用 `TraceExportService.DefaultBattleFileName`，默认名 `trace_战斗N-官网兼容.log` 不含日期。旧文本导入优先取文件名中的 `YYYYMMDD`，所以源录制日和首击日均不能直接用于单场默认命名。跨午夜计时、次日后续战斗、两种来源格式及东八区／西五区由契约回归覆盖。
+
 ## 现有事件盘点
 
 下表依据当前两版生产与消费源码，不依据日志样本推测。Python 生产目录为 `endfield_pcap/trace/`，消费目录为 `parser_core/ingestion/`；C# 分别为 `Runtime/Tracing/`、`Core/Ingestion/`。同名文件在两版按对应职责映射。历史兼容项不能因当前生产器不再输出而删除。

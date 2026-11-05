@@ -1,4 +1,3 @@
-using System.Globalization;
 using EndfieldLogs.Core.Compatibility;
 using EndfieldLogs.Core.Ingestion;
 using EndfieldLogs.Core.Realtime;
@@ -38,8 +37,7 @@ public sealed partial class HistoryAnalyzer
             if (stream.TimestampClockOrigin is { } origin) stamp = origin + ((stamp - origin) % 86_400_000 + 86_400_000) % 86_400_000;
             stream.Accept(++evidence, item with { CapturedAtMs = stamp });
         }
-        var date = DateOnly.ParseExact(record.ReferenceDate, "yyyy-MM-dd", CultureInfo.InvariantCulture);
-        var full = StructuredAnalysis(selected.Offset).BuildHistorySnapshot(stream, date, "", Path.GetFileName(record.FilePath), cancellationToken: token);
+        var full = StructuredAnalysis(selected.Offset).BuildHistorySnapshot(stream, selected.ReferenceDate, "", Path.GetFileName(record.FilePath), cancellationToken: token);
         if (full?.Get("battle") is not EvidenceObject battle || !TraceData.Truth(battle.Get("total_damage")))
             throw new InvalidDataException("所选记录没有可供分析的伤害事件");
         return full;
