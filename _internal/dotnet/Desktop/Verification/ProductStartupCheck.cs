@@ -34,6 +34,7 @@ internal sealed class ProductStartupCheck : IDisposable
         {
             CheckUpdatesOnStart = false, StartCaptureOnLaunch = false, StartInputRecordingOnLaunch = false,
             ToggleGuiHotkey = "verification-disabled", ToggleOverlaysHotkey = "verification-disabled",
+            ToggleRecordingHotkey = "verification-disabled",
             Overlays = new[] { "damage", "combo_skill", "uid_mask" }.Select(type => new OverlaySettings
                 { SourceValue = type, Enabled = false, Hidden = true, ClickThrough = true }).ToArray(),
             ThemeMode = "dark", FontPercent = 100,
@@ -45,7 +46,8 @@ internal sealed class ProductStartupCheck : IDisposable
     {
         if (settings.StartCaptureOnLaunch || settings.StartInputRecordingOnLaunch || settings.CheckUpdatesOnStart
             || settings.Overlays.Any(entry => entry.Enabled) || settings.ToggleGuiHotkey != "verification-disabled"
-            || settings.ToggleOverlaysHotkey != "verification-disabled")
+            || settings.ToggleOverlaysHotkey != "verification-disabled"
+            || settings.ToggleRecordingHotkey != "verification-disabled")
             throw new InvalidOperationException("启动检查的隔离配置不能开启采集、输入、快捷键或浮窗");
     }
 
