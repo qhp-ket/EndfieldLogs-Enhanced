@@ -40,9 +40,16 @@ def test_single_timeline_click_and_compatible_export_use_last_selected_battle(ma
     wait_for(lambda: bool(opened), app)
     assert len(opened) == 1 and opened[0][1].record_index == 1
     target = tmp_path / 'selected.log'
-    monkeypatch.setattr(QFileDialog, 'getSaveFileName', lambda *args: (str(target), ''))
+    suggested = []
+    def choose_export(*args):
+        suggested.append(args[2])
+        return str(target), ''
+    monkeypatch.setattr(QFileDialog, 'getSaveFileName', choose_export)
     window.records_page.export_btn.click()
     wait_for(lambda: not presenter._export_pending, app)
+    from endfield_pcap.history.export import default_battle_export_path
+    assert suggested == [str(default_battle_export_path(records[0]))]
+    assert '20261105' not in default_battle_export_path(records[0]).name
     integrity = load_raw_log_integrity(str(target))
     assert integrity['verified'] and len(split_trace_battles(integrity['raw_content'])) == 1
     assert parse_overlay_battle_snapshot_text(integrity['raw_content'])['battle']['total_damage'] == 760

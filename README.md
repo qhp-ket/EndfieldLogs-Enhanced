@@ -5,6 +5,8 @@
 主界面、战斗分析和浮窗均采用 Qt 原生实现，便携包自带运行环境。
 本文中的「官网版」指 ZMDLogs 发行版。
 
+0.3.0 同时提供 Python／Qt 和 C#／WPF 两种预发布本体，请完整解压其中一种；本分支维护 Python／Qt。C# 版及其已知限制见 `migration/csharp-wpf` 分支的 README。官网 uploader 独立发行。
+
 相关项目：[ZMDLogs 官网](https://zmdlogs.com/)、[AKEData 网站](https://www.akedata.wiki/)、[AKEData 仓库](https://github.com/NagiYume/AKEDatabase)。
 
 ## 功能概览
@@ -68,6 +70,8 @@ GUI 启动默认未记录。首页「伤害日志」中启动抓包后，点击�
 ### 官网上传
 
 当前源码新录制默认使用 `trace_*.jsonl`，历史日志仍可读取。在战斗日志页选中一场，点击「导出官网兼容日志…」生成 `.log` 后再上传；多选时导出最后选中的一场，保留该场完整证据及必要上下文，不包含其他场次。JSONL 连续分卷应一起保留。配置中的显式 `service.trace_format: "legacy"` 继续有效。
+
+历史分析与单场导出均保留必要的战前角色／敌人属性。跨午夜战斗按录制时区和回放起点还原日期；默认导出名为 `trace_战斗N-官网兼容.log`，不沿用源录制日期。重新导入兼容日志会优先读取文件名中的 `YYYYMMDD`，否则采用文件修改日期，因此请保留默认名称及修改时间，避免将整份录制的日期写入单场文件名。
 
 **旧格式 `trace_*.log` 连同 `.log.status.json` 可直接用于 ZMDLogs 官网版 uploader。**
 官网 uploader 独立打包，文件从校验过的官方 ZIP 原样提取；输入文件仅用于本地分析。

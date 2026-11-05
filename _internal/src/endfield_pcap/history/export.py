@@ -4,6 +4,7 @@ import json
 import os
 import re
 import tempfile
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from uploader_core.log_integrity import (
     RAW_LOG_PROOF_BEGIN_PREFIX,
@@ -11,6 +12,12 @@ from uploader_core.log_integrity import (
     build_raw_log_proof,
     load_raw_log_integrity,
 )
+
+
+def default_battle_export_path(record) -> Path:
+    # Filename dates override mtime on import. A source recording can span days,
+    # and the first hit's date can differ from the selected replay's origin date.
+    return record.file_path.with_name(f'trace_战斗{record.record_index}-官网兼容.log')
 
 
 def export_trace_log(source: Path, destination: Path) -> dict:
@@ -62,6 +69,7 @@ def export_battle_log(record, destination: Path) -> dict:
     """Export precisely one indexed battle, including its retained context."""
     from endfield_pcap.history.importer import TraceCombatRecord
     source, destination = record.file_path, Path(destination).resolve()
+    source_mtime = record.started_at_ms / 1000
     if destination == source.resolve():
         raise ValueError('请另存导出文件，不能覆盖原始日志')
     if record.source_start_line < 0 or record.source_end_line <= record.source_start_line:
@@ -79,27 +87,12 @@ def export_battle_log(record, destination: Path) -> dict:
     else:
         from endfield_pcap.trace.legacy import legacy_lines
         if isinstance(record, TraceCombatRecord):
-            from parser_core.trace_volumes import read_events, resolve_volumes
-            from parser_core.realtime.live_events import LiveEventOverlayBattleParser
-            from endfield_pcap.history.structured import chain_signature
+            from parser_core.trace_volumes import resolve_volumes
+            from endfield_pcap.history.structured import structured_record_events
             chain = resolve_volumes(source)
-            if not chain.complete or chain_signature(chain) != record.source_volumes:
-                raise ValueError('原始 trace 分卷已变化或不完整，请刷新记录后重新导出')
             if any(volume.path == destination for volume in chain.volumes):
                 raise ValueError('不能覆盖原始 trace 分卷')
-            offset = chain.volumes[0].header.timezone_offset_minutes
-            prefix = LiveEventOverlayBattleParser(timezone_offset_minutes=offset)
-            selected = []
-            index = -1
-            for index, event in enumerate(read_events(chain)):
-                if index < record.source_start_line:
-                    prefix.feed_event(event)
-                elif index == record.source_start_line:
-                    selected.extend(prefix.history_event_context())
-                if record.source_start_line <= index < record.source_end_line:
-                    selected.append(event)
-            if index + 1 < record.source_end_line:
-                raise ValueError('所选战斗事件范围不完整，请刷新记录')
+            selected, offset = structured_record_events(record, chain=chain)
         else:
             from endfield_pcap.history.analysis import session_record_events
             from endfield_pcap.history.session_volumes import resolve_sessions, retains_sources
@@ -119,13 +112,24 @@ def export_battle_log(record, destination: Path) -> dict:
             if fresh.source_prefix_sha256 != record.source_prefix_sha256:
                 selected, offset = session_record_events(fresh)
             record = fresh
-        text = ''.join(line for event in selected for line in legacy_lines(event, timezone_offset_minutes=offset))
+        chunks = []
+        for event in selected:
+            lines = legacy_lines(event, timezone_offset_minutes=offset)
+            if not lines:
+                continue
+            if not chunks:
+                # Legacy lines have no date/zone: mtime's machine-local date must
+                # match the first exported line's recorded wall date, before rollover.
+                stamp = datetime.fromtimestamp(event.captured_at_ms / 1000, timezone(timedelta(minutes=offset)))
+                source_mtime = stamp.replace(tzinfo=None).timestamp()
+            chunks.extend(lines)
+        text = ''.join(chunks)
     if not re.search(r'^\[\d{2}:\d{2}:\d{2}\.\d{3}\] HP_V2\s+#\d+\b', text, re.MULTILINE):
         raise ValueError('所选战斗没有可导出的伤害证据')
     return _write_export(source, destination, text, dict(exporter='endfield-pcap-gui',
         source_file_name=source.name, scope='selected_battle', battle_index=record.record_index,
         source_start_line=record.source_start_line, source_end_line=record.source_end_line),
-        source_mtime=record.started_at_ms / 1000)
+        source_mtime=source_mtime)
 
 
 def _write_export(source, destination, text, meta, *, source_mtime=None):

@@ -79,9 +79,10 @@ class HistoryPresenter(QObject):
     def export_selected(self):
         if self._export_pending or not self.controller.selected_records:
             return
+        from endfield_pcap.history.export import default_battle_export_path
         record = replace(self.controller.selected_records[-1])
         name, _ = QFileDialog.getSaveFileName(self.parent(), '导出所选战斗 · 官网兼容日志',
-            str(record.file_path.with_name(f'{record.file_path.stem}-战斗{record.record_index}-官网兼容.log')), '战斗日志 (*.log)')
+            str(default_battle_export_path(record)), '战斗日志 (*.log)')
         if not name:
             return
         self._export_pending = True

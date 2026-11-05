@@ -23,3 +23,5 @@ python -B _development/run_tests.py uploader_core
 ```
 
 普通回归使用合成数据，可选官网兼容检查需准备源码副本。
+
+历史分析和单场兼容导出的事件选择、日期基准及默认命名约定见 [trace 导入与贡献口径](docs/trace-import-and-rdps.md)。相关修改运行 `app-history`，涉及界面路由时同时覆盖 `app-gui`；完整发行与搬目录检查见 [版本与打包](docs/portable-packaging.md)。

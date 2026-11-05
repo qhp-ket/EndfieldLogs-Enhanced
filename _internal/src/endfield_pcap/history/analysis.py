@@ -20,7 +20,10 @@ def load_record_snapshot(record: CombatRecord) -> dict:
         return trace_record_snapshot(record)
     events, offset = session_record_events(record)
     from parser_core.realtime.events import EventBattleParser, LiveEventBatch
-    stamp = datetime.fromtimestamp(record.started_at_ms / 1000, timezone(timedelta(minutes=offset)))
+    if not events:
+        raise ValueError('所选记录没有可供分析的事件')
+    # Time-only replay unfolds midnight relative to its first event, not first hit.
+    stamp = datetime.fromtimestamp(events[0].captured_at_ms / 1000, timezone(timedelta(minutes=offset)))
     analysis = EventBattleParser(reference_date=stamp.date(), timezone_offset_minutes=offset,
                                 file_name=record.file_path.name)
     snapshot = analysis.snapshot_events(LiveEventBatch(0, 1, 0, events))

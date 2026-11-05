@@ -35,6 +35,8 @@ python -B _development/tools/release.py build --component uploader   # 官网上
 输出目录为 `_releases/`。本体和 uploader 独立发行，uploader 使用上游版本号。
 官方 ZIP 可通过资源工具的 `--archive PATH --offline` 提供。
 
+0.3.0 预发布同时交付 Python／Qt 的 `Endfield-Logs-Enhanced-0.3.0-windows-x64.zip` 和独立 C#／WPF 分支构建的 `Endfield-Logs-Enhanced-0.3.0-csharp-windows-x64.zip`，各附 `.sha256`。应用版本均为 `0.3.0`；GitHub Release 标记为预发布，不替代稳定版。两版清单分别记录对应源码 commit，C# 对应源码另随包交付。官网 uploader 未变时复用既有独立包，不重新构建。
+
 ## 按差异验证
 
 先看源码 diff，再按相对路径、大小和 SHA-256 比较上一份包：

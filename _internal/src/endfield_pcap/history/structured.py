@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 from parser_core.battle_splitter.events import split_event_battles
 from parser_core.realtime.events import EventBattleParser, LiveEventBatch
+from parser_core.realtime.live_events import LiveEventOverlayBattleParser
 from parser_core.trace_volumes import read_events, resolve_volumes
 
 from endfield_pcap.analysis.live.publisher import _transport_copy
@@ -44,21 +45,39 @@ def load_structured_records(path):
     return records
 
 
+def structured_record_events(record, *, chain=None):
+    """Share selected evidence and required prefix context with compatibility export."""
+    chain = chain or resolve_volumes(record.file_path)
+    if chain_signature(chain) != record.source_volumes or not chain.complete:
+        raise ValueError('原始 trace 分卷已变化或不完整，请刷新记录后重新加载')
+    offset = chain.volumes[0].header.timezone_offset_minutes
+    prefix = LiveEventOverlayBattleParser(timezone_offset_minutes=offset)
+    selected = []
+    index = -1
+    for index, event in enumerate(read_events(chain)):
+        if index < record.source_start_line:
+            prefix.feed_event(event)
+        elif index == record.source_start_line:
+            selected.extend(prefix.history_event_context())
+        if record.source_start_line <= index < record.source_end_line:
+            selected.append(event)
+    if index + 1 < record.source_end_line:
+        raise ValueError('所选战斗事件范围不完整，请刷新记录')
+    return tuple(selected), offset
+
+
 def structured_record_snapshot(record):
     chain = resolve_volumes(record.file_path)
     if chain_signature(chain) != record.source_volumes or not chain.complete:
         raise ValueError('原始 trace 分卷已变化或不完整，请刷新记录后重新加载')
     if not record.snapshot:
-        header = chain.volumes[0].header
-        # The reader validates the complete chain, but only the selected range enters analysis.
-        selected = tuple(event for index, event in enumerate(read_events(chain))
-                         if record.source_start_line <= index < record.source_end_line)
+        selected, offset = structured_record_events(record, chain=chain)
         if not selected:
             raise ValueError('所选记录没有可供分析的事件')
-        zone = timezone(timedelta(minutes=header.timezone_offset_minutes))
+        zone = timezone(timedelta(minutes=offset))
         reference = datetime.fromtimestamp(selected[0].captured_at_ms / 1000, zone).date()
         parser = EventBattleParser(reference_date=reference,
-            timezone_offset_minutes=header.timezone_offset_minutes, file_name=record.file_path.name,
+            timezone_offset_minutes=offset, file_name=record.file_path.name,
             last_hit_hint=record.last_hit_hint)
         snapshot = _transport_copy(parser.snapshot_events(LiveEventBatch(0, 1, 0, selected)))
         if not snapshot or not snapshot.get('battle', {}).get('total_damage'):

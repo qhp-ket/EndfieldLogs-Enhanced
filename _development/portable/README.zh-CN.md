@@ -1,4 +1,4 @@
-# Endfield Logs - Enhanced 便携包
+# Endfield Logs - Enhanced 0.3.0 · Python／Qt 预发布便携包
 
 适用于 Windows 10/11 x64，界面和说明使用中文。包内携带 Python、Qt 原生界面和运行依赖。
 完整解压到可写目录，双击 `Start-GUI.cmd`；启动时 CMD 等待 GUI 显示后退出。
@@ -49,6 +49,10 @@ CD 就绪表示冷却状态，技能触发条件由游戏判断。
 新录制默认使用 JSONL，连续分卷须一起保留。在战斗日志页选中一场，点击「导出官网兼容日志…」生成 `.log` 后再上传；多选时仅导出最后选中的那场，保留完整证据及必要上下文，不混入其他场次。不能将 JSONL 直接交给官网 uploader。配置中的显式 `service.trace_format: "legacy"` 继续有效。
 旧格式录制可直接选择 `.dev-gui/logs/battles/` 日期目录中的 `trace_*.log`，保留 `.log.status.json`，按官网规则解析和上传。
 输入文件供本地分析使用。
+
+历史分析和单场导出保留必要的战前角色／敌人属性，跨午夜日期按录制时区还原。默认导出名为 `trace_战斗N-官网兼容.log`；请保留文件修改时间，避免在文件名中添加源录制日期，兼容日志重新导入时会优先使用文件名中的 `YYYYMMDD`。
+
+本次预发布分别提供 Python／Qt 和 C#／WPF 本体，选择其中一种完整解压。官网 uploader 版本独立，不随本体版本号升级。
 
 配置、日志和历史列表保存在 `.dev-gui/`，运行日志可在 GUI 查看。
 向他人分发请使用原始 ZIP。
