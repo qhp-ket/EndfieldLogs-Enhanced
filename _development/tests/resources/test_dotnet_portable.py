@@ -16,6 +16,13 @@ SPEC.loader.exec_module(portable)
 
 
 class DotnetPortableTests(unittest.TestCase):
+    def test_source_archive_keeps_wpf_style_dictionary(self):
+        portable.copy_source(self.stage)
+        resource = '_internal/dotnet/Desktop/Presentation/CompactControls.xaml'
+        with zipfile.ZipFile(self.stage / portable.SOURCE) as bundle:
+            self.assertEqual(bundle.read(resource), (portable.ROOT / resource).read_bytes())
+            self.assertFalse(any('/obj/' in name or '/bin/' in name for name in bundle.namelist()))
+
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)

@@ -15,7 +15,7 @@ python -B _development/tools/build_dotnet_portable.py --publish-directory _devel
 
 0.3.0 预发布的 C# 文件名带 `-csharp-`，Python／Qt 本体使用 `Endfield-Logs-Enhanced-0.3.0-windows-x64.zip`；应用版本均为 `0.3.0`。两版分别从对应分支的已提交源码构建并记录 commit，GitHub Release 标记为预发布，不替代稳定版；源码标签分别为 `v0.3.0`（Python／Qt）和 `v0.3.0-csharp`（C#）。每个 ZIP 附 `.sha256`，本地保留原始 ZIP 和干净解压目录。
 
-已有开发构建输出时也执行上述 `Rebuild`，避免依赖项目沿用不同调试符号参数的增量产物。无 Git 的包内源码独立重建必须与最终发布文件逐字节比较；仅比较源码哈希不足以证明发布程序集使用了相同构建参数。
+已有开发构建输出时也执行上述 `Rebuild`，避免依赖项目沿用不同调试符号参数的增量产物。源码归档须包含 XAML 样式等编译资源；无 Git 的包内源码独立重建必须与最终发布文件逐字节比较，仅比较源码哈希不足以证明发布程序集使用了相同构建参数。
 
 包根目录保留 EXE、`README.zh-CN.md`、`BUILD-MANIFEST.json`；其余文件分类存放：
 

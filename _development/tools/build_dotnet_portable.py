@@ -153,7 +153,7 @@ def copy_source(stage):
         if path.parts[:2] != ('_internal', 'dotnet') or not (ROOT / path).is_file():
             continue
         if len(path.parts) == 3 or path.parts[2] in projects:
-            if path.suffix.lower() not in {'.cs', '.csproj', '.json', '.props', '.pb', '.rsp', '.config', '.manifest'}:
+            if path.suffix.lower() not in {'.cs', '.csproj', '.json', '.props', '.pb', '.rsp', '.config', '.manifest', '.xaml'}:
                 continue
             selected.append(path)
     for name in ('LICENSE', 'THIRD_PARTY_NOTICES.md'):
