@@ -22,7 +22,7 @@ internal sealed class DamagePlot : FrameworkElement
     protected override Visual GetVisualChild(int index) => index switch { 0 => axis, 1 => reference, _ => throw new ArgumentOutOfRangeException(nameof(index)) };
     internal DamageSeriesResult Series => series;
     private double? referenceTime;
-    private double Labels = 180, viewportX, fontScale = 1;
+    private double Labels = 260, viewportX, fontScale = 1;
     private BattlePalette palette = new(false);
     internal void ApplyAppearance(double scale, bool dark) { fontScale = scale; palette = new(dark); InvalidateVisual(); }
     internal void SetViewport(double offset)

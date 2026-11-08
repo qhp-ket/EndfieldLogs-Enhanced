@@ -45,18 +45,19 @@ public static class ContextWire
 
     public static EvidenceObject Observation(TraceEvent item)
     {
+        var data = TraceModel.Data(item);
         if (item.Type is "game_instance" or "game_mechanics")
         {
-            if (item.Data.Get("source") is not EvidenceText source || !Mechanics.TryGetValue(source.Value, out var declaration)
-                || item.Type != declaration.Type || item.Data.Get("action") is not EvidenceText action || action.Value != declaration.Action)
+            if (data.Get("source") is not EvidenceText source || !Mechanics.TryGetValue(source.Value, out var declaration)
+                || item.Type != declaration.Type || data.Get("action") is not EvidenceText action || action.Value != declaration.Action)
                 throw new InvalidDataException("Invalid mechanics source/action");
         }
         else if (item.Type == "scene_battle")
         {
-            if (item.Data.Get("source") is not EvidenceText) throw new InvalidDataException("Scene source is required");
+            if (data.Get("source") is not EvidenceText) throw new InvalidDataException("Scene source is required");
         }
         else if (item.Type is not ("battle_reset" or "session_warning")) throw new InvalidDataException("Expected context event");
-        return item.Data;
+        return data;
     }
 
     public static (string Marker, IReadOnlyDictionary<string, string> Fields)? TimerObservation(TraceEvent item)

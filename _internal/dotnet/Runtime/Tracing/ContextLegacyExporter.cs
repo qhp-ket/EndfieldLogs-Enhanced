@@ -12,8 +12,8 @@ public static class ContextLegacyExporter
     public static IReadOnlyList<string> Lines(TraceEvent item, int timeZoneOffsetMinutes)
     {
         if (item.Type is not ("game_instance" or "game_mechanics" or "scene_battle" or "battle_reset" or "session_warning")
-            || item.Data.Get("legacy_layout") is not EvidenceObject layout) throw new InvalidDataException("Expected context event with legacy layout");
-        var data = Obj(TraceValueProjection.Restore(item.Data, layout));
+            ) throw new InvalidDataException("Expected context event with legacy layout");
+        var data = ExportValues.Data(item);
         List<string> parts;
         if (item.Type is "game_instance" or "game_mechanics")
         {

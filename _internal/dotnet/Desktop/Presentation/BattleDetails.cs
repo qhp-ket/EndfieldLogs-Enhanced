@@ -8,7 +8,7 @@ internal static class BattleDetails
 {
     internal static string Time(double stamp, bool frames, bool suffix = true) => (frames ? stamp / 1000 * 30 : stamp / 1000).ToString(frames ? "F1" : "F3", CultureInfo.CurrentCulture) + (suffix ? frames ? "F" : "s" : "");
     internal static string Number(double? value) => value is { } number ? number.ToString("N2", CultureInfo.CurrentCulture) : "未知";
-    internal static string Description(TimelineMark mark, bool frames)
+    internal static string Description(TimelineMark mark, bool frames, bool compact = false)
     {
         var first = mark.Evidence[0]; var summary = BattleEvidence.Summary(mark.Evidence);
         List<string> lines = [mark.Name, $"{Time(mark.Start, frames)}–{Time(mark.End, frames)}" + (frames ? "（30F/s）" : ""), "来源：" + (mark.Buff is not null ? BuffDisplay.Source(first)
@@ -17,10 +17,10 @@ internal static class BattleDetails
         if (targets.Length > 0) lines.Add("目标：" + string.Join("、", targets));
         if (mark.Skill is { } skill)
         {
-            lines.Add(skill.Cast is { } cast ? BattleEvidence.Number(cast.Get("end_ms_from_start")) is not null ? "时间依据：SKILL_CAST_START → SKILL_CAST_END（协议施放生命周期）" : "时间依据：仅有 SKILL_CAST_START；结束未知，显示起点标记"
+            if (!compact) lines.Add(skill.Cast is { } cast ? BattleEvidence.Number(cast.Get("end_ms_from_start")) is not null ? "时间依据：SKILL_CAST_START → SKILL_CAST_END（协议施放生命周期）" : "时间依据：仅有 SKILL_CAST_START；结束未知，显示起点标记"
                 : mark.Evidence.Any(row => row.Get("actual_start_ms_from_start") is not EvidenceNull) ? "时间依据：核心匹配的施放起止" : "时间依据：首末命中分组");
             if (summary.Hits == 0) lines.Add("施放记录（无伤害补录）");
-            if (mark.FrameReference is { } rule)
+            if (!compact && mark.FrameReference is { } rule)
             {
                 lines.Add($"AKEData 配置：{PythonDisplay.String(rule.Get("duration_frames"))}F 总时长；exclusiveFrame={PythonDisplay.String(rule.Get("exclusive_frames"))}F（配置参考）");
                 lines.Add(BattleEvidence.Number(rule.Get("anchor_ms")) is { } anchor ? "固定显示区间：" + Time(anchor, frames) + " 起，首个实际命中点 + 配置时长；保留日志原区间" : "没有实际命中点，保留日志施放区间或起点");
@@ -33,7 +33,7 @@ internal static class BattleDetails
         if (summary.Hits > 0)
         {
             lines.Add($"伤害：{summary.Damage:N2}（{summary.Hits} 次命中）");
-            lines.Add($"rD 基数：{Number(summary.Basis)}；已分配：{summary.Allocated:N2}；有分配证据 {summary.Covered}/{summary.Hits} 击");
+            if (!compact) lines.Add($"rD 基数：{Number(summary.Basis)}；已分配：{summary.Allocated:N2}；有分配证据 {summary.Covered}/{summary.Hits} 击");
             lines.Add("rDMG 分配：" + string.Join("；", summary.Contributions.Select(share => $"{share.Name} {share.Value:N2}")));
         }
         if (mark.Buff is { } buff)

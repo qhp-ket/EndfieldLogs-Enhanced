@@ -98,10 +98,12 @@ public sealed class DisplayNameCatalog
         if (ExactSkillNames.TryGetValue(key, out var exactName) && exactName.Length == 0) return null;
         if (key == "chr_0017_yvonne_skill_162") return "伊冯连携 / 机器人持续伤害";
         if (key == "chr_0017_yvonne_skill_163") return "伊冯连携 / 机器人终结爆炸";
+        if (key == "chr_0037_minghe_normalskill_2") return "奔霆";
         if (Mappings.Get(key) is EvidenceObject hint && CatalogValues.Truth(hint.Get("display_name")))
             return CatalogValues.Text(hint.Get("display_name"));
         if (exactName is { Length: > 0 }) return exactName;
         var canonicalKey = identities.CanonicalPacketSkill(key);
+        if (canonicalKey == "chr_0037_minghe_normalskill_2") return "奔霆";
         return ExactSkillNames.TryGetValue(canonicalKey, out var canonicalName)
             ? canonicalName.Length == 0 ? null : canonicalName : CanonicalSkillNames.GetValueOrDefault(canonicalKey);
     }

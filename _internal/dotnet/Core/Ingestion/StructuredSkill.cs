@@ -16,7 +16,7 @@ public static class StructuredSkill
             throw new InvalidDataException("Expected skill phase and instance");
         foreach (var key in new[] { "owner", "attacker", "skill", "skill_source", "source", "original_source" })
             if (item.Data.Get(key) is not (EvidenceNull or EvidenceText)) throw new InvalidDataException("Expected skill/resource label");
-        var data = (EvidenceObject)TraceValueProjection.Restore(item.Data, item.Data.Get("legacy_layout") as EvidenceObject ?? new(new Dictionary<string, EvidenceValue>()));
+        var data = TraceModel.Data(item);
         string L(string key, string fallback = "unknown") => SkillWire.Label(data, key, fallback);
         var time = item.CapturedAtMs;
         if (item.Type == "skill_cast")

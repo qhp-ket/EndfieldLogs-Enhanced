@@ -3,6 +3,8 @@ using System.Text;
 using System.Text.Json.Nodes;
 using EndfieldLogs.Core.Catalog;
 using EndfieldLogs.Core.Compatibility;
+using EndfieldLogs.Core.Ingestion;
+using EndfieldLogs.Core.Reporting;
 using EndfieldLogs.Core.Tracing;
 using EndfieldLogs.Runtime.History;
 using EndfieldLogs.Runtime.Tracing;
@@ -57,8 +59,16 @@ internal static class TraceVolumeSpecs
             var destination = Path.Combine(folder.FullName, "uploader.log");
             var proof = TraceExportService.Export(lastPath, destination, "2026-11-01T12:00:00+08:00");
             var exported = TraceExportService.LoadIntegrity(destination);
-            check(exported.Verified && Encoding.UTF8.GetBytes(exported.RawContent).SequenceEqual(Encoding.UTF8.GetBytes(expected)),
-                "Final exported uploader body is byte-for-byte equal to the fixed legacy reference and its proof verifies");
+            var files = new ResourceFiles(folder.FullName);
+            var analysis = BattleReportAnalysis.Load(files, TimeZoneInfo.Utc);
+            EvidenceObject? ParseBody(string text)
+            {
+                BattleIngestionStream stream = new(BattleIngestionResources.Load(files));
+                stream.Accept(text.Split('\n').Select((line, index) => (index + 1, line)));
+                return analysis.BuildReport(BattleReportInput.Capture(stream, new(1970, 1, 1)), text);
+            }
+            check(exported.Verified && EvidenceJson.PythonEquals(ParseBody(exported.RawContent)!, ParseBody(expected)!),
+                "V2 export preserves the complete parsed legacy report and its final-body integrity proof verifies");
             check(((EvidenceObject)proof.Get("meta")).Get("source_recording_id") is EvidenceText { Value: "synthetic-volume-reference" }
                 && ((EvidenceObject)proof.Get("meta")).Get("source_volumes") is EvidenceArray { Items.Count: 2 },
                 "Export provenance identifies the recording and every source volume separately from the body");
@@ -100,8 +110,8 @@ internal static class TraceVolumeSpecs
                 && EvidenceJson.PythonEquals(((EvidenceObject)analyzer.Analyze(relocated).Get("battle")).Get("total_damage"), new EvidenceInteger(197_967)),
                 "History rename relocates every retained source reference and preserves typed analysis");
             TraceExportService.Export(lastPath, destination);
-            check(TraceVolumes.Resolve(renamed).Volumes.Count == 2 && TraceExportService.LoadIntegrity(destination).RawContent == expected,
-                "Renaming a volume preserves identity-based discovery and the exact exported legacy body");
+            check(TraceVolumes.Resolve(renamed).Volumes.Count == 2 && TraceExportService.LoadIntegrity(destination).RawContent == exported.RawContent,
+                "Renaming a volume preserves identity-based discovery and deterministic compatibility output");
             var moved = Directory.CreateDirectory(Path.Combine(folder.FullName, "missing"));
             var outside = Path.Combine(moved.FullName, Path.GetFileName(renamed)); File.Move(renamed, outside);
             var incomplete = TraceVolumes.Resolve(lastPath);

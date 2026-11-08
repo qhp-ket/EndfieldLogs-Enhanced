@@ -20,7 +20,9 @@ internal sealed partial class BattleTimeline
     {
         var x = referenceTime is { } time ? Labels + time / Duration * Math.Max(1, ActualWidth - Labels - 10) : (double?)null;
         if (x < viewportX + Labels || viewportWidth > 0 && x > viewportX + viewportWidth) x = null;
-        reference.Set(x, StickyHeaderTop + Header, ActualHeight);
+        reference.Set(x, StickyHeaderTop + Header, ActualHeight, referenceTime is { } stamp ? BattleDetails.Time(stamp, frames) : null,
+            14 * fontScale, Ink, CanvasBackground, viewportX + Labels, viewportWidth > 0 ? viewportX + viewportWidth : ActualWidth,
+            VisualTreeHelper.GetDpi(this).PixelsPerDip);
     }
     private void DrawObservations(DrawingContext dc, double top, double rowHeight, Func<double, double> x)
     {

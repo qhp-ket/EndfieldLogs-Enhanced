@@ -89,6 +89,28 @@ public sealed class LoadoutSnapshotParser(IReadOnlyDictionary<string, EvidenceOb
         return new(result);
     }
 
+    private EvidenceArray Equipment(EvidenceArray observations) => new(observations.Items.Cast<EvidenceObject>().Select(row =>
+    {
+        var id = ((EvidenceText)row.Get("item_id")).Value;
+        var meta = equipment.GetValueOrDefault(id) ?? Empty;
+        var fields = row.Fields.ToDictionary();
+        foreach (var key in new[] { "item_name", "suit_id", "suit_name", "part_name" })
+            fields[key] = Or(meta.Get(key), new EvidenceText(key == "item_name" ? id : ""));
+        fields["rarity"] = meta.Get("rarity"); fields["catalog_main_attr"] = meta.Get("main_attr");
+        fields["catalog_sub_attrs"] = Or(meta.Get("sub_attrs"), Empty);
+        return (EvidenceValue)new EvidenceObject(fields);
+    }).ToArray());
+
+    private EvidenceArray SuitCounts(EvidenceArray observations) => new(observations.Items.Cast<EvidenceObject>().Select(row =>
+    {
+        var id = ((EvidenceText)row.Get("suit_id")).Value; var count = ((EvidenceInteger)row.Get("piece_count")).Value;
+        var meta = suits.GetValueOrDefault(id) ?? Empty;
+        return (EvidenceValue)Object(("suit_id", new EvidenceText(id)), ("suit_name", Or(meta.Get("suit_name"), new EvidenceText(id))),
+            ("piece_count", Number(count)), ("required_piece_count", meta.Get("required_piece_count")),
+            ("active", new EvidenceBoolean(meta.Get("required_piece_count") is EvidenceInteger required && count >= required.Value)),
+            ("description", Or(meta.Get("description"), new EvidenceText(""))), ("value", Or(meta.Get("value"), Empty)));
+    }).ToArray());
+
     public EvidenceObject? Slot(string line)
     {
         var character = TraceFields.Token(line, "char");
@@ -116,7 +138,8 @@ public sealed class LoadoutSnapshotParser(IReadOnlyDictionary<string, EvidenceOb
         var character = observation.Character; if (!character.StartsWith("chr_", StringComparison.Ordinal)) return null;
         var weapon = observation.Weapon; var level = observation.WeaponLevel;
         var meta = weapons.GetValueOrDefault(weapon) ?? Empty;
-        var suit = observation.SuitBlob;
+        var suit = observation.Suits is { } typedSuits ? string.Join(' ', typedSuits.Items.Cast<EvidenceObject>()
+            .Select(row => $"[{PythonDisplay.String(row.Get("suit_id"))}]={PythonDisplay.String(row.Get("piece_count"))}")) : observation.SuitBlob;
         var result = Object(("slot", Number(observation.Slot)), ("character_key", new EvidenceText(character)),
             ("character_name", new EvidenceText(characterName(character) is { Length: > 0 } name ? name : character)),
             ("character_level", Number(observation.CharacterLevel)), ("potential", Number(observation.Potential)),
@@ -125,7 +148,8 @@ public sealed class LoadoutSnapshotParser(IReadOnlyDictionary<string, EvidenceOb
             ("weapon_refine", Number(observation.Refine)), ("weapon_refine_source", observation.Refine is not null ? new EvidenceText("loadout") : EvidenceNull.Value),
             ("weapon_break", Number(observation.Breakthrough)), ("weapon_base_atk", SelectedBaseAttack(weapon, level)),
             ("weapon_catalog_skilllist", Or(meta.Get("skilllist"), new EvidenceArray([]))), ("equip_suit_raw", new EvidenceText(suit.Length > 0 ? "{"+suit+"}" : "{}")),
-            ("suit_effects", SuitCounts(suit)), ("equips", InlineEquipmentBlob(observation.EquipmentBlob)),
+            ("suit_effects", observation.Suits is { } suitRows ? SuitCounts(suitRows) : SuitCounts(suit)),
+            ("equips", observation.Equipment is { } equipmentRows ? Equipment(equipmentRows) : InlineEquipmentBlob(observation.EquipmentBlob)),
             ("skill_int_ids", new EvidenceArray(observation.SkillIds.Select(value => (EvidenceValue)new EvidenceText(value)).ToArray())),
             ("weapon_source_skills", new EvidenceArray([])), ("weapon_refine_stats", new EvidenceArray([])), ("gem_template", EvidenceNull.Value), ("gem_terms", Empty));
         var fields = new Dictionary<string, EvidenceValue>(result.Fields, StringComparer.Ordinal);
@@ -155,17 +179,22 @@ public sealed class LoadoutSnapshotParser(IReadOnlyDictionary<string, EvidenceOb
     {
         var character = observation.Character; if (!character.StartsWith("chr_", StringComparison.Ordinal)) return null;
         var weapon = observation.Weapon; var level = observation.WeaponLevel;
-        var refineStats = SourceSkills(observation.RefineStatsBlob);
-        var source = SourceSkills(observation.SourceSkillsBlob);
+        var refineStats = observation.RefineStats ?? SourceSkills(observation.RefineStatsBlob);
+        var source = observation.SourceSkills ?? SourceSkills(observation.SourceSkillsBlob);
         var rawTerms = observation.TermsBlob;
         var weaponId = observation.WeaponInstance; var gemId = observation.GemInstance;
         EvidenceArray? gemTerms = null;
         if (allowBoundGem && Regex.IsMatch(weaponId, @"\A[1-9]\d*\z") && Regex.IsMatch(gemId, @"\A[1-9]\d*\z")
-            && observation.GemWeapon == weaponId && rawTerms.Length > 0)
+            && observation.GemWeapon == weaponId && (rawTerms.Length > 0 || observation.Terms is { Items.Count: > 0 }))
         {
-            var matches = rawTerms.Split(',').Select(value => Regex.Match(value.Trim(), @"\A(\d+):[^,@{}]*@cost(\d+)\z")).ToArray();
-            if (matches.All(match => match.Success)) gemTerms = new(matches.Select(match => (EvidenceValue)Object(
-                ("term_num_id", Number(Coerce(match.Groups[1].Value))), ("cost", Number(Coerce(match.Groups[2].Value))))).ToArray());
+            if (observation.Terms is { } terms) gemTerms = new(terms.Items.Cast<EvidenceObject>().Select(row =>
+                (EvidenceValue)Object(("term_num_id", row.Get("term_num_id")), ("cost", row.Get("cost")))).ToArray());
+            else
+            {
+                var matches = rawTerms.Split(',').Select(value => Regex.Match(value.Trim(), @"\A(\d+):[^,@{}]*@cost(\d+)\z")).ToArray();
+                if (matches.All(match => match.Success)) gemTerms = new(matches.Select(match => (EvidenceValue)Object(
+                    ("term_num_id", Number(Coerce(match.Groups[1].Value))), ("cost", Number(Coerce(match.Groups[2].Value))))).ToArray());
+            }
         }
         var refine = refinement.Infer(weapon, source.Items.Count > 0 ? source : refineStats, gemTerms);
         var attack = observation.BaseAttack;
@@ -174,7 +203,11 @@ public sealed class LoadoutSnapshotParser(IReadOnlyDictionary<string, EvidenceOb
             ("weapon_base_atk", attack.IsZero ? SelectedBaseAttack(weapon, level) : Number(attack)),
             ("weapon_base_atk_lv1", Number(observation.BaseAttackLv1)), ("weapon_base_atk_max", Number(observation.BaseAttackMax)),
             ("weapon_refine_stats", refineStats), ("weapon_source_skills", source), ("gem_template", Text(observation.GemTemplate)),
-            ("gem_terms", Blackboard(rawTerms.Replace(':', '='))));
+            ("gem_terms", observation.Terms is { } termRows ? new EvidenceObject(termRows.Items.Cast<EvidenceObject>()
+                .GroupBy(row => PythonDisplay.String(row.Get("term_num_id"))).Select(group => group.Last()).ToDictionary(
+                row => PythonDisplay.String(row.Get("term_num_id")), row => (EvidenceValue)new EvidenceText(
+                    PythonDisplay.String(row.Get("template")) + "@cost" + PythonDisplay.String(row.Get("cost"))), StringComparer.Ordinal))
+                : Blackboard(rawTerms.Replace(':', '='))));
     }
 
     private EvidenceObject? CharacterSkills(string line, EvidenceObject? context, IReadOnlyDictionary<string, string>? squad)

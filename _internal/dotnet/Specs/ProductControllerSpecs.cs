@@ -30,6 +30,12 @@ internal static class ProductControllerSpecs
             Until(() => { lock (backends) return backends.Count == 1 && backends[0].Started.Task.IsCompleted; });
             Until(() => controller.Poll().Frames.Any(frame => frame.Type == "analysis_summary"));
             check(controller.Running, "Owner polling subscribes to a running production stream without racing startup");
+            check(controller.Poll().Recording && controller.Poll().TracePath is not null,
+                "Starting capture also starts an independent recording");
+            var firstTrace = controller.Poll().TracePath;
+            controller.SetRecordingAsync(false).WaitAsync(TimeSpan.FromSeconds(5)).GetAwaiter().GetResult();
+            check(!controller.Poll().Recording && !controller.Poll().Recording && controller.Running,
+                "Stopping recording keeps capture running and polling never restarts recording");
             Until(() => active?.WebSocketEndpoint is not null);
             using (ClientWebSocket visual = new())
             {
@@ -47,6 +53,8 @@ internal static class ProductControllerSpecs
                 "Stopping waits for the real composition and releases native ownership");
             controller.Start(); Until(() => { lock (backends) return backends.Count == 2 && backends[1].Started.Task.IsCompleted; });
             check(controller.Running && controller.Poll().Error is null, "Restart creates an independent one-shot service and clears old error state");
+            check(controller.Poll().Recording && controller.Poll().TracePath is not null && controller.Poll().TracePath != firstTrace,
+                "Restarting capture starts a fresh recording after a manual recording stop");
             var rejected = false;
             Task.Run(() => { try { controller.Poll(); } catch (InvalidOperationException) { rejected = true; } }).GetAwaiter().GetResult();
             check(rejected, "Background code cannot drain an owner-thread capture controller");

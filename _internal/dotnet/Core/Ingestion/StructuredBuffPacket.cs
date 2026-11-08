@@ -22,7 +22,7 @@ public static class StructuredBuffPacket
         foreach (var key in new[] { "buff_inst_id", "source_actor_id", "target_id", "owner_id", "operation_owner_id", "environment_inst_id" })
             if (observation.Get(key) is not EvidenceNull && (observation.Get(key) is not EvidenceText id || id.Value.Length == 0 || id.Value.Any(unit => unit is < '0' or > '9')))
                 throw new InvalidDataException("Instance identities must be decimal strings");
-        var data = (EvidenceObject)TraceValueProjection.Restore(item.Data, item.Data.Get("legacy_layout") as EvidenceObject ?? new(new Dictionary<string, EvidenceValue>()));
+        var data = TraceModel.Data(item);
         if (item.Type == "buff_unresolved") packets.ObserveUnresolved(UnresolvedFields(data), evidenceIndex, item.CapturedAtMs);
         else packets.Observe(item.Type, BuffPacketWire.Observation(data), evidenceIndex, item.CapturedAtMs);
     }

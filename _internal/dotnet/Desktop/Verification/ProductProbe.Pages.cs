@@ -143,6 +143,15 @@ internal static partial class ProductProbe
             FindButton(page, "从列表移除选中记录").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
             Check("history_remove_keeps_original", history.Records.Count == 0 && File.ReadAllBytes(path).SequenceEqual(original));
             VerifyHistoryInteractions(Check);
+            var timelineReport = (EvidenceObject)EvidenceJson.Parse("""
+                {"battle":{"duration_ms":10000},"participants":[{"character_key":"chr_0001_test","character_name":"长名称角色"}],
+                 "casts":[{"character_key":"chr_0001_test","skill_key":"chr_0001_test_normal_skill","skill_name":"完整战技名称","ts_ms_from_start":1000,"end_ms_from_start":2000},
+                   {"character_key":"chr_0001_test","skill_key":"chr_0001_test_combo_skill","ts_ms_from_start":3000,"end_ms_from_start":4000},
+                   {"character_key":"chr_0001_test","skill_key":"chr_0001_test_ultimate_skill","ts_ms_from_start":5000}],
+                 "timeline_events":[{"event_type":"damage","lane_type":"skill","source_character_key":"chr_0001_test","event_key":"chr_0001_test_ultimate_skill","ts_ms_from_start":7000,"value":100}]}
+                """);
+            BattlePresentationCheck.Verify(timelineReport, new(temporary.FullName), temporary.FullName,
+                Path.ChangeExtension(output, ".timeline.json"), Check);
             File.WriteAllText(output, JsonSerializer.Serialize(new { passed = true, checks, native_windows = 0, boundary = "Actual page controls rendered offscreen; no foreground, keyboard, mouse, capture or hardware services." }, new JsonSerializerOptions { WriteIndented = true }));
             return 0;
         }

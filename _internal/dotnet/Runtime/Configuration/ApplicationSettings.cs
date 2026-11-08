@@ -81,6 +81,7 @@ public sealed record ApplicationSettings
     public int OverlayMigrationCount { get; init; }
     public EvidenceObject BattleTableWidths { get; init; } = SettingsData.Empty();
     public EvidenceObject BattleLaneConfigs { get; init; } = SettingsData.Empty();
+    public int BattleFontPercent { get; init; } = 115;
     public IReadOnlyList<string> OverlayRestoreIds { get; init; } = [];
     public bool StartCaptureOnLaunch { get; init; }
     public bool CheckUpdatesOnStart { get; init; } = true;

@@ -50,6 +50,7 @@ public static class StructuredEntity
     };
     private static double? Number(EvidenceValue value) => value switch
     {
+        EvidenceObject marker when marker.Get("number_status") is EvidenceText { Value: "nan" or "positive_infinity" or "negative_infinity" } => double.NaN,
         EvidenceReal real => real.Value, EvidenceInteger integer => (double)integer.Value,
         EvidenceBoolean flag => flag.Value ? 1 : 0,
         EvidenceText text when double.TryParse(text.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var number) => number,
@@ -75,7 +76,7 @@ public static class StructuredEntity
         if (!item.Data.Fields.TryGetValue("entity_id", out var rawIdentity)) throw new InvalidDataException("Missing entity identity");
         if (rawIdentity is not EvidenceNull && (rawIdentity is not EvidenceText text || text.Value.Length == 0 || text.Value.Any(unit => unit is < '0' or > '9')))
             throw new InvalidDataException("Entity instance IDs must be decimal strings");
-        var data = Object(TraceValueProjection.Restore(item.Data, item.Data.Get("legacy_layout") as EvidenceObject ?? new(new Dictionary<string, EvidenceValue>())));
+        var data = TraceModel.Data(item);
         if (data.Get("template") is not EvidenceText template || data.Get("kind") is not (EvidenceText or EvidenceNull))
             throw new InvalidDataException("Expected entity labels");
         var kind = (data.Get("kind") as EvidenceText)?.Value;

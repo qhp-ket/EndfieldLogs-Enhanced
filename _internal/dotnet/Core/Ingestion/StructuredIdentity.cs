@@ -31,7 +31,7 @@ public static class StructuredIdentity
             Identity(item.Data.Get("entity_id"));
         }
         else throw new InvalidDataException("Expected identity event");
-        var data = (EvidenceObject)TraceValueProjection.Restore(item.Data, item.Data.Get("legacy_layout") as EvidenceObject ?? new(new Dictionary<string, EvidenceValue>()));
+        var data = TraceModel.Data(item);
         if (item.Type == "squad")
         {
             var bindings = ActorIdentity.SquadBindings(((EvidenceArray)data.Get("members")).Items.Cast<EvidenceObject>()

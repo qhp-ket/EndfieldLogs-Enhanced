@@ -99,10 +99,10 @@ internal static class StructuredEntitySpecs
             && events[4].Data.Get("detail") is EvidenceObject { Fields.Count: 0 }, "Spawn vectors retain precision and caller isolation without filling missing coordinates");
         check(events.SelectMany(item => EntityLegacyExporter.Lines(item, 0)).SequenceEqual(new[] {
             "[23:59:59.999] ENTITY_VALUE seq=None id=7 scene=0 hp=inf ult=unknown delta=-0.0 srcType=unknown srcInt=0 origSrcType=unknown origSrcInt=unknown\n",
-            "[23:59:59.999] ENTITY_DIE id=0007\n", "[23:59:59.999] ENTITY_DIE id=None\n",
+            "[23:59:59.999] ENTITY_DIE id=7\n", "[23:59:59.999] ENTITY_DIE id=None\n",
             "[23:59:59.999] ABILITY_ENTITY_SPAWN seq=0 tick=0 actionId=4 inst=0 skill=unknown_skill templateIntId=unknown ownerId=7 owner=id_7 sourceId=7 source=id_7 entityId=9007199254740993 pos=1.23456789,unknown,-0.0 rot=inf,unknown,unknown\n",
             "[23:59:59.999] ABILITY_ENTITY_SPAWN seq=0 tick=0 actionId=4 inst=0 skill=unknown_skill templateIntId=unknown ownerId=7 owner=id_7 sourceId=7 source=id_7 entityId=unknown pos=unknown,unknown,unknown rot=unknown,unknown,unknown\n" }),
-            "Independent entity export restores raw death identity, unknowns, negative zero, nonfinite vectors and source fallback");
+            "V2 entity export uses canonical identities and preserves unknowns, negative zero, nonfinite vectors and source fallback");
         var stream = StructuredDamageSpecs.Stream();
         stream.Accept(events.Select((item, index) => (index + 1, item)));
         check(stream.LastContextMs == -1 && stream.Entities.Timelines.Count == 0 && stream.Entities.CriticalAttributesByActor.Count == 0

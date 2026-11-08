@@ -207,3 +207,6 @@ desktop.ini
 
 # Reviewed runtime data only; all other ZIPs remain local.
 !/_internal/data/runtime-data.zip
+
+# Reviewed synthetic cross-language trace contract only.
+!/_internal/dotnet/Specs/Fixtures/trace-v2-cross-language.jsonl

@@ -68,7 +68,7 @@ public static class TraceVolumes
             if (header.Volume < expected) throw new InvalidDataException($"trace 录制 {header.RecordingId} 有重复的第 {header.Volume} 卷");
             if (header.Volume > expected) issues.Add($"trace 缺少第 {expected}～{header.Volume - 1} 卷，记录不完整");
             expected = header.Volume + 1;
-            if (header.Language != selected.Header.Language || header.GeneratorVersion != selected.Header.GeneratorVersion
+            if (header.Version != selected.Header.Version || header.Language != selected.Header.Language || header.GeneratorVersion != selected.Header.GeneratorVersion
                 || header.TimeZoneId != selected.Header.TimeZoneId || header.TimeZoneOffsetMinutes != selected.Header.TimeZoneOffsetMinutes
                 || header.Resources.Count != selected.Header.Resources.Count
                 || header.Resources.Any(pair => !selected.Header.Resources.TryGetValue(pair.Key, out var value) || value != pair.Value))

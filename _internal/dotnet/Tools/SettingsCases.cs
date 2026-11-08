@@ -60,6 +60,7 @@ internal static class SettingsCases
             var comparable = actual;
             var formatContract = true;
             var recordingHotkeyContract = true;
+            var battleFontContract = true;
             if (!skins && test["expected"]?["payload"]?["service"] is JsonObject expectedService
                 && !expectedService.ContainsKey("trace_format"))
             {
@@ -82,8 +83,17 @@ internal static class SettingsCases
                 if (ReferenceEquals(comparable, actual)) comparable = actual.DeepClone();
                 comparable["payload"]!.AsObject().Remove("toggle_recording_hotkey");
             }
+            if (!skins && test["expected"]?["payload"] is JsonObject fixedPayload && !fixedPayload.ContainsKey("battle_font_percent"))
+            {
+                // Independent analysis typography was added after the fixed reference.
+                // Nondefault persistence and bounds are covered by SettingsSpecs.
+                battleFontContract = actual["payload"]!["battle_font_percent"]?.GetValue<int>() == 115;
+                if (ReferenceEquals(comparable, actual)) comparable = actual.DeepClone();
+                comparable["payload"]!.AsObject().Remove("battle_font_percent");
+            }
             outcomes.Add(new JsonObject { ["name"] = test["name"]!.GetValue<string>(),
-                ["passed"] = formatContract && recordingHotkeyContract && JsonNode.DeepEquals(comparable, test["expected"]),
+                ["passed"] = formatContract && recordingHotkeyContract && battleFontContract && JsonNode.DeepEquals(comparable, test["expected"]),
+                ["battle_font_contract"] = battleFontContract,
                 ["trace_format_contract"] = formatContract, ["recording_hotkey_contract"] = recordingHotkeyContract,
                 ["actual"] = actual });
         }

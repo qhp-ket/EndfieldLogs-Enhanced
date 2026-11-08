@@ -43,10 +43,10 @@ internal static class StructuredLoadoutSpecs
             && new[] { "weapon_level", "weapon_base_atk", "character_level", "weapon_refine" }.All(key => !current.Fields.ContainsKey(key)),
             "Typed equipment keeps unknown levels absent instead of manufacturing level-one attack or refinement");
         check(current.Get("equipment_snapshot_complete") is EvidenceBoolean { Value: true }
-            && EvidenceJson.PythonEquals(current.Get("unresolved_equip_inst_ids"), EvidenceJson.Parse("""["00123"]"""))
+            && EvidenceJson.PythonEquals(current.Get("unresolved_equip_inst_ids"), EvidenceJson.Parse("""["123"]"""))
             && ((EvidenceObject)((EvidenceArray)current.Get("equips")).Items[0]).Get("item_id") is EvidenceText { Value: "piece" }
             && EvidenceJson.PythonEquals(current.Get("skill_int_ids"), EvidenceJson.Parse("""["4","5"]""")),
-            "Typed equipment decodes only native field syntax and preserves unresolved identity spelling");
+            "Typed equipment consumes native fields with canonical unresolved identities");
         check(state.Party.ActiveSuits[Owner].SetEquals(["suit_a"]) && state.SquadActorKeys.Count == 0
             && state.CurrentGroup is { LineNumber: 1, TimestampMs: 1000 },
             "Loadout activity and historical indices do not invent squad authority");

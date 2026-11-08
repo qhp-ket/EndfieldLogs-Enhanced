@@ -10,8 +10,7 @@ public static class ClockLegacyExporter
     public static IReadOnlyList<string> Lines(TraceEvent item, int timeZoneOffsetMinutes)
     {
         if (item.Type is not ("clock_tick" or "clock_sync" or "time_freeze_request" or "time_freeze_state")) throw new InvalidDataException("Expected clock event");
-        if (item.Data.Get("legacy_layout") is not EvidenceObject layout) throw new InvalidDataException("Clock event lacks legacy export layout");
-        var data = Obj(TraceValueProjection.Restore(item.Data, layout));
+        var data = ExportValues.Data(item);
         var source = S(data.Get("source"));
         var message = data.Fields.TryGetValue("message_id", out var msg) ? S(msg) : "unknown";
         var raw = data.Get("raw_body_hex") is EvidenceText text ? text.Value.Length == 0 ? "empty" : text.Value : "unknown";

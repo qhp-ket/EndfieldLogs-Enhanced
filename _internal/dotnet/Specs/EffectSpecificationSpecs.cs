@@ -56,5 +56,30 @@ internal static class EffectSpecificationSpecs
             "Conflicting identity rejects effects with an explicit quality reason");
         check(EvidenceJsonSignature.Sorted(record) == original && conflict.Get("rdps_unresolved_semantic_condition") is EvidenceNull,
             "Composition returns owned evidence without changing caller records");
+        roots["conduct"] = Obj("""
+            {"damageModifier":[
+              {"enableSide":"Defender","condition":{"onlyExecuteWhenSourceIsMainChar":false,"onlyExecuteWhenSourceIsGuard":false,"actionData":[
+                {"$type":"Beyond.Gameplay.Core.Conditions.CheckDamageTypeMask.Data","isEnable":true,"damageTypeMask":92}]},
+               "damageProcessors":[{"$type":"Beyond.Gameplay.Core.DamageScaleProcessor","side":"Defender","zoneName":"NormalCalcZone","addition":{"useBlackboardKey":true,"blackboardKey":"rate"}}]},
+              {"enableSide":"Defender","condition":{"onlyExecuteWhenSourceIsMainChar":false,"onlyExecuteWhenSourceIsGuard":false,"actionData":[
+                {"$type":"Beyond.Gameplay.Core.Conditions.CheckDamageTypeMask.Data","isEnable":true,"damageTypeMask":129},
+                {"$type":"Beyond.Gameplay.Core.CompareFloat.Data","isEnable":true,"compare":"Equals","valueA":{"useBlackboardKey":true,"blackboardKey":"enhanced"},"valueB":{"useBlackboardKey":false,"value":1}}]},
+               "damageProcessors":[{"$type":"Beyond.Gameplay.Core.DamageScaleProcessor","side":"Defender","zoneName":"NormalCalcZone","addition":{"useBlackboardKey":true,"blackboardKey":"rate"}}]}],
+             "attributeModifier":{"isConvertedAttribute":false,"attributeModifiers":[]}}
+            """);
+        var conductCatalog = Catalog(Obj("""{"verified_effects":{"conduct":{"effects":[{"zone":"vuln_taken","element":"all","bb_key":"rate"}]}}}"""));
+        foreach (var flag in new[] { "1", "0", "null" })
+        {
+            var observedConduct = Obj("{\"event_key\":\"conduct\",\"bb_values\":{\"rate\":0.2,\"enhanced\":" + flag + "}}");
+            var conductEffects = conductCatalog.CollectStatic(observedConduct).Effects;
+            check(conductEffects.Count == 2, "Both exact conduct branches retain their original predicates");
+            foreach (var element in new[] { "pulse", "physical", "ether", "real" })
+            {
+                var damage = Obj("{\"damage_element\":\"" + element + "\"}");
+                var matching = conductEffects.Count(effect => EffectConditions.Failure(effect, damage) is null);
+                check(matching == (element == "pulse" || flag == "1" && element is "physical" or "ether" ? 1 : 0),
+                    "Conduct applies once, with observed enhancement and exact element mask: " + flag + "/" + element);
+            }
+        }
     }
 }

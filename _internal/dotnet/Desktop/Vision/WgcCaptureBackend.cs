@@ -15,6 +15,8 @@ public sealed unsafe class WgcCaptureBackend : IVisionCaptureBackend
     private readonly object gate = new();
     private readonly D3DReadback readback;
     private readonly IDirect3DDevice device;
+    private readonly WgcCaptureItemCache captureItems;
+    private readonly bool ownsItems;
     private GameWindows? discovery;
     private string? executable;
     private GraphicsCaptureItem? item;
@@ -30,8 +32,11 @@ public sealed unsafe class WgcCaptureBackend : IVisionCaptureBackend
     private long resized, undersized;
     internal object Diagnostics { get { lock (gate) return new { receivedFrames = nextId, resized, undersized, size.Width, size.Height, targetClosed, window }; } }
 
-    public WgcCaptureBackend()
+    public WgcCaptureBackend() : this(new WgcCaptureItemCache(), true) { }
+    public WgcCaptureBackend(WgcCaptureItemCache captureItems) : this(captureItems, false) { }
+    private WgcCaptureBackend(WgcCaptureItemCache captureItems, bool ownsItems)
     {
+        this.captureItems = captureItems; this.ownsItems = ownsItems;
         if (!GraphicsCaptureSession.IsSupported()) throw new PlatformNotSupportedException("系统不支持 Windows Graphics Capture");
         readback = new();
         nint inspectable = 0;
@@ -43,16 +48,16 @@ public sealed unsafe class WgcCaptureBackend : IVisionCaptureBackend
     {
         ObjectDisposedException.ThrowIf(disposed, this);
         if (game != executable) { discovery = new(game); executable = game; }
-        var found = discovery!.Discover(); return new(found.Windows, found.Foreground);
+        var found = discovery!.Discover(); captureItems.KeepOnly(found.Windows); return new(found.Windows, found.Foreground);
     }
     public void SetTarget(long? target)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
         CloseTarget();
-        if (target is null) return;
+        if (target is null) { captureItems.Clear(); return; }
         try
         {
-            item = CreateItem((nint)target.Value); size = item.Size;
+            item = captureItems.Get(target.Value, out size);
             if (size.Width <= 0 || size.Height <= 0) throw new InvalidOperationException("游戏窗口尺寸无效");
             var thread = GetWindowThreadProcessId((nint)target.Value, out var process);
             if (thread == 0) throw new InvalidOperationException("游戏窗口已关闭");
@@ -60,14 +65,14 @@ public sealed unsafe class WgcCaptureBackend : IVisionCaptureBackend
             session = pool.CreateCaptureSession(item); session.IsCursorCaptureEnabled = false;
             // Match Qt's WGC backend: disable the colored capture border on each
             // new session, including replacements after a target resize.
-            var sessionPointer = MarshalInterface<GraphicsCaptureSession>.FromManaged(session);
+            var sessionPointer = MarshalInspectable<GraphicsCaptureSession>.FromManaged(session);
             try { CaptureSessionOptions.TryDisableBorder(sessionPointer); }
             finally { Marshal.Release(sessionPointer); }
             lock (gate) { window = target.Value; windowThread = thread; windowProcess = process; targetClosed = false; failure = null; }
             pool.FrameArrived += OnFrame;
             session.StartCapture();
         }
-        catch { CloseTarget(); throw; }
+        catch { captureItems.Invalidate(item); CloseTarget(); throw; }
     }
     private void OnFrame(Direct3D11CaptureFramePool sender, object args)
     {
@@ -105,6 +110,7 @@ public sealed unsafe class WgcCaptureBackend : IVisionCaptureBackend
             if (targetClosed || window == 0) return null;
             if (GetWindowThreadProcessId((nint)window, out var process) != windowThread || process != windowProcess)
             {
+                captureItems.Invalidate(item);
                 targetClosed = true; latest?.Dispose(); latest = null; return null;
             }
             if (failure is not null) throw new InvalidOperationException("WGC 帧接收失败", failure);
@@ -114,6 +120,7 @@ public sealed unsafe class WgcCaptureBackend : IVisionCaptureBackend
             {
                 var content = frame.ContentSize;
                 if (content.Width <= 0 || content.Height <= 0) return null;
+                captureItems.ObserveSize(item!, content);
                 if (content.Width != size.Width || content.Height != size.Height)
                 {
                     // The resize frame's underlying texture can still have the old size. Recreate and await a fresh frame.
@@ -169,7 +176,11 @@ public sealed unsafe class WgcCaptureBackend : IVisionCaptureBackend
     {
         lock (gate) { if (disposed) return; disposed = true; }
         try { CloseTarget(); }
-        finally { lock (gate) if (!leased) CloseDevice(); }
+        finally
+        {
+            if (ownsItems) captureItems.Dispose();
+            lock (gate) if (!leased) CloseDevice();
+        }
     }
     private void CloseDevice()
     {
@@ -179,24 +190,5 @@ public sealed unsafe class WgcCaptureBackend : IVisionCaptureBackend
             readback.Dispose();
         }
     }
-    private static GraphicsCaptureItem CreateItem(nint window)
-    {
-        // IGraphicsCaptureItemInterop is an IUnknown factory interface, separate from the WinRT item projection.
-        var name = "Windows.Graphics.Capture.GraphicsCaptureItem";
-        Marshal.ThrowExceptionForHR(WindowsCreateString(name, name.Length, out var className));
-        nint factory = 0, item = 0;
-        try
-        {
-            var iid = new Guid("3628e81b-3cac-4c60-b7f4-23ce0e0c3356");
-            Marshal.ThrowExceptionForHR(RoGetActivationFactory(className, in iid, out factory));
-            var itemIid = new Guid("79c3f95b-31f7-4ec2-a464-632ef5d30760");
-            Marshal.ThrowExceptionForHR(((delegate* unmanaged[Stdcall]<nint, nint, Guid*, nint*, int>)(*(nint**)factory)[3])(factory, window, &itemIid, &item));
-            return MarshalInterface<GraphicsCaptureItem>.FromAbi(item);
-        }
-        finally { if (item != 0) Marshal.Release(item); if (factory != 0) Marshal.Release(factory); WindowsDeleteString(className); }
-    }
-    [DllImport("combase.dll", CharSet = CharSet.Unicode, ExactSpelling = true)] private static extern int WindowsCreateString(string value, int length, out nint result);
-    [DllImport("combase.dll", ExactSpelling = true)] private static extern int WindowsDeleteString(nint value);
-    [DllImport("combase.dll", ExactSpelling = true)] private static extern int RoGetActivationFactory(nint className, in Guid iid, out nint factory);
     [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(nint window, out uint process);
 }

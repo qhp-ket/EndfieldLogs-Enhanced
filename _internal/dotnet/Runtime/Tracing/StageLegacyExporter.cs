@@ -10,8 +10,7 @@ public static class StageLegacyExporter
     public static IReadOnlyList<string> Lines(TraceEvent item, int timeZoneOffsetMinutes)
     {
         if (item.Type is not ("dungeon" or "contracts" or "battle_result")) throw new InvalidDataException("Expected stage event");
-        if (item.Data.Get("legacy_layout") is not EvidenceObject layout) throw new InvalidDataException("Stage event lacks legacy export layout");
-        var data = Obj(TraceValueProjection.Restore(item.Data, layout));
+        var data = ExportValues.Data(item);
         List<string> parts;
         if (item.Type == "dungeon")
         {

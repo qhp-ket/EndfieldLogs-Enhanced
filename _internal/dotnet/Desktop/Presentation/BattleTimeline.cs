@@ -2,6 +2,8 @@ using System.Globalization;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using EndfieldLogs.Core.Compatibility;
 using EndfieldLogs.Runtime.History;
@@ -20,6 +22,10 @@ internal sealed partial class BattleTimeline : FrameworkElement
     private readonly Dictionary<string, int> ownerOrder;
     private readonly Dictionary<TimelineMark, double[]> damageTimes = new(ReferenceEqualityComparer.Instance);
     private readonly TimeReferenceVisual reference = new();
+    private readonly ToolTip hoverTip = new() { Placement = PlacementMode.Relative, StaysOpen = true, IsHitTestVisible = false, MaxWidth = 600 };
+    private readonly TextBlock hoverContent = new() { TextWrapping = TextWrapping.Wrap };
+    private Window? hoverOwner;
+    private void CloseHover(object? sender, EventArgs args) => hoverTip.IsOpen = false;
     // Keep decoration resources at their original painter positions. Changing selection updates
     // only the old/new block, without rebuilding report text, observations or hover indexes.
     private sealed record MarkDecoration(DrawingGroup Drawing, Rect Block, Rect Underline, Brush Fill, bool Buff, bool Fallback);
@@ -48,8 +54,9 @@ internal sealed partial class BattleTimeline : FrameworkElement
     private string filter = "";
     private bool buffs = true, frames;
     private double zoom = 1, rowScale = 1;
-    private double Labels = 180;
-    private const double Header = 30, Row = 32;
+    private double Labels = 260;
+    private double Header => Math.Max(30, 22 * fontScale + 8);
+    private const double Row = 32;
     private IReadOnlyList<Track>? trackCache;
     private TimelineInputLayout? inputLayout;
     public event Action<IReadOnlyList<EvidenceObject>>? Selected;
@@ -78,9 +85,13 @@ internal sealed partial class BattleTimeline : FrameworkElement
         Energy = EnergyObservations.Build(snapshot, energyRules); Control = EnergyObservations.Control(snapshot);
         Enemies = EnemyObservations.Build(snapshot);
         marks = BuildMarks(snapshot, names.Keys.ToHashSet(StringComparer.Ordinal), BuffDisplay.Names(resources), SkillFrameReference.Rules(resources)); ClipToBounds = true; Focusable = true;
-        MouseMove += Hover; MouseLeave += (_, _) => { ToolTip = null; SetReference(null); ReferenceChanged?.Invoke(null); };
+        hoverTip.PlacementTarget = this; hoverTip.Content = hoverContent;
+        MouseMove += Hover; MouseLeave += (_, _) => { hoverTip.IsOpen = false; SetReference(null); ReferenceChanged?.Invoke(null); };
+        Loaded += (_, _) => { hoverOwner = Window.GetWindow(this); if (hoverOwner is not null) hoverOwner.Deactivated += CloseHover; };
+        Unloaded += (_, _) => { hoverTip.IsOpen = false; if (hoverOwner is not null) hoverOwner.Deactivated -= CloseHover; hoverOwner = null; };
         MouseLeftButtonDown += (_, args) =>
         {
+            hoverTip.IsOpen = false;
             var point = args.GetPosition(this);
             if (Math.Abs(point.X - viewportX - Labels) <= 4) { BeginLabelResize(point); args.Handled = true; return; }
             if (point.Y < StickyHeaderTop + Header) return;
@@ -89,7 +100,7 @@ internal sealed partial class BattleTimeline : FrameworkElement
             var expansion = expandAreas.FirstOrDefault(area => area.Bounds.Contains(point));
             if (expansion.Owner is not null) { ToggleLane(expansion.Owner, expansion.Lane); return; }
             if (point.X < viewportX + Labels) return;
-            var found = hitAreas.Where(area => area.Bounds.Contains(point)).Select(area => area.Mark).Distinct().ToArray();
+            var found = MarksAt(point);
             if (found.Length == 0) return; SelectMarks(found);
         };
         MouseLeftButtonUp += (_, args) => { if (resizingLabels) { resizingLabels = false; ReleaseMouseCapture(); args.Handled = true; } };
@@ -212,7 +223,7 @@ internal sealed partial class BattleTimeline : FrameworkElement
             .Select(row => EvidenceView.Number(row.Get("ts_ms_from_start"))).OfType<double>().ToArray();
     }
     protected override Size MeasureOverride(Size availableSize) => new(ContentWidth, Header + Math.Max(1, Lanes().Length + ObservationRows + (InputLayout.ExtraRow ? 1 : 0)) * RowHeight);
-    private void Text(DrawingContext dc, string value, Point at, Brush brush, double size = 12, double width = double.PositiveInfinity)
+    private void Text(DrawingContext dc, string value, Point at, Brush brush, double size = 14, double width = double.PositiveInfinity)
     {
         if (collectLabels && at.X < Labels) { labelText.Add((value, at, brush, size, width)); return; }
         var dpi = VisualTreeHelper.GetDpi(this).PixelsPerDip; var key = (value, size * fontScale, width, brush, dpi);
@@ -268,10 +279,10 @@ internal sealed partial class BattleTimeline : FrameworkElement
                 var bounds = DisplayBounds(mark); var fallback = ShowFrameReference && mark.FrameReference is { } frameRule && BattleEvidence.Number(frameRule.Get("end_ms")) is not null;
                 var rectangle = new Rect(X(bounds.Start), markY + 5, Math.Max(4, X(bounds.End) - X(bounds.Start)), rowHeight - 10);
                 var visibleBlock = VisibleX(rectangle.Left, rectangle.Right);
-                var fill = mark.Lane == "BUFF" ? buffFill : mark.Lane == "施放" ? skillFill : hitFill;
+                var fill = mark.Lane == "BUFF" ? buffFill : SkillFill(mark.Skill?.Category);
                 if (visibleBlock)
                 {
-                    hitAreas.Add((rectangle, mark));
+                    var hit = rectangle; hit.Inflate(3, 1); hitAreas.Add((hit, mark));
                 }
                 var visibleUnderline = Rect.Empty;
                 if (fallback)
@@ -286,7 +297,7 @@ internal sealed partial class BattleTimeline : FrameworkElement
                     if (!decorations.TryGetValue(mark, out var entries)) decorations[mark] = entries = [];
                     entries.Add(entry); PaintDecoration(entry, mark == selected); dc.DrawDrawing(entry.Drawing);
                 }
-                if (visibleBlock && rectangle.Width > 30) Text(dc, mark.Buff is { } buff ? BuffDisplay.StateText(buff.States) : mark.Name, new Point(rectangle.X + 4, rectangle.Y + 3), Brushes.Black, width: rectangle.Width - 8);
+                if (visibleBlock && rectangle.Width > 30) Text(dc, mark.Buff is { } buff ? BuffDisplay.StateText(buff.States) : mark.Name, new Point(rectangle.X + 4, rectangle.Y + 3), Brushes.Black, 13 * rowScale, width: rectangle.Width - 8);
                 if (mark.Buff is { } stateful)
                 {
                     System.Numerics.BigInteger? previous = 0;
@@ -306,6 +317,7 @@ internal sealed partial class BattleTimeline : FrameworkElement
                 {
                     var x = X(stamp); if (!VisibleX(x, x)) continue;
                     dc.DrawLine(damageHitPen, new Point(x, markY + rowHeight - 10), new Point(x, markY + rowHeight - 3));
+                    hitAreas.Add((new Rect(x - 3, markY + rowHeight - 11, 6, 9), mark));
                 }
             }
             index += track.Rows;
@@ -335,23 +347,31 @@ internal sealed partial class BattleTimeline : FrameworkElement
     }
     private void Hover(object sender, MouseEventArgs args)
     {
-        var point = args.GetPosition(this); var found = hitAreas.Where(area => area.Bounds.Contains(point)).Select(area => area.Mark).Distinct().ToArray();
+        var point = args.GetPosition(this);
         if (resizingLabels) { ResizeLabels(resizeStartWidth + point.X - resizeStartX); return; }
         var onDivider = Math.Abs(point.X - viewportX - Labels) <= 4;
         if (dividerHovered != onDivider) { dividerHovered = onDivider; InvalidateVisual(); }
-        if (onDivider) { Cursor = Cursors.SizeWE; ToolTip = "拖动调整角色与轨道列宽"; return; }
+        Cursor = onDivider ? Cursors.SizeWE : settingsAreas.Any(area => area.Bounds.Contains(point)) || expandAreas.Any(area => area.Bounds.Contains(point)) ? Cursors.Hand : Cursors.Arrow;
         var stamp = point.X >= viewportX + Labels ? Math.Clamp((point.X - Labels) / Math.Max(1, ActualWidth - Labels - 10), 0, 1) * Duration : (double?)null;
         SetReference(stamp); ReferenceChanged?.Invoke(stamp);
-        if (settingsAreas.Any(area => area.Bounds.Contains(point))) { Cursor = Cursors.Hand; ToolTip = "配置此角色的技能轨道"; return; }
-        if (expandAreas.Any(area => area.Bounds.Contains(point))) { Cursor = Cursors.Hand; ToolTip = "展开／合并重叠技能块"; return; }
-        Cursor = Cursors.Arrow;
-        if (point.Y < StickyHeaderTop + Header) { ToolTip = stamp is { } time ? BattleDetails.Time(time, frames) : "时间轴"; return; }
-        if (point.X < viewportX + Labels) { ToolTip = string.Join("\n", labelHitAreas.Where(area => area.Bounds.Contains(point)).Select(area => area.Tooltip)); return; }
-        var descriptions = found.Select(mark => BattleDetails.Description(mark, frames) + (mark.Buff is { } buff ? "\n当前位置：" + BuffDisplay.StateText(buff.States, stamp) : ""))
+        var text = HoverText(point);
+        hoverContent.Text = text; hoverTip.HorizontalOffset = point.X + 14; hoverTip.VerticalOffset = point.Y + 18;
+        hoverTip.IsOpen = !string.IsNullOrEmpty(text);
+    }
+    internal TimelineMark[] MarksAt(Point point) => hitAreas.Where(area => area.Bounds.Contains(point)).Select(area => area.Mark).Distinct().ToArray();
+    internal string HoverText(Point point)
+    {
+        if (Math.Abs(point.X - viewportX - Labels) <= 4) return "拖动调整角色与轨道列宽";
+        if (settingsAreas.Any(area => area.Bounds.Contains(point))) return "配置此角色的技能轨道";
+        if (expandAreas.Any(area => area.Bounds.Contains(point))) return "展开／合并重叠技能块";
+        if (point.X < viewportX + Labels) return string.Join("\n", labelHitAreas.Where(area => area.Bounds.Contains(point)).Select(area => area.Tooltip));
+        var stamp = Math.Clamp((point.X - Labels) / Math.Max(1, ActualWidth - Labels - 10), 0, 1) * Duration;
+        var timeLabel = "当前位置：" + BattleDetails.Time(stamp, frames);
+        if (point.Y < StickyHeaderTop + Header) return timeLabel;
+        var descriptions = MarksAt(point).Select(mark => BattleDetails.Description(mark, frames, compact: mark.Skill is not null) + (mark.Buff is { } buff ? "\n当前位置：" + BuffDisplay.StateText(buff.States, stamp) : ""))
             .Concat(labelHitAreas.Where(area => area.Bounds.Contains(point)).Select(area => area.Tooltip))
             .Concat(inputHitAreas.Where(area => area.Bounds.Contains(point)).Select(area => area.Tooltip))
             .Concat(ObservationTooltip(point) is { Length: > 0 } observation ? [observation] : []).ToArray();
-        var text = descriptions.Length == 0 ? null : string.Join("\n\n", descriptions);
-        if (!Equals(ToolTip, text)) ToolTip = text;
+        return timeLabel + (descriptions.Length == 0 ? "" : "\n\n" + string.Join("\n\n", descriptions));
     }
 }

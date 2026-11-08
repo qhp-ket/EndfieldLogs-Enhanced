@@ -16,6 +16,9 @@ internal static class SettingsSpecs
             var path = Path.Combine(root, "settings.json");
             SettingsCodec formatCodec = new(new(root));
             var defaults = formatCodec.Decode(Object("{}"));
+            var battleFont = formatCodec.Decode(formatCodec.Encode(defaults with { BattleFontPercent = 150 }));
+            check(defaults.BattleFontPercent == 115 && battleFont.BattleFontPercent == 150 && battleFont.FontPercent == defaults.FontPercent,
+                "Battle font persists independently of the main interface font");
             check(defaults.ToggleRecordingHotkey == "Ctrl+I", "Recording starts and stops with Ctrl+I by default");
             formatCodec.Save(defaults with { ToggleRecordingHotkey = "Ctrl+Alt+I" }, path);
             check(formatCodec.Load(path).ToggleRecordingHotkey == "Ctrl+Alt+I", "Recording shortcut persists independently");

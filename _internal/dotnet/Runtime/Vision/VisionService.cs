@@ -25,7 +25,8 @@ public sealed record VisionMember(int Slot, string CharacterKey, string DisplayN
 public sealed record VisionPreview(byte[] Bgra, int Width, int Height, long Window);
 
 /// <summary>Demand-driven visual worker with one capture owner and one latest result. No UI objects cross this boundary.</summary>
-public sealed class VisionService(Func<IVisionCaptureBackend> factory, string executable, EvidenceValue? settings = null) : IAsyncDisposable
+public sealed class VisionService(Func<IVisionCaptureBackend> factory, string executable, EvidenceValue? settings = null,
+    IDisposable? captureResources = null) : IAsyncDisposable
 {
     private readonly object gate = new();
     private VisionConfiguration config = VisionConfiguration.Normalize(settings);
@@ -198,11 +199,15 @@ public sealed class VisionService(Func<IVisionCaptureBackend> factory, string ex
     {
         Task? stopping;
         lock (gate) { if (closed) return; closed = true; enabled = false; stop?.Cancel(); stopping = worker; }
-        if (stopping is not null) await stopping.ConfigureAwait(false);
-        lock (gate)
+        try
         {
-            worker = null; stop?.Dispose(); stop = null; identity.Clear(); preview = null; published = null; targets = new([], null);
-            state = TraceData.Make(("status", "已停止"), ("frame_valid", false), ("slots", new EvidenceArray([])));
+            if (stopping is not null) await stopping.ConfigureAwait(false);
+            lock (gate)
+            {
+                worker = null; stop?.Dispose(); stop = null; identity.Clear(); preview = null; published = null; targets = new([], null);
+                state = TraceData.Make(("status", "已停止"), ("frame_valid", false), ("slots", new EvidenceArray([])));
+            }
         }
+        finally { captureResources?.Dispose(); }
     }
 }

@@ -1,0 +1,12 @@
+{"format":"endfield.trace","generator":{"language":"python","version":"0.3.0"},"previous_volume":null,"recording_id":"cross-language-v2","resources":{"catalog":"synthetic"},"timezone":{"id":"Asia/Shanghai","offset_minutes":480},"version":2,"volume":1}
+{"kind":"capture_session","ref":1,"session_id":"session-a","type":"definition"}
+{"id":"101","kind":"entity","ref":1,"type":"definition"}
+{"id":"201","kind":"entity","ref":2,"type":"definition"}
+{"kind":"template","ref":1,"template":"skill_template","type":"definition"}
+{"id":"9001","kind":"entity","ref":3,"type":"definition"}
+{"captured_at_ms":1793894400000,"client_tick_ms":23500,"data":{"action":{"action_id":7,"event_inst_id":{"entity_ref":3},"event_owner_id":{"entity_ref":1},"skill":{"template_ref":1}},"actors":{"attacker":"chr_test","attacker_id":{"entity_ref":1},"target":"enemy_test","target_id":{"entity_ref":2}},"amounts":{"is_crit":true,"value":12345.6},"blackboards":{"calculation":[],"dynamic":[]},"evidence":{"modifier_args":{"processor_index":0,"provided":false},"presence":{"value":true}},"hit_seq":1},"seq":1,"source":{"detail_index":0,"operation_seq":8,"owner_id":{"entity_ref":1},"session_ref":1},"type":"damage"}
+{"kind":"template","ref":2,"template":"chr_test","type":"definition"}
+{"id":"401","kind":"entity","ref":4,"type":"definition"}
+{"captured_at_ms":1793894399999,"data":{"entity_id":{"entity_ref":1},"equip_inst_ids":[{"entity_id":{"entity_ref":4},"slot":0}],"equip_suit":[{"piece_count":3,"suit_id":"suit_test"}],"equips":[{"enhance_levels":[{"index":0,"level":2}],"item_id":"piece","slot":0,"stats":[{"level":2,"name":"Atk","slot":"main","value":5.0}]}],"skill_int_ids":[4,5],"template":{"template_ref":2}},"seq":2,"source":{"session_ref":1},"type":"loadout_slot"}
+{"kind":"capture_session","ref":2,"session_id":"session-b","type":"definition"}
+{"captured_at_ms":1793894400010,"data":{"observation":{"client_tick_ms":17,"event_owner_id":{"entity_ref":1},"target_id":{"entity_ref":1},"value":{"number_status":"nan"}}},"seq":3,"source":{"operation_seq":0,"session_ref":2},"type":"buff_origin"}

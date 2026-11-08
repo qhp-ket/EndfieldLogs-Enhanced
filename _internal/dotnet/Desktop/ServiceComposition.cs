@@ -22,7 +22,9 @@ internal static class ServiceComposition
     {
         var input = new InputRecordingController(Environment.ProcessPath ?? throw new InvalidOperationException("无法定位本体程序"));
         var executable = Path.Combine(settings.Current.Service.NativeGameDirectory, settings.Current.Service.GameExecutable);
-        var vision = new VisionService(() => new WgcCaptureBackend(), executable, settings.Current.VisionSettings);
+        var captureItems = new WgcCaptureItemCache();
+        var vision = new VisionService(() => new WgcCaptureBackend(captureItems), executable,
+            settings.Current.VisionSettings, captureResources: captureItems);
         return new(input, vision, setCaptureStreams, settings, InputNativeDirectory(settings.Context.ApplicationRoot), diagnostic);
     }
 }

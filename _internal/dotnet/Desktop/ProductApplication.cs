@@ -3,6 +3,7 @@ using System.Windows;
 using EndfieldLogs.Core.Catalog;
 using EndfieldLogs.Desktop.Presentation;
 using EndfieldLogs.Runtime.Configuration;
+using EndfieldLogs.Runtime.Services;
 using EndfieldLogs.Desktop.Verification;
 
 namespace EndfieldLogs.Desktop;
@@ -35,6 +36,8 @@ internal static class ProductApplication
         }
         catch (Exception error)
         {
+            using var failureLog = new RuntimeLog(Path.Combine(ResolveRoot(requestedRoot), ".dev-gui", "logs", "runtime.log"));
+            failureLog.Write("程序启动失败", error);
             if (startupCheckOutput is not null) ProductStartupCheck.WriteFailure(startupCheckOutput, error);
             else MessageBox.Show(error.Message, "启动失败", MessageBoxButton.OK, MessageBoxImage.Error);
             return 1;

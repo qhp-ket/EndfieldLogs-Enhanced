@@ -119,8 +119,7 @@ public static class StructuredDamage
     public static void Accept(TraceEvent item, int evidenceIndex, HitBuffLifecycleObservations lifecycle, PacketObservationState packets)
     {
         var observation = Observation(item);
-        var layout = OptionalObject(OptionalObject(item.Data.Get("legacy_layout")).Get("children"));
-        var evidence = Object(TraceValueProjection.Restore(item.Data.Get("evidence"), OptionalObject(layout.Get("evidence"))));
+        var evidence = Object(TraceModel.Data(item).Get("evidence"));
         var mods = OptionalObject(evidence.Get("modifier_args")); var report = OptionalObject(evidence.Get("battle_report_info"));
         var presence = OptionalObject(evidence.Get("presence"));
         var attackerMods = ModifierIds(mods, "attacker"); var defenderMods = ModifierIds(mods, "defender");

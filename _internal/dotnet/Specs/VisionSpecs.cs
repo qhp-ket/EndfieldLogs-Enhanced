@@ -92,11 +92,17 @@ internal static class VisionSpecs
     }
     private static void Until(Func<bool> predicate)
     { var started = Stopwatch.GetTimestamp(); while (!predicate()) { if (Stopwatch.GetElapsedTime(started).TotalSeconds > 10) throw new TimeoutException("Visual worker did not reach its expected state"); Thread.Sleep(10); } }
+    private sealed class CaptureResources : IDisposable
+    {
+        public int Disposals;
+        public void Dispose() => Disposals++;
+    }
     public static void Service(Action<bool, string> check)
     {
         ConcurrentQueue<Capture> created = new();
         IVisionCaptureBackend Factory() { Capture backend = new(); created.Enqueue(backend); return backend; }
-        VisionService service = new(Factory, "missing-game.exe");
+        CaptureResources resources = new();
+        VisionService service = new(Factory, "missing-game.exe", captureResources: resources);
         try
         {
             check(!service.Running && created.IsEmpty, "Visual capture allocates no backend until a consumer enables it");
@@ -142,10 +148,13 @@ internal static class VisionSpecs
             check(Slots((EvidenceObject)snapshot.Get("snapshot")).All(row => row.Get("character_key") is EvidenceNull), "Changing the target window clears stale character identity and requires fresh geometry confirmation");
             service.SetEnabledAsync(false).GetAwaiter().GetResult();
             check(capture.Disposed && !service.Running && Status(service.State) == "已停止", "Disabling visual demand waits for native backend release without involving capture or input services");
+            check(resources.Disposals == 0, "Stopping capture releases the backend but preserves the shared target resource for restart");
             var stream = (EvidenceText)snapshot.Get("stream_id"); service.SetEnabledAsync(true).GetAwaiter().GetResult(); Until(() => created.Count == 2);
             check(service.TakeSnapshot()!.Get("stream_id") is EvidenceText restarted && restarted.Value != stream.Value, "Restarted visual capture has a distinct stream for sequence isolation");
         }
         finally { service.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
+        service.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        check(resources.Disposals == 1, "Final service disposal releases shared capture resources exactly once");
         check(created.All(capture => capture.Disposed), "Disposing the visual service releases its final backend and worker");
     }
 }

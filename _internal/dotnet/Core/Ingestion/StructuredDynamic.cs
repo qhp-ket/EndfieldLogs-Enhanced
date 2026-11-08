@@ -14,7 +14,7 @@ public static class StructuredDynamic
             foreach (var key in new[] { "buff_inst_id", "owner_id", "operation_owner_id", "environment_inst_id" })
                 if (fields.Get(key) is not EvidenceNull && (fields.Get(key) is not EvidenceText id || id.Value.Length == 0 || id.Value.Any(unit => unit is < '0' or > '9')))
                     throw new InvalidDataException("Instance identities must be decimal strings");
-        var data = (EvidenceObject)TraceValueProjection.Restore(item.Data, item.Data.Get("legacy_layout") as EvidenceObject ?? new(new Dictionary<string, EvidenceValue>()));
+        var data = TraceModel.Data(item);
         // Read-skill-setting has always been diagnostic; it is not a refresh.
         if (item.Type == "blackboard_skill_setting") return;
         var refresh = item.Type == "buff_attribute_refresh";

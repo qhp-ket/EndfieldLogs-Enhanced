@@ -137,10 +137,11 @@ internal static class GameCaptureServiceSpecs
                     var content = ReadActive(trace);
                     if (format == "jsonl")
                     {
-                        var rows = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-                        var header = (TraceHeader)TraceJsonl.Parse(rows[0], header: true);
-                        var recorded = rows.Skip(1).Select(line => (TraceEvent)TraceJsonl.Parse(line, header: false)).ToArray();
-                        check(header.Language == "csharp" && header.Volume == 1 && header.PreviousVolume is null
+                        using TraceJsonlReader reader = new();
+                        var rows = reader.Feed(Encoding.UTF8.GetBytes(content));
+                        var header = (TraceHeader)rows[0];
+                        var recorded = rows.OfType<TraceEvent>().ToArray();
+                        check(header.Version == 2 && reader.PendingBytes == 0 && header.Language == "csharp" && header.Volume == 1 && header.PreviousVolume is null
                             && header.TimeZoneOffsetMinutes == (int)TimeZoneInfo.Local.GetUtcOffset(DateTime.Now).TotalMinutes
                             && recorded.Any(item => item.Type == "damage")
                             && recorded.Select(item => item.Sequence).SequenceEqual(Enumerable.Range(1, recorded.Length).Select(value => (long)value))
@@ -265,8 +266,10 @@ internal static class GameCaptureServiceSpecs
                 check(snapshots.Last().Snapshot is null && snapshots.Last().SourceGeneration > snapshots.First().SourceGeneration,
                     "Stopped capture delivers an explicit cleared generation after the last live result");
                 File.Move(archive, archive + ".moved");
-                check(!Directory.GetFiles(logs, "*.tmp", SearchOption.AllDirectories).Any() && diagnostics.All(message => message == "capture closed"),
-                    "Normal lifecycle leaves no temporary sidecars or diagnostics and permits immediate file operations");
+                check(!Directory.GetFiles(logs, "*.tmp", SearchOption.AllDirectories).Any()
+                    && diagnostics.Any(message => message.StartsWith("抓包统计 ", StringComparison.Ordinal))
+                    && diagnostics.All(message => message == "capture closed" || message.StartsWith("抓包统计 ", StringComparison.Ordinal)),
+                    "Normal lifecycle emits capture counters without errors, leaves no temporary sidecars and permits immediate file operations");
             }
 
             var failedLogs = Path.Combine(folder.FullName, "observer-failure"); Backend rejected = new();

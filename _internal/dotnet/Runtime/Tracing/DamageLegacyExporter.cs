@@ -12,10 +12,11 @@ public static partial class DamageLegacyExporter
     public static IReadOnlyList<string> Lines(TraceEvent item, int timeZoneOffsetMinutes)
     {
         if (item.Type != "damage") throw new InvalidDataException("Expected damage event");
-        if (item.Data.Get("legacy_layout") is not EvidenceObject layout) throw new InvalidDataException("Damage event lacks legacy export layout");
-        var data = Obj(TraceValueProjection.Restore(item.Data, layout));
+        var data = ExportValues.Data(item);
         var actors = Obj(data.Get("actors")); var action = Obj(data.Get("action")); var amounts = Obj(data.Get("amounts"));
-        var evidence = Obj(data.Get("evidence")); var context = Obj(evidence.Get("packet_context"));
+        var evidence = Obj(data.Get("evidence"));
+        var context = evidence.Get("packet_context") is EvidenceObject packetContext ? packetContext
+            : Make(("packetSeq", item.Source.Get("operation_seq")), ("packetSessionId", item.Source.Get("session_id")));
         var detailFields = evidence.Fields.Where(pair => pair.Key is not ("presence" or "packet_context")).ToDictionary();
         detailFields["damage_unit_index"] = action.Get("damage_unit_index"); detailFields["part_inst_id"] = action.Get("part_inst_id");
         var detail = new EvidenceObject(detailFields);

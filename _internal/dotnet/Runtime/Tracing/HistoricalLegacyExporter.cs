@@ -36,8 +36,7 @@ public static class HistoricalLegacyExporter
 
     public static IReadOnlyList<string> Lines(TraceEvent item, int offset)
     {
-        if (item.Data.Get("legacy_layout") is not EvidenceObject layout) throw new InvalidDataException("Historical event lacks legacy export layout");
-        var data = (EvidenceObject)TraceValueProjection.Restore(item.Data, layout);
+        var data = ExportValues.Data(item);
         var stamp = DateTimeOffset.FromUnixTimeMilliseconds(item.CapturedAtMs).ToOffset(TimeSpan.FromMinutes(offset)).ToString("HH:mm:ss.fff", CultureInfo.InvariantCulture);
         return ["[" + stamp + "] " + Body(item.Type, data) + "\n"];
     }

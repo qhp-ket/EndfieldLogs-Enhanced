@@ -42,7 +42,7 @@ public sealed class CaptureController(ResourceFiles resources, SettingsStore set
     {
         Owner(); ObjectDisposedException.ThrowIf(closed, this); if (Running) return;
         DropSubscriptions(); cancellation?.Dispose(); cancellation = new();
-        var request = ++generation; var options = settings.Current.Service.ToCaptureOptions() with { RecordingOnStart = false };
+        var request = ++generation; var options = settings.Current.Service.ToCaptureOptions() with { RecordingOnStart = true };
         lock (gate) { error = null; memberSession = null; members = []; diagnostics.Clear(); }
         // Construction is cheap; all fallible resource/native setup happens in GameCaptureService.RunAsync.
         var current = factory?.Invoke(options) ?? new(resources, options); service = current;
@@ -57,7 +57,7 @@ public sealed class CaptureController(ResourceFiles resources, SettingsStore set
                 lock (gate) if (request == generation)
                 {
                     if (diagnostics.Count == 64) diagnostics.Dequeue();
-                    diagnostics.Enqueue(exception is null ? message : message + "：" + exception.Message);
+                    diagnostics.Enqueue(exception is null ? message : message + "：" + exception);
                 }
             }, cancellationToken: token).ConfigureAwait(false);
         }

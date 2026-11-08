@@ -11,11 +11,13 @@ internal static class Program
         if (args is ["--check-product-startup", var startupOutput]) return ProductApplication.Run(startupCheckOutput: startupOutput);
         if (args is ["--check-navigation", var navigationOutput]) return ProductProbe.RunNavigationChecks(navigationOutput);
         if (args is ["--check-pages", var pagesOutput]) return ProductProbe.RunPageChecks(pagesOutput);
+        if (args is ["--check-battle-presentation", var battleSource, var battleRoot, var battleOutput]) return BattlePresentationCheck.Run(battleSource, battleRoot, battleOutput);
         if (args is ["--check-portable-layout", var portableOutput]) return PortableLayoutProbe.Run(portableOutput);
         if (args is ["--probe-window", var output]) return OverlayProbe.Run(output);
         if (args is ["--probe-vision", var visionOutput]) return VisionCaptureProbe.Run(visionOutput);
         if (args is ["--probe-vision-lifetime", var lifetimeOutput]) return VisionCaptureProbe.Run(lifetimeOutput, naturalLifetime: true);
         if (args is ["--probe-vision-lifetime", var reusedOutput, "reuse-device"]) return VisionCaptureProbe.Run(reusedOutput, naturalLifetime: true, reuseDevice: true);
+        if (args is ["--probe-vision-lifetime", var cachedOutput, "reuse-item"]) return VisionCaptureProbe.Run(cachedOutput, naturalLifetime: true, reuseItem: true);
         if (args is ["--probe-product", var productOutput]) return ProductProbe.Run(productOutput);
         if (args is ["--probe-overlays", var overlayOutput]) return OverlayProductProbe.Run(overlayOutput);
         if (args is ["--probe-overlay-layout", var layoutProbeOutput]) return OverlayProductProbe.RunLayouts(layoutProbeOutput);

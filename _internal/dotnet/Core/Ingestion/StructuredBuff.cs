@@ -22,7 +22,7 @@ public static class StructuredBuff
         if (item.Type == "buff_blackboard" && (item.Data.Get("values") is not EvidenceArray array || array.Items.Any(row =>
                 row is not EvidenceObject obj || obj.Get("key") is not EvidenceText || !BlackboardValue(obj.Get("value")))))
             throw new InvalidDataException("Expected BUFF blackboard values");
-        var data = (EvidenceObject)TraceValueProjection.Restore(item.Data, item.Data.Get("legacy_layout") as EvidenceObject ?? new(new Dictionary<string, EvidenceValue>()));
+        var data = TraceModel.Data(item);
         if (item.Type == "buff_blackboard")
         {
             Dictionary<string, double?> values = new(StringComparer.Ordinal);

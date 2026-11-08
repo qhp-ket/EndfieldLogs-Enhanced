@@ -12,7 +12,7 @@ namespace EndfieldLogs.Core.Reporting;
 public sealed class ReportExport(BattleLoadoutResolver loadouts, Func<string, string?> enemyName,
     Func<BigInteger, EvidenceObject> contractTag, TimeZoneInfo? timeZone = null)
 {
-    public const string ParserVersion = "raw-log-parser-v60";
+    public const string ParserVersion = "raw-log-parser-v61";
     public const string RulesVersion = "raw-log-parser-v45";
     private static EvidenceText Text(string value) => new(value);
     private static EvidenceValue Optional(string? value) => value is null ? EvidenceNull.Value : Text(value);

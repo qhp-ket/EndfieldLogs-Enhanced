@@ -18,9 +18,8 @@ internal static class TraceJsonlCases
         foreach (var row in ((EvidenceArray)fixture.Get("observations")).Items.Cast<EvidenceObject>())
         {
             var (kind, raw) = HistoricalEvidenceWire.Data(((EvidenceText)row.Get("line")).Value) ?? throw new InvalidDataException("Expected historical observation");
-            var projected = TraceValueProjection.Capture(raw);
-            var data = ((EvidenceObject)projected.Value).Fields.ToDictionary(); data["legacy_layout"] = projected.Layout;
-            writer.Write(new TraceEvent(++sequence, time, kind, new(data), new(new Dictionary<string, EvidenceValue>())));
+            var source = new EvidenceObject(new Dictionary<string, EvidenceValue>());
+            writer.Write(new TraceEvent(++sequence, time, kind, TraceModel.Compact(raw, source, null, kind), source));
         }
         Console.WriteLine($"Historical observations: {sequence}"); return 0;
     }

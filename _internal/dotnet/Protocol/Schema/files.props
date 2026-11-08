@@ -219,4 +219,7 @@
   <ProtocolRoot Include="VECTOR.proto" />
   <ProtocolRoot Include="WEAPON_DATA.proto" />
   <ProtocolRoot Include="WEEK_RAID_SETTLEMENT_CONVERT.proto" />
+  <ProtocolRoot Include="SC_ATTACH_SERVER_SKILL.proto" />
+  <ProtocolRoot Include="SC_UPDATE_SERVER_SKILL.proto" />
+  <ProtocolRoot Include="SC_DETACH_SERVER_SKILL.proto" />
 </ItemGroup></Project>

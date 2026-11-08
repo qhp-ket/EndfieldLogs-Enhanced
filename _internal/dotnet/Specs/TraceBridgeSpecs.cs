@@ -139,7 +139,7 @@ internal static class TraceBridgeSpecs
             "[00:00:01.100] OFFICIAL_TIMER_START source=SC_GAME_MECHANICS_SYNC_CHALLENGE_START gameId=indie_battletower_synthetic\n",
             "[00:00:01.200] BATTLE_PHASE_START seq=0 source=BattleOpModifyBattleState gameId=indie_battletower_synthetic\n",
             "[00:00:01.300] OFFICIAL_TIMER_AWAIT source=BattleOpModifyBattleState gameId=indie_battletower_synthetic officialStartSeen=1\n",
-            "[00:00:01.400] GAME_INST_LEAVE source=SC_GAME_MECHANICS_SYNC_LEAVE_GAME_INST gameId=indie_battletower_synthetic gameInstId=0009007199254740993\n",
+            "[00:00:01.400] GAME_INST_LEAVE source=SC_GAME_MECHANICS_SYNC_LEAVE_GAME_INST gameId=indie_battletower_synthetic gameInstId=9007199254740993\n",
             "[00:00:01.400] OFFICIAL_TIMER_MISSING boundary=SC_GAME_MECHANICS_SYNC_LEAVE_GAME_INST packetBattleActive=0 officialExpected=1 officialStartSeen=1 gameId=indie_battletower_synthetic\n",
             "[00:00:01.400] GAME_TIMER_RESET source=SC_GAME_MECHANICS_SYNC_LEAVE_GAME_INST\n" }), "Independent phase and boundary export preserves exact bytes");
         var stream = StructuredDamageSpecs.Stream(); stream.Accept(items.Select((item, index) => (index + 1, item)));
@@ -160,7 +160,7 @@ internal static class TraceBridgeSpecs
         items = events.Select(item => (TraceEvent)TraceJsonl.Parse(TraceJsonl.Serialize(item), header: false)).ToArray();
         check(items.SelectMany(item => ContextLegacyExporter.Lines(item, 330)).SequenceEqual(new[] {
             "[05:30:01.000] GAME_MECHANICS_TIME_FREEZE source=SC_GAME_MECHANICS_MODIFY_INST_TIME_FREEZE gameInstId=18446744073709551615 isHunterMode=0 count=4 freezeInfos=[0:-7,2:3,0:0] totalFreezeMs=3\n",
-            "[05:30:02.000] BATTLE_RESET_STATUS\n", "[05:30:03.000] BATTLE_RESET_STATUS reason=0 battleInst=00012\n",
+            "[05:30:02.000] BATTLE_RESET_STATUS\n", "[05:30:03.000] BATTLE_RESET_STATUS reason=0 battleInst=12\n",
             "[05:30:04.000] SESSION_WARNING kind=unknown direction=unknown missingBytes=0 gapCount=unknown\n",
             "[05:30:05.000] SCENE_BATTLE_STATE source=SC_SCENE_SET_BATTLE inBattle=0\n",
             "[05:30:06.000] SC_GAME_MECHANICS_SYNC_COMPLETION_REWARD source=SC_GAME_MECHANICS_SYNC_COMPLETION_REWARD\n" }), "Context export preserves raw freeze count, signs, optional fields, timezone and bare reset");

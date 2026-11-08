@@ -20,9 +20,9 @@ OVERRIDES = {
     'data/local_semantics/skill_frame_rules.json',
     'data/packet_semantics/rdps_semantics_registry.json',
 }
-SOURCE = dict(source_release='ZMDLogs 3.0.12 (2026-10-16)',
-              source_url='https://zmdlogs.com/downloads/EndfieldLogsClient_3.0.12_20261016.zip',
-              source_archive_sha256='dbddebee37320fa3da91b2e1e747c30b16c66e893d9a1387d52fbbee0dc74571')
+SOURCE = dict(source_release='ZMDLogs 3.0.14 (2026-11-05)',
+              source_url='https://zmdlogs.com/downloads/EndfieldLogsClient_3.0.14_20261105.zip',
+              source_archive_sha256='0035dce6e8d8f8dc2fbd91df9a2f2e695490387d1b3f0927086ad93f50f467df')
 FIXED = {
     'data/akedata/buff/manifest.json', 'data/akedata/character/manifest.json',
     'data/akedata/enemy/manifest.json', 'data/akedata/dungeon/manifest.json',
@@ -42,7 +42,8 @@ FIXED = {
     'data/packet_semantics/buff_numeric_map.json', 'data/packet_semantics/skill_numeric_map.json',
     'data/packet_semantics/mechanism_registry.json',
     'data/packet_semantics/weapon_static_attack_catalog.json',
-    'data/public/contract_tags.json', 'data/message_ids_cs.json', 'data/message_ids_sc.json',
+    'data/public/contract_tags.json', 'data/public/server_texts.json',
+    'data/message_ids_cs.json', 'data/message_ids_sc.json',
     'jsondata/ActorImageTable.json', 'jsondata/CharacterNameIndex.json', 'jsondata/Dungeon.json',
 } | OVERRIDES
 ITEMS = (
@@ -223,6 +224,9 @@ def build(source: Path, output: Path, *, overrides: Path | None = None):
     manifest = dict(schema_version=2, root='_internal', projection_version=2, **SOURCE,
                     bundle=dict(path='data/runtime-data.zip', bytes=bundle_path.stat().st_size,
                                 sha256=sha(bundle_path.read_bytes())), files=rows)
+    for key in ('supplements', 'uploader_source'):
+        if key in inventory:
+            manifest[key] = inventory[key]
     (output / 'data/resource-manifest.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2)+'\n', encoding='utf8', newline='\n')
     print(json.dumps(dict(files=len(rows), selected_source_bytes=raw_bytes,
                           runtime_bytes=sum(row['bytes'] for row in rows), bundle_bytes=bundle_path.stat().st_size), indent=2))

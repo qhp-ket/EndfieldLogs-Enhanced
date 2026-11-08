@@ -16,7 +16,7 @@ namespace EndfieldLogs.Desktop.Verification;
 /// <summary>Captures only this process's synthetic window; persists measurements, never desktop pixels.</summary>
 internal static class VisionCaptureProbe
 {
-    public static int Run(string output, bool naturalLifetime = false, bool reuseDevice = false)
+    public static int Run(string output, bool naturalLifetime = false, bool reuseDevice = false, bool reuseItem = false)
     {
         Application application = new() { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         Grid pattern = new(); pattern.ColumnDefinitions.Add(new()); pattern.ColumnDefinitions.Add(new());
@@ -36,7 +36,34 @@ internal static class VisionCaptureProbe
                 await Task.Run(async () =>
                 {
                     var baseline = Process.GetCurrentProcess().HandleCount;
-                    using WgcCaptureBackend backend = new();
+                    using WgcCaptureItemCache? captureItems = reuseItem ? new() : null;
+                    WgcCaptureBackend CreateBackend() => captureItems is null ? new() : new(captureItems);
+                    if (captureItems is not null)
+                    {
+                        var noTargetBackends = 0;
+                        List<object> noTargetSamples = [];
+                        await using (VisionService idle = new(() => { Interlocked.Increment(ref noTargetBackends); return CreateBackend(); },
+                            Path.Combine(Path.GetTempPath(), "EndfieldLogs-missing-vision-target.exe")))
+                        {
+                            for (var cycle = 0; cycle < 12; cycle++)
+                            {
+                                await idle.SetEnabledAsync(true);
+                                var waiting = Stopwatch.StartNew();
+                                while (idle.State.Get("status") is not EvidenceText { Value: "等待游戏窗口" })
+                                {
+                                    if (waiting.Elapsed.TotalSeconds > 5) throw new TimeoutException("No-target worker did not reach idle");
+                                    await Task.Delay(10);
+                                }
+                                await idle.SetEnabledAsync(false);
+                                using var current = Process.GetCurrentProcess();
+                                noTargetSamples.Add(new { cycle = cycle + 1, handles = current.HandleCount, privateBytes = current.PrivateMemorySize64,
+                                    cpuMs = current.TotalProcessorTime.TotalMilliseconds });
+                            }
+                        }
+                        Require(noTargetBackends == 12 && captureItems.CreatedCount == 0 && !captureItems.HasItem, "no_target_never_creates_capture_item");
+                        result["no_target_restarts"] = noTargetSamples;
+                    }
+                    using WgcCaptureBackend backend = CreateBackend();
                     var targets = backend.Discover(Environment.ProcessPath!);
                     Require(targets.Windows.Contains((long)hwnd), "window_discovered");
                     backend.SetTarget(hwnd);
@@ -48,6 +75,7 @@ internal static class VisionCaptureProbe
                     }
                     await window.Dispatcher.InvokeAsync(() => { window.Width = 900; window.Height = 520; right.Background = new SolidColorBrush(Color.FromRgb(48, 96, 224)); });
                     using (var resized = await Next(backend, true, 800)) result["resized_frame"] = new { resized.Pixels.Width, resized.Pixels.Height, resized.Client };
+                    if (captureItems is not null) Require(captureItems.CreatedCount == 1, "resize_reuses_capture_item");
                     backend.SetTarget(null); Require(backend.AcquireLatest() is null, "target_detached");
                     backend.SetTarget(hwnd);
                     var lease = await Next(backend, true, 800); var pixels = lease.Pixels;
@@ -57,7 +85,8 @@ internal static class VisionCaptureProbe
                     try { _ = pixels.At(0, 0, 0); throw new InvalidOperationException("released pixels remained accessible"); }
                     catch (ObjectDisposedException) { result["lease_invalidated"] = true; }
                     result["forced_gc"] = !naturalLifetime;
-                    result["capture_owner"] = reuseDevice ? "shared device, recreated target/pool/session" : "recreated device/target/pool/session";
+                    result["capture_owner"] = reuseItem ? "shared target, recreated device/pool/session"
+                        : reuseDevice ? "shared device, recreated target/pool/session" : "recreated device/target/pool/session";
                     void Collect() { if (!naturalLifetime) { GC.Collect(); GC.WaitForPendingFinalizers(); GC.Collect(); } }
                     List<object> samples = [];
                     void Sample(string phase, int cycle)
@@ -71,15 +100,16 @@ internal static class VisionCaptureProbe
                     Sample("before_warmup", 0);
                     for (var cycle = 0; cycle < 6; cycle++)
                     {
-                        using WgcCaptureBackend repeated = new(); repeated.SetTarget(hwnd); using (await Next(repeated, true, 800)) { }
+                        using WgcCaptureBackend repeated = CreateBackend(); repeated.SetTarget(hwnd); using (await Next(repeated, true, 800)) { }
                     }
                     Collect(); await Task.Delay(250); var initializedHandles = Process.GetCurrentProcess().HandleCount;
                     Sample("warmup_complete", 6);
                     var initializedTypes = HandleTypes();
+                    var initializedItems = captureItems?.CreatedCount;
                     for (var cycle = 0; cycle < 6; cycle++) { using D3DReadback graphics = new(); }
                     Collect(); await Task.Delay(250); var graphicsOnlyHandles = Process.GetCurrentProcess().HandleCount;
                     Sample("graphics_only_complete", 6);
-                    using WgcCaptureBackend? sharedBackend = reuseDevice ? new() : null;
+                    using WgcCaptureBackend? sharedBackend = reuseDevice ? CreateBackend() : null;
                     var measuredCycles = naturalLifetime ? 30 : 6;
                     for (var cycle = 0; cycle < measuredCycles; cycle++)
                     {
@@ -88,13 +118,15 @@ internal static class VisionCaptureProbe
                             sharedBackend.SetTarget(hwnd); using (await Next(sharedBackend, true, 800)) { }
                             sharedBackend.SetTarget(null);
                         }
-                        else using (WgcCaptureBackend repeated = new()) { repeated.SetTarget(hwnd); using (await Next(repeated, true, 800)) { } }
+                        else using (WgcCaptureBackend repeated = CreateBackend()) { repeated.SetTarget(hwnd); using (await Next(repeated, true, 800)) { } }
                         if (naturalLifetime) { await Task.Delay(250); Sample("capture_disposed", cycle + 1); }
                     }
                     sharedBackend?.Dispose();
                     Collect(); await Task.Delay(2000); Collect(); var finalHandles = Process.GetCurrentProcess().HandleCount;
                     Sample("settled", measuredCycles);
-                    result["repeated_capture"] = new { cycles = 6 + measuredCycles, warmHandles, initializedHandles, graphicsOnlyHandles, finalHandles, settledDelta = finalHandles - graphicsOnlyHandles, initializedTypes, finalTypes = HandleTypes(), samples };
+                    result["repeated_capture"] = new { cycles = 6 + measuredCycles, warmHandles, initializedHandles, graphicsOnlyHandles, finalHandles,
+                        settledDelta = finalHandles - graphicsOnlyHandles, initializedItems, finalItems = captureItems?.CreatedCount, initializedTypes, finalTypes = HandleTypes(), samples };
+                    if (captureItems is not null) Require(captureItems.CreatedCount == initializedItems && captureItems.HasItem, "restart_reuses_capture_item");
                     var resourcesBounded = finalHandles - graphicsOnlyHandles <= 8;
 
                     var regions = Enumerable.Range(0, 4).Select(i => new HudSlotRegions(new(.06 + i * .22, .22, .14, .025),
@@ -102,7 +134,7 @@ internal static class VisionCaptureProbe
                     var configuration = new VisionConfiguration("custom", regions, hwnd);
                     var hud = await window.Dispatcher.InvokeAsync(() => { HudPattern pattern = new(regions); window.Content = pattern; return pattern; });
                     WgcCaptureBackend? liveBackend = null;
-                    await using (VisionService service = new(() => liveBackend = new WgcCaptureBackend(), Environment.ProcessPath!, configuration.ToEvidence()))
+                    await using (VisionService service = new(() => liveBackend = CreateBackend(), Environment.ProcessPath!, configuration.ToEvidence()))
                     {
                         service.SetPreview(true); await service.SetEnabledAsync(true);
                         var watch = Stopwatch.StartNew();
@@ -144,7 +176,7 @@ internal static class VisionCaptureProbe
                         }
                     }
                     if (naturalLifetime) { await Task.Delay(500); Sample("streaming_disposed", 200); }
-                    using (WgcCaptureBackend closing = new())
+                    using (WgcCaptureBackend closing = CreateBackend())
                     {
                         await window.Dispatcher.InvokeAsync(() => window.Content = pattern);
                         closing.SetTarget(hwnd); using (await Next(closing, true, 800)) { }
@@ -152,6 +184,7 @@ internal static class VisionCaptureProbe
                         await Task.Delay(350);
                         using var final = closing.AcquireLatest();
                         Require(final is null && JsonSerializer.SerializeToElement(closing.Diagnostics).GetProperty("targetClosed").GetBoolean(), "window_close_clears_frame");
+                        if (captureItems is not null) Require(!captureItems.HasItem, "window_close_invalidates_cached_item");
                     }
                     result["handles_before"] = baseline; result["handles_after"] = Process.GetCurrentProcess().HandleCount;
                     using (var current = Process.GetCurrentProcess())

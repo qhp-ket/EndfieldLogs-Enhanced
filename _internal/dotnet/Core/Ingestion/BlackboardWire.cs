@@ -46,6 +46,6 @@ public static class BlackboardWire
             throw new InvalidDataException("Expected calculation key and result");
         if (item.Type == "blackboard_preset" && item.Data.Get("modified_value") is not EvidenceText)
             throw new InvalidDataException("Expected preset value");
-        return (EvidenceObject)TraceValueProjection.Restore(item.Data, item.Data.Get("legacy_layout") as EvidenceObject ?? new(new Dictionary<string, EvidenceValue>()));
+        return TraceModel.Data(item);
     }
 }

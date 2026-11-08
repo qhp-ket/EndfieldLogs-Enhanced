@@ -10,7 +10,7 @@ public static class BlackboardLegacyExporter
 {
     public static IReadOnlyList<string> Lines(TraceEvent item, int timezoneOffsetMinutes)
     {
-        var data = BlackboardWire.Observation(item);
+        var data = ExportValues.Data(item);
         string body;
         if (item.Type == "ink_release") body = "INK_RELEASE " + Json(BlackboardWire.ReleaseObservation(data), finite: true);
         else

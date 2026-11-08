@@ -61,6 +61,7 @@ internal sealed partial class BattleAnalysisWindow : Window
         character.ItemsSource = options; character.DisplayMemberPath = "Value"; character.SelectedValuePath = "Key"; character.SelectedIndex = 0;
         controls.Children.Add(character); controls.Children.Add(showBuffs); controls.Children.Add(inputPanel); controls.Children.Add(Ui.Text("时间缩放")); controls.Children.Add(timeZoom);
         controls.Children.Add(frames); controls.Children.Add(Ui.Text("图形大小")); controls.Children.Add(graphScale);
+        graphScale.ToolTip = "调整技能块、头像、标记及曲线区域大小；文字大小可在显示设置中单独调整。";
         controls.Children.Add(Ui.Button("适合窗口", () => { timeZoom.Value = 1; timeline.FitToWindow(diagramScroll.ViewportWidth); diagramScroll.ScrollToHorizontalOffset(0); }));
         controls.Children.Add(metric);
         controls.Children.Add(Ui.Button("详情", () => SetDetails(!DetailsExpanded)));
@@ -106,6 +107,7 @@ internal sealed partial class BattleAnalysisWindow : Window
     {
         var owner = character.SelectedValue as string ?? "";
         timeline.Configure(owner, showBuffs.IsChecked == true, timeZoom.Value, graphScale.Value, frames.IsChecked == true);
+        plot.Height = 155 * graphScale.Value;
         if (selectedMarks.Count > 0) ShowMarks(selectedMarks);
         plot.Visibility = metric.SelectedIndex == 4 ? Visibility.Collapsed : Visibility.Visible;
         if (metric.SelectedIndex == 4) return;

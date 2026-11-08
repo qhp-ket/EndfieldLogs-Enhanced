@@ -31,6 +31,8 @@ internal sealed partial class MainWindow : Window
     internal MainNavigation Navigation { get; } = new();
     private readonly ConcurrentQueue<string> messages = new();
     private readonly DispatcherTimer timer;
+    private readonly RuntimeLog runtimeLog;
+    private string? lastServiceState;
     private EvidenceObject? liveSnapshot;
     private string? lastError;
     private bool wasRunning, closing, cleaned, remoteCombo, rotatingRecording;
@@ -43,6 +45,7 @@ internal sealed partial class MainWindow : Window
         Func<SettingsStore, Action<IReadOnlySet<string>>, Action<string>, IndependentServiceController>? independentFactory = null)
     {
         this.settings = settings; this.resources = resources;
+        runtimeLog = new(Path.Combine(settings.Context.ApplicationRoot, ".dev-gui", "logs", "runtime.log"));
         updates = new(settings, Notify);
         Title = "Endfield Logs - Enhanced"; Width = 1200; Height = 800; MinWidth = 780; MinHeight = 500; WindowStartupLocation = WindowStartupLocation.CenterScreen;
         capture = captureFactory?.Invoke(settings) ?? new(resources, settings);
@@ -69,6 +72,8 @@ internal sealed partial class MainWindow : Window
         Navigation.AddPage(MainPage.Logs, "运行日志", "\uE8A5", diagnostic, newGroup: true);
         Navigation.AddPage(MainPage.Settings, "设置", "\uE713", new SettingsPage(settings, ApplySettings, Notify, updates, active =>
         { shell?.SuspendHotkeys(active); if (!active) ApplySettings(); }));
+        Log($"程序启动，版本 {typeof(MainWindow).Assembly.GetName().Version?.ToString(3)}，PID {Environment.ProcessId}；运行日志：{runtimeLog.Path}");
+        if (runtimeLog.Error is { } logError) notice.Text = "运行日志无法写入：" + logError;
         Navigation.PageChanged += key => { if (key == MainPage.History) Track(history.RefreshAsync()); };
         ApplySettings();
         InitializeShell();
@@ -85,12 +90,14 @@ internal sealed partial class MainWindow : Window
         Closing += OnClosing;
     }
     internal void Notify(string text)
-    { notice.Text = text; diagnostic.AppendText($"[{DateTime.Now:HH:mm:ss}] {text}\n"); if (diagnostic.Text.Length > 64 * 1024) diagnostic.Text = diagnostic.Text[^48_000..]; diagnostic.ScrollToEnd(); }
+    { notice.Text = text; Log(text); }
+    private void Log(string text, Exception? error = null)
+    { diagnostic.AppendText(runtimeLog.Write(text, error) + "\n"); if (diagnostic.Text.Length > 64 * 1024) diagnostic.Text = diagnostic.Text[^48_000..]; diagnostic.ScrollToEnd(); }
     private void QueueNotice(string text) => messages.Enqueue(text);
-    private void Guard(Action action) { try { action(); } catch (Exception error) { Notify(error.Message); } }
+    private void Guard(Action action) { try { action(); } catch (Exception error) { notice.Text = error.Message; Log("操作失败", error); } }
     internal void Track(Task task) => _ = ObserveAsync(task);
     private async Task ObserveAsync(Task task)
-    { try { await task; } catch (OperationCanceledException) when (closing) { } catch (Exception error) { if (!closing) QueueNotice(error.Message); } }
+    { try { await task; } catch (OperationCanceledException) when (closing) { } catch (Exception error) { runtimeLog.Write("后台操作失败", error); if (!closing) QueueNotice(error.Message); } }
     private void ToggleCapture()
     { if (capture.Running) Track(capture.StopAsync()); else { liveSnapshot = null; overlays.ClearLive(); if (history.DisplayedKey is null) summary.SetSnapshot(null); capture.Start(); } }
     private async Task NewRecordingAsync()
@@ -128,7 +135,7 @@ internal sealed partial class MainWindow : Window
             while (messages.TryDequeue(out var message)) Notify(message);
             var state = capture.Poll();
             if (remoteCombo != state.ComboRequested) { remoteCombo = state.ComboRequested; UpdateRequirements(); }
-            foreach (var line in state.Diagnostics) Notify(line);
+            foreach (var line in state.Diagnostics) Log(line);
             if (state.Error is { Length: > 0 } error && error != lastError) Notify("抓包故障：" + error);
             lastError = state.Error;
             captureButton.Content = state.Stopping ? "正在停止…" : state.Running ? "停止抓包" : "启动抓包"; captureButton.IsEnabled = !state.Stopping;
@@ -156,6 +163,9 @@ internal sealed partial class MainWindow : Window
             Home.UpdateInput(services.InputStatus);
             if (independent.InputEnabled && !services.InputRunning && services.InputStatus.Get("status") is not EvidenceText { Value: "error" }) Home.InputStatus.Text = "已启用 · 等待开始记录伤害日志";
             Home.VisionStatus.Text = services.VisualStatus;
+            var inputState = services.InputStatus.Get("status") is EvidenceText inputStatus ? inputStatus.Value : "未知";
+            var serviceState = $"抓包 {(state.Running ? state.Status?.Flow.State.ToString() ?? "正在启动" : "已停止")}；记录 {(state.Recording ? "记录中" : "未记录")}；输入 {inputState}；连携识别 {services.VisualStatus}";
+            if (serviceState != lastServiceState) { Log(serviceState); lastServiceState = serviceState; }
             foreach (var update in history.Drain())
             {
                 historyPage.RefreshRows(); foreach (var errorText in update.Errors) Notify(errorText);
@@ -169,7 +179,7 @@ internal sealed partial class MainWindow : Window
             }
             historyPage.UpdateState();
         }
-        catch (Exception error) { if (error.Message != lastError) Notify(error.Message); lastError = error.Message; }
+        catch (Exception error) { if (error.Message != lastError) { notice.Text = error.Message; Log("界面状态更新失败", error); } lastError = error.Message; }
     }
     private async void OnClosing(object? sender, CancelEventArgs args)
     {
@@ -184,8 +194,8 @@ internal sealed partial class MainWindow : Window
             overlays.Dispose();
             await Task.WhenAll(independent.DisposeAsync().AsTask(), capture.DisposeAsync().AsTask());
         }
-        catch (Exception error) { Notify("退出清理：" + error.Message); }
+        catch (Exception error) { Log("退出清理失败", error); }
         // Cleanup may complete synchronously. Defer the second close until WPF leaves the first Closing event.
-        finally { cleaned = true; _ = Dispatcher.BeginInvoke(new Action(Close)); }
+        finally { Log("程序退出，服务清理流程结束"); runtimeLog.Dispose(); cleaned = true; _ = Dispatcher.BeginInvoke(new Action(Close)); }
     }
 }

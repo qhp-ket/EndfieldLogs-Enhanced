@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Numerics;
-using System.Text.RegularExpressions;
 using EndfieldLogs.Core.Catalog;
 using EndfieldLogs.Core.Compatibility;
 
@@ -48,8 +47,12 @@ public static class LoadoutWire
         }
         return null;
     }
-    private static string FirstBracketBody(string value) => value.Split(']', 2)[0];
-    private static string[] Digits(string value) => Regex.Matches(value, @"\d+").Select(match => match.Value).ToArray();
+    private static EvidenceArray NativeRows(EvidenceObject data, string key) => data.Get(key) switch
+    {
+        EvidenceArray rows => rows,
+        EvidenceNull => new EvidenceArray([]),
+        _ => throw new InvalidDataException("Expected native loadout array: " + key),
+    };
     public static LoadoutSlotObservation Slot(EvidenceObject data)
     {
         var level = Number(data, "weapon_lv"); var refine = Integer(data.Get("refine"));
@@ -59,11 +62,13 @@ public static class LoadoutWire
             Potential = Number(data, "potential"), WeaponInstance = Number(data, "weapon_id").ToString(CultureInfo.InvariantCulture),
             Weapon = Text(data, "weapon_template", "unknown_weapon"), WeaponLevel = level > 0 ? level : null,
             Refine = refine is not null && refine >= 0 && refine <= 5 ? refine : null,
-            Breakthrough = Number(data, "breakthrough"), SuitBlob = CompactBody(Text(data, "equip_suit", "{}")) ?? "",
-            EquipmentBlob = CompactBody(Text(data, "equips", "{}")), SkillIds = Digits(FirstBracketBody(Text(data, "skill_int_ids"))),
-            UnplacedIds = data.Get("unplaced_equipment") is EvidenceArray unplaced ? Digits(FirstBracketBody(string.Join(',',
-                unplaced.Items.Cast<EvidenceObject>().Select(row => PythonDisplay.String(row.Get("entity_id")))))) : null,
-            EquipmentComplete = data.Get("equipment_snapshot_complete") is EvidenceBoolean complete ? complete.Value : null,
+            Breakthrough = Number(data, "breakthrough"),
+            Suits = NativeRows(data, "equip_suit"), Equipment = NativeRows(data, "equips"),
+            SkillIds = NativeRows(data, "skill_int_ids").Items.Select(PythonDisplay.String).ToArray(),
+            UnplacedIds = data.Get("unplaced_equipment") is EvidenceArray unplaced ? unplaced.Items.Cast<EvidenceObject>()
+                .Where(row => row.Get("entity_id") is not EvidenceNull).Select(row => PythonDisplay.String(row.Get("entity_id"))).ToArray() : null,
+            EquipmentComplete = data.Get("equipment_snapshot_complete") is EvidenceBoolean complete
+                && !(data.Get("invalid_fields") is EvidenceObject invalid && invalid.Fields.ContainsKey("equips")) ? complete.Value : null,
         };
     }
     public static LoadoutStatsObservation Stats(EvidenceObject data)
@@ -72,11 +77,11 @@ public static class LoadoutWire
         return new(((EvidenceText)data.Get("template")).Value)
         {
             Weapon = Text(data, "weapon_template", "unknown_weapon"), WeaponInstance = Number(data, "weapon_id").ToString(CultureInfo.InvariantCulture),
-            RefineStatsBlob = CompactBody("{" + Text(data, "weapon_refine_stats") + "}"),
-            SourceSkillsBlob = CompactBody("{" + Text(data, "weapon_source_skills") + "}"),
+            RefineStats = NativeRows(data, "weapon_refine_stats"), SourceSkills = NativeRows(data, "weapon_source_skills"),
             BaseAttack = Attack("weapon_base_atk"), BaseAttackLv1 = Attack("weapon_base_atk_lv1"), BaseAttackMax = Attack("weapon_base_atk_max"),
             GemInstance = Number(data, "gem_id").ToString(CultureInfo.InvariantCulture), GemWeapon = Number(data, "gem_weapon_id").ToString(CultureInfo.InvariantCulture),
-            GemTemplate = Number(data, "gem_template").ToString(CultureInfo.InvariantCulture), TermsBlob = CompactBody("{" + Text(data, "gem_terms") + "}") ?? "",
+            GemTemplate = Number(data, "gem_template").ToString(CultureInfo.InvariantCulture),
+            Terms = NativeRows(data, "gem_terms"),
         };
     }
 }

@@ -24,15 +24,13 @@ public sealed partial class TraceBridge
         if (e.Get("seq_id") is EvidenceInteger operation) source["operation_seq"] = operation;
         if (e.Get("generation") is EvidenceInteger generation && generation.Value >= 0 && generation.Value < BigInteger.One << 32)
             source["generation"] = generation;
-        if (DecimalRange(e.Get("operation_owner_id"), 0, BigInteger.One << 64)) source["owner_id"] = new EvidenceText(S(e.Get("operation_owner_id")));
-        if (action.TryGetValue("action_id", out var actionId)) source["action_id"] = actionId;
+        if (DecimalRange(e.Get("operation_owner_id"), 0, BigInteger.One << 64)) source["owner_id"] = TraceModel.Normalize(e.Get("operation_owner_id"), identity: true);
         Dictionary<string, EvidenceValue> amounts = [];
         foreach (var (input, output) in new[] { ("value", "value"), ("cur_hp", "current_hp"), ("is_crit", "is_crit") })
             if (detail.Fields.TryGetValue(input, out var value)) amounts[output] = value;
         var excluded = new HashSet<string>(["value", "cur_hp", "is_crit", "target_id", "damage_unit_index", "part_inst_id"], StringComparer.Ordinal);
         var evidence = detail.Fields.Where(pair => !excluded.Contains(pair.Key)).ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
         evidence["presence"] = presence;
-        evidence["packet_context"] = Make(("packetSeq", e.Get("seq_id")), ("packetSessionId", e.Get("session_id")));
         Dictionary<string, EvidenceValue> actors = new() { ["attacker"] = new EvidenceText(attacker), ["target"] = new EvidenceText(target) };
         if (attackerId is not null) actors["attacker_id"] = new EvidenceInteger(attackerId.Value);
         if (targetId is not null) actors["target_id"] = new EvidenceInteger(targetId.Value);
@@ -47,10 +45,8 @@ public sealed partial class TraceBridge
             ["action"] = new EvidenceObject(action), ["amounts"] = new EvidenceObject(amounts),
             ["blackboards"] = blackboards, ["evidence"] = new EvidenceObject(evidence),
         });
-        var projected = TraceValueProjection.Capture(data);
-        var payload = ((EvidenceObject)projected.Value).Fields.ToDictionary();
-        payload["legacy_layout"] = projected.Layout;
-        return new(++structuredEventSequence, ts, "damage", new EvidenceObject(payload), (EvidenceObject)EvidenceJson.Clone(new EvidenceObject(source)),
+        var payload = TraceModel.Compact(data, new(source), null);
+        return new(++structuredEventSequence, ts, "damage", payload, (EvidenceObject)EvidenceJson.Clone(new EvidenceObject(source)),
             e.Get("client_tick_tms") is EvidenceInteger tick && tick.Value >= long.MinValue && tick.Value <= long.MaxValue ? (long)tick.Value : null);
     }
 }

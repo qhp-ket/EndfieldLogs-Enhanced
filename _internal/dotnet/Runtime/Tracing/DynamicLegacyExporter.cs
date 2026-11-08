@@ -10,7 +10,7 @@ public static class DynamicLegacyExporter
 {
     public static IReadOnlyList<string> Lines(TraceEvent item, int timezoneOffsetMinutes)
     {
-        var data = (EvidenceObject)TraceValueProjection.Restore(item.Data, (EvidenceObject)item.Data.Get("legacy_layout"));
+        var data = ExportValues.Data(item);
         var observation = BuffPacketWire.Observation(data, pairs: false);
         var proof = Json(observation, finite: true);
         var body = item.Type switch

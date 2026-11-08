@@ -9,8 +9,12 @@ internal sealed partial class BattleTimeline
     // by successive drawing instructions without allocating one resource per mark/hit.
     private static T Frozen<T>(T value) where T : Freezable { value.Freeze(); return value; }
     private static readonly Brush trackTint = Frozen(new SolidColorBrush(Color.FromArgb(10, 128, 128, 128)));
-    private static readonly Brush skillFill = Frozen(new SolidColorBrush(Color.FromRgb(128, 163, 185)));
-    private static readonly Brush hitFill = Frozen(new SolidColorBrush(Color.FromRgb(186, 156, 114)));
+    private static readonly Brush skillFill = Frozen(new SolidColorBrush(Color.FromRgb(132, 186, 230)));
+    private static readonly Brush comboFill = Frozen(new SolidColorBrush(Color.FromRgb(239, 176, 106)));
+    private static readonly Brush ultimateFill = Frozen(new SolidColorBrush(Color.FromRgb(225, 136, 142)));
+    private static readonly Brush otherFill = Frozen(new SolidColorBrush(Color.FromRgb(164, 174, 185)));
+    internal static Brush SkillFill(string? category) => category switch
+        { "战技" => skillFill, "连携" => comboFill, "大招" or "终结" => ultimateFill, _ => otherFill };
     private static readonly Brush buffFill = Frozen(new SolidColorBrush(Color.FromRgb(149, 167, 130)));
     private static readonly Brush markOutline = Frozen(new SolidColorBrush(Color.FromRgb(96, 106, 116)));
     private static readonly Pen gridPen = Frozen(new Pen(new SolidColorBrush(Color.FromArgb(32, 128, 128, 128)), .7));

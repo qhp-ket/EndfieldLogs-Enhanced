@@ -10,7 +10,7 @@ public static class BuffPacketLegacyExporter
 {
     public static IReadOnlyList<string> Lines(TraceEvent item, int timezoneOffsetMinutes)
     {
-        var data = (EvidenceObject)TraceValueProjection.Restore(item.Data, (EvidenceObject)item.Data.Get("legacy_layout"));
+        var data = ExportValues.Data(item);
         string body;
         if (item.Type == "buff_unresolved")
         {

@@ -10,8 +10,7 @@ public static class TimerLegacyExporter
     public static IReadOnlyList<string> Lines(TraceEvent item, int timeZoneOffsetMinutes)
     {
         if (item.Type is not ("battle_timer" or "official_timer" or "battle_phase" or "battle_timer_missing")) throw new InvalidDataException("Expected timer event");
-        if (item.Data.Get("legacy_layout") is not EvidenceObject layout) throw new InvalidDataException("Timer event lacks legacy export layout");
-        var data = Obj(TraceValueProjection.Restore(item.Data, layout));
+        var data = ExportValues.Data(item);
         var phase = S(data.Get("phase"));
         (string Input, string Output)[] fields = (item.Type, phase) switch
         {

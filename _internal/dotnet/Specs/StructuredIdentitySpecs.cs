@@ -18,10 +18,10 @@ internal static class StructuredIdentitySpecs
     {
         var stream = StructuredDamageSpecs.Stream();
         stream.Accept(1, Event("squad", """{"members":[{"template":"chr_0002_beta","entity_id":22},{"template":"chr_0001_alpha","entity_id":"0011"},{"template":"sample","entity_id":33},{"template":"chr_0003_gamma","entity_id":null}]}"""));
-        check(stream.Loadouts.SquadActorKeys.Keys.SequenceEqual(new[] { "22", "0011" }) && stream.PartyActorIds.SetEquals(["22", "0011"]),
-            "Squad preserves legacy member order and original ID representation while excluding unresolved templates");
+        check(stream.Loadouts.SquadActorKeys.Keys.SequenceEqual(new[] { "22", "11" }) && stream.PartyActorIds.SetEquals(["22", "11"]),
+            "Squad preserves member order with canonical instance IDs while excluding unresolved templates");
         stream.Accept(2, Event("squad", """{"members":[{"template":"chr_0002_beta","entity_id":22},{"template":"chr_0001_alpha","entity_id":22}]}"""));
-        check(stream.Loadouts.SquadActorKeys.Count == 0 && stream.PartyActorIds.SetEquals(["22", "0011"]),
+        check(stream.Loadouts.SquadActorKeys.Count == 0 && stream.PartyActorIds.SetEquals(["22", "11"]),
             "Duplicate squad member clears current binding but preserves observed party IDs");
         stream.Accept(3, Event("squad", """{"members":[]}"""));
         check(stream.Loadouts.SquadActorKeys.Count == 0 && stream.PartyActorIds.Count == 2, "Empty squad does not discard observed party evidence");

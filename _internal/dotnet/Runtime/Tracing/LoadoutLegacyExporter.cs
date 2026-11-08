@@ -11,8 +11,7 @@ public static class LoadoutLegacyExporter
     public static IReadOnlyList<string> Lines(TraceEvent item, int timeZoneOffsetMinutes)
     {
         if (item.Type is not ("loadout_group" or "loadout_slot" or "loadout_stats")) throw new InvalidDataException("Expected loadout event");
-        if (item.Data.Get("legacy_layout") is not EvidenceObject layout) throw new InvalidDataException("Loadout event lacks export layout");
-        var data = Obj(TraceValueProjection.Restore(item.Data, layout));
+        var data = ExportValues.Data(item);
         string N(string key) => LoadoutWire.Number(data, key).ToString(CultureInfo.InvariantCulture);
         string T(string key, string fallback = "") => LoadoutWire.Text(data, key, fallback);
         string body;

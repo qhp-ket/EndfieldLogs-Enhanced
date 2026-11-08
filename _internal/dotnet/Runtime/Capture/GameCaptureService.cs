@@ -96,6 +96,7 @@ public sealed class GameCaptureService(ResourceFiles resources, GameCaptureOptio
         LoopbackWebSocketServer? sockets = options.WebSocketPort is { } port
             ? new(port, options.BrowserToken, analysis.Subscribe, Hello, () => metrics.WsBatchesSent++) : null;
         ServiceState? lastState = null;
+        long nextDiagnostic = 0;
         bool? lastRecording = null;
         string? shutdownStatusPath = null;
         lock (gate) { activeRecording = recording; activeArtifacts = artifacts; activeStreams = analysis; activeSocket = sockets; }
@@ -122,6 +123,14 @@ public sealed class GameCaptureService(ResourceFiles resources, GameCaptureOptio
                     artifacts.WriteStatus(snapshot, metrics, devices, finalPath);
                     if (lastState != snapshot.Flow.State || lastRecording != artifacts.Recording)
                     { lastState = snapshot.Flow.State; lastRecording = artifacts.Recording; sockets?.BroadcastHello(); }
+                    var now = Environment.TickCount64;
+                    if (diagnostic is not null && (now >= nextDiagnostic || !snapshot.Running))
+                    {
+                        nextDiagnostic = now + 5000;
+                        diagnostic($"抓包统计 state={snapshot.Flow.State} packets={snapshot.PacketsSeen} queue_drop={snapshot.QueueDrops} " +
+                            $"pcap_drop={snapshot.Statistics.Dropped} frames={metrics.FramesDecoded} messages={metrics.MessagesDecoded} " +
+                            $"events={metrics.OutboundEventsEmitted} protobuf_errors={metrics.ProtobufDecodeErrors} decompress_errors={metrics.DecompressionErrors}", null);
+                    }
                     onStatus?.Invoke(snapshot);
                 }, onDiagnostic: diagnostic, rotateRecording: () =>
                 {

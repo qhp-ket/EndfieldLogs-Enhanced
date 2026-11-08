@@ -17,8 +17,7 @@ public static class EntityLegacyExporter
     public static IReadOnlyList<string> Lines(TraceEvent item, int timeZoneOffsetMinutes)
     {
         if (item.Type is not ("entity_stats" or "entity_attributes" or "entity_value" or "entity_die" or "ability_spawn")) throw new InvalidDataException("Expected entity event");
-        if (item.Data.Get("legacy_layout") is not EvidenceObject layout) throw new InvalidDataException("Entity event lacks legacy export layout");
-        var data = Obj(TraceValueProjection.Restore(item.Data, layout));
+        var data = ExportValues.Data(item);
         var attrs = AttributeTokens(data.Get("attributes"));
         static string Number(EvidenceValue value) => Float(value) is { } number ? PythonDisplay.Float(number) : "unknown";
         static string Vector(EvidenceValue value) => string.Join(',', new[] { "x", "y", "z" }.Select(axis => Number(Obj(value).Get(axis))));

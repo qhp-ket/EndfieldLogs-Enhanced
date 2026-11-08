@@ -83,8 +83,11 @@ public sealed class ContractTagCatalog
             var name = Text(item.Get("name"), texts) ?? Text(item.Get("nameTextId"), texts);
             var description = Text(item.Fields.ContainsKey("desc") ? item.Get("desc") : item.Get("description"), texts)
                 ?? Text(item.Get("descTextId"), texts);
-            if (!string.IsNullOrEmpty(name)) fields["name"] = new EvidenceText(name);
+            if (!string.IsNullOrEmpty(name)) fields["name"] = new EvidenceText(name + (item.Get("romanNumSuffix") as EvidenceText)?.Value);
+            else if (item.Get("name") is not EvidenceText) fields["name"] = EvidenceNull.Value;
             if (!string.IsNullOrEmpty(description)) fields["description"] = new EvidenceText(description);
+            if (CatalogValues.Truth(item.Get("formattedDescription")) && item.Get("descriptionTemplate") == fields.GetValueOrDefault("description"))
+                fields["description"] = item.Get("formattedDescription");
             catalog[id] = new(fields);
         }
         return catalog;
@@ -92,19 +95,25 @@ public sealed class ContractTagCatalog
 
     private IReadOnlyDictionary<string, string> LoadTexts()
     {
+        Dictionary<string, string> result = new(StringComparer.Ordinal);
         foreach (var path in resources.TableCandidates("I18nTextTable_CN.json"))
         {
             if (resources.Read(path) is not EvidenceObject document) continue;
-            Dictionary<string, string> result = new(StringComparer.Ordinal);
             foreach (var (key, value) in document.Fields)
             {
                 var text = value as EvidenceText;
                 if (value is EvidenceObject obj) text = CatalogValues.Or(obj.Get("text"), obj.Get("value")) as EvidenceText;
                 if (text is not null) result[key] = text.Value;
             }
-            return result;
+            break;
         }
-        return new Dictionary<string, string>(StringComparer.Ordinal);
+        if (resources.ReadRelative("data/public/server_texts.json") is EvidenceObject server
+            && server.Get("source") is EvidenceText { Value: "SC_SYNC_MULTI_LANG_CONFIG" }
+            && server.Get("language") is EvidenceText { Value: "CN" }
+            && server.Get("texts") is EvidenceObject texts)
+            foreach (var (key, value) in texts.Fields)
+                if (value is EvidenceText text) result[key] = text.Value;
+        return result;
     }
 
     private static string? Text(EvidenceValue value, IReadOnlyDictionary<string, string> texts)

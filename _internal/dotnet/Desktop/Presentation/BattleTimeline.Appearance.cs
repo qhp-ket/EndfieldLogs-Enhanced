@@ -19,9 +19,11 @@ internal sealed partial class BattleTimeline
     internal void ApplyPresentation(AvatarCache cache, int fontPercent, bool portraits, int portraitPercent, bool dark)
     {
         avatars = cache; fontScale = Math.Clamp(fontPercent / 100d, .8, 1.8); showAvatars = portraits; avatarScale = Math.Clamp(portraitPercent / 100d, .5, 3); palette = new(dark);
+        hoverTip.FontSize = 14 * fontScale;
+        hoverTip.FontFamily = typeface.FontFamily; hoverTip.Background = CanvasBackground; hoverTip.Foreground = Ink;
         textCache.Clear(); InvalidateMeasure(); InvalidateVisual();
     }
-    private double PortraitSize(double height) => showAvatars ? Math.Min(Math.Min(24 * avatarScale, height - 8), CharacterWidth * .4) : 0;
+    private double PortraitSize(double height) => showAvatars ? Math.Min(Math.Min(24 * avatarScale * rowScale, height - 8), CharacterWidth * .4) : 0;
     private void DrawPortraits(DrawingContext dc, IReadOnlyList<Track> tracks, double rowHeight)
     {
         AvatarCount = 0; var row = 0;

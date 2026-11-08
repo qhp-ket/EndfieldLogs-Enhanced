@@ -6,6 +6,10 @@ internal static class EffectConditionSpecs
     public static void Run(Action<bool, string> check)
     {
         static EvidenceObject Obj(string json) => (EvidenceObject)EvidenceJson.Parse(json);
+        var comparison = Obj("""{"condition":{"type":"value_compare","source":"CompareFloat","compare":"Equals","left":1,"right":1}}""");
+        check(EffectConditions.Failure(comparison, Obj("{}")) is null, "Observed enhanced-conduct flag satisfies the exact typed comparison");
+        check(EffectConditions.Failure(Obj("""{"condition":{"type":"value_compare","compare":"Equals","left":0,"right":1}}"""), Obj("{}"))?.Get("reason_group") is EvidenceText { Value: "condition_unsatisfied" }, "Normal conduct does not enable its physical branch");
+        check(EffectConditions.Failure(Obj("""{"condition":{"type":"value_compare","compare":"Equals","left":null,"right":1}}"""), Obj("{}"))?.Get("reason_group") is EvidenceText { Value: "condition_unobservable" }, "An absent enhanced-conduct flag remains unknown");
         var root = Obj("""{"damageModifier":[{"condition":{"onlyExecuteWhenSourceIsMainChar":false,"onlyExecuteWhenSourceIsGuard":false,"actionData":[{"isEnable":true,"$type":"CheckDamageType","damageType":"Fire"}]}}]}""");
         ModifierConditionCatalog first = new(new Dictionary<string, EvidenceObject> { ["a"] = root });
         ModifierConditionCatalog second = new(new Dictionary<string, EvidenceObject> { ["a"] = Obj("{}") });

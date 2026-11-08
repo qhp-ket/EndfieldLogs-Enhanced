@@ -132,6 +132,9 @@ def prepare_raw(root, manifest, source):
                 rows.append(dict(path=path.relative_to(destination).as_posix(), bytes=path.stat().st_size,
                                  sha256=digest(path)))
     raw_manifest = dict(schema_version=1, source_archive_sha256=manifest['source_archive_sha256'], files=rows)
+    for name in ('supplements', 'uploader_source'):
+        if name in manifest:
+            raw_manifest[name] = manifest[name]
     (destination / 'data/resource-manifest.json').write_text(json.dumps(raw_manifest, indent=2)+'\n', encoding='utf8')
     print('Raw inputs retained locally in _development/raw-resources/_internal; not used at runtime.')
 
@@ -155,13 +158,15 @@ def prepare(root, *, archive=None, offline=False, check=False, uploader=False, c
         else:
             print('Runtime resources already verified; no download or changes needed.')
         return 0
-    source = acquire_archive(root, manifest, archive, offline)
+    only_uploader = uploader and not (raw or missing or capture_key)
+    source_manifest = manifest.get('uploader_source', manifest) if only_uploader else manifest
+    source = acquire_archive(root, source_manifest, archive, offline)
     if raw:
         prepare_raw(root, manifest, source)
     with zipfile.ZipFile(source) as bundle:
         for row in missing:
             install_member(bundle, PREFIX + row['path'], resource_path(root, row['path']), row['sha256'])
-        if uploader:
+        if uploader and (only_uploader or 'uploader_source' not in manifest):
             prefix = PREFIX + 'uploader/'
             members = [info for info in bundle.infolist() if info.filename.startswith(prefix) and not info.is_dir()]
             if not members:
@@ -175,6 +180,8 @@ def prepare(root, *, archive=None, offline=False, check=False, uploader=False, c
         if capture_key:
             install_member(bundle, PREFIX + 'secrets/client_privkey.pem', key,
                            'b83257fadefe901f708386da11ffcde0eb0dee6450a6b56fc1b85e197cab1b56')
+    if uploader and not only_uploader and 'uploader_source' in manifest:
+        prepare(root, offline=offline, uploader=True)
     if missing_resources(root, manifest):
         raise ValueError('Resource installation incomplete')
     print(f'Verified {len(manifest["files"])} resources; official components prepared as requested.')

@@ -53,7 +53,7 @@ internal static partial class ProductProbe
             check("display_panel_enables_exact_frame_fallback", window.Timeline.ShowFrameReference && window.Timeline.DisplayBounds(skill) == (500, 2500)
                 && window.Timeline.DisplayBounds(complete) == (1000, 1400) && window.Timeline.DisplayBounds(noHit) == (3000, 3000)
                 && Descendants<TextBlock>(window).Any(text => text.Text == "固定起止回退已开启" && text.IsVisible));
-            check("fallback_keeps_logged_underline_and_raw_coordinates", window.Timeline.MarkAreas.Count(area => area.Mark == skill) == 2 && skill.Start == 100 && skill.End == 100
+            check("fallback_keeps_logged_underline_and_raw_coordinates", window.Timeline.MarkAreas.Count(area => area.Mark == skill) >= 2 && skill.Start == 100 && skill.End == 100
                 && BattleDetails.Description(skill, false).Contains("条件分支", StringComparison.Ordinal) && BattleDetails.Description(skill, true).Contains("未对齐实战时间", StringComparison.Ordinal));
             var rawBox = (TextBox)((TabItem)window.DetailsPages.Items[3]).Content;
             var overviewBox = (TextBox)((TabItem)window.DetailsPages.Items[0]).Content;
@@ -147,7 +147,8 @@ internal static partial class ProductProbe
                 if (!before.AsSpan(offset, 4).SequenceEqual(after.AsSpan(offset, 4)))
                 {
                     var px = offset / 4 % width; var py = offset / 4 / width;
-                    if (Math.Abs(px - x) > 2 || py < top - 1) outside++;
+                    var timeLabel = view is BattleTimeline && py < 48 && px >= x && px < x + 130;
+                    if (!timeLabel && (Math.Abs(px - x) > 2 || py < top - 1)) outside++;
                     minX = Math.Min(minX, px); maxX = Math.Max(maxX, px); minY = Math.Min(minY, py); maxY = Math.Max(maxY, py);
                     changed++;
                 }

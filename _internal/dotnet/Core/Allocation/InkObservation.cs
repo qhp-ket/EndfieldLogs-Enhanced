@@ -15,16 +15,18 @@ public sealed record InkObservation(BigInteger Number, string Kind, IReadOnlyDic
         if (item.Type is not ("ink_release" or "blackboard_dynamic" or "blackboard_calculation" or "actor_mapping" or "skill_cast"))
             return new(index, "other", new Dictionary<string, string>());
         var data = item.Type is "ink_release" or "blackboard_calculation" ? BlackboardWire.Observation(item)
-            : (EvidenceObject)TraceValueProjection.Restore(item.Data, item.Data.Get("legacy_layout") as EvidenceObject ?? new(new Dictionary<string, EvidenceValue>()));
+            : TraceModel.Data(item);
         if (item.Type == "ink_release") return new(index, "release", new Dictionary<string, string>(), BlackboardWire.ReleaseObservation(data));
         if (item.Type == "blackboard_dynamic") return new(index, "operation", DynamicWire.Fields(data), Identity: BuffPacketWire.Observation(data, pairs: false), IdentityPresent: true);
         if (item.Type == "blackboard_calculation")
         {
             var fields = BlackboardWire.Fields(data);
+            static string NumericToken(EvidenceValue value) => SkillWire.Number(value) is { } number && double.IsFinite(number)
+                ? PythonDisplay.Float(number) : "unknown";
             fields["key"] = PythonDisplay.String(data.Get("key"));
-            fields["final"] = PythonDisplay.Float(SkillWire.Number(data.Get("final_value"))!.Value);
+            fields["final"] = NumericToken(data.Get("final_value"));
             foreach (var (source, target) in new[] { ("value_a", "valueA"), ("value_b", "valueB") })
-                if (data.Fields.ContainsKey(source)) fields[target] = PythonDisplay.Float(SkillWire.Number(data.Get(source))!.Value);
+                if (data.Fields.ContainsKey(source)) fields[target] = NumericToken(data.Get(source));
             return new(index, "operation", fields);
         }
         if (item.Type == "actor_mapping") return new(index, "mapping", new Dictionary<string, string>

@@ -15,7 +15,7 @@ public static class StructuredCharacterSkills
         if (item.Data.Get("skills") is not EvidenceArray rows || rows.Items.Any(value => value is not EvidenceObject row
             || row.Get("skill") is not EvidenceText || !row.Fields.ContainsKey("level")))
             throw new InvalidDataException("Expected character skill observations");
-        var data = (EvidenceObject)TraceValueProjection.Restore(item.Data, item.Data.Get("legacy_layout") as EvidenceObject ?? new(new Dictionary<string, EvidenceValue>()));
+        var data = TraceModel.Data(item);
         state.ObserveCharacterSkills(((EvidenceText)data.Get("template")).Value,
             Catalog.CatalogValues.Truth(data.Get("entity_id")) ? PythonDisplay.String(data.Get("entity_id")) : "unknown",
             ((EvidenceArray)data.Get("skills")).Items.Cast<EvidenceObject>().Select(row =>

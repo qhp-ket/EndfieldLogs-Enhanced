@@ -11,9 +11,7 @@ internal static class TraceEventHistorySpecs
     private static EvidenceObject Obj(string json) => (EvidenceObject)EvidenceJson.Parse(json);
     private static TraceEvent Event(long seq, long stamp, string type, string json)
     {
-        var projection = TraceValueProjection.Capture(Obj(json));
-        var fields = ((EvidenceObject)projection.Value).Fields.ToDictionary(); fields["legacy_layout"] = projection.Layout;
-        return new(seq, stamp, type, new(fields), Obj("{}"));
+        return new(seq, stamp, type, (EvidenceObject)TraceModel.Normalize(TraceLoadout.Native(Obj(json))), Obj("{}"));
     }
     private static TraceEvent Damage(long seq, long stamp) => Event(seq, stamp, "damage", $$$$"""
         {"hit_seq":{{{{seq}}}},"actors":{"attacker":"chr_0001_test","target":"eny_0001_test"},

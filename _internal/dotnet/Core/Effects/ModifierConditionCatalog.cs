@@ -77,10 +77,11 @@ public sealed class ModifierConditionCatalog(IReadOnlyDictionary<string, Evidenc
                     "Beyond.Gameplay.Core.Conditions.CheckDamageType.Data" => "CheckDamageType",
                     "Beyond.Gameplay.Core.Conditions.CheckDamageTypeMask.Data" => "CheckDamageTypeMask",
                     "Beyond.Gameplay.Core.Conditions.CheckDamageDecorateMask.Data" => "CheckDamageDecorateMask",
+                    "Beyond.Gameplay.Core.CompareFloat.Data" => "CompareFloat",
                     "Beyond.Gameplay.Core.CheckBuffStackNumAdvanced.Data" => "CheckBuffStackNumAdvanced",
                     _ => symbol,
                 };
-                if (kind is not ("CheckHp" or "CheckDamageType" or "CheckDamageTypeMask" or "CheckDamageDecorateMask" or "CheckBuffStackNumAdvanced"))
+                if (kind is not ("CheckHp" or "CheckDamageType" or "CheckDamageTypeMask" or "CheckDamageDecorateMask" or "CheckBuffStackNumAdvanced" or "CompareFloat"))
                 {
                     errors.Add(Text("unsupported_action:" + kind));
                     continue;
@@ -113,7 +114,15 @@ public sealed class ModifierConditionCatalog(IReadOnlyDictionary<string, Evidenc
     private static EvidenceObject? DecodeAction(string kind, EvidenceObject action, out string? error)
     {
         error = null;
-        if (kind == "CheckHp")
+        if (kind == "CompareFloat")
+        {
+            bool Valid(EvidenceValue raw) => raw is EvidenceObject value && value.Get("useBlackboardKey") is EvidenceBoolean enabled
+                && (!enabled.Value || value.Get("blackboardKey") is EvidenceText { Value.Length: > 0 });
+            if (!Is(action.Get("compare"), "Equals") || !Valid(action.Get("valueA")) || !Valid(action.Get("valueB"))) error = "unsupported_float_comparison";
+            else return Object(("type", Text("value_compare")), ("source", Text(kind)), ("compare", Text("Equals")),
+                ("left_config", action.Get("valueA")), ("right_config", action.Get("valueB")));
+        }
+        else if (kind == "CheckHp")
         {
             var compare = action.Get("compare");
             if (!Is(compare, "LT", "LE", "GT", "GE", "EQ", "NE") || action.Get("isRatio") is not EvidenceBoolean

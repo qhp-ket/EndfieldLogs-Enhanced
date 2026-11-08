@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
 using EndfieldLogs.Core.Compatibility;
@@ -77,6 +78,8 @@ internal sealed class ProductStartupCheck : IDisposable
                     await Dispatcher.Yield(DispatcherPriority.ContextIdle);
                     BenchmarkWindow.Check();
                     Check("navigation_" + page, main.Navigation.SelectedPage == page && main.Navigation.SelectedContent.IsVisible);
+                    if (page == MainPage.Logs)
+                        Check("runtime_log_visible_without_recording", main.Navigation.SelectedContent is TextBox log && log.Text.Contains("程序启动"));
                 }
                 main.Navigation.SetExpanded(false);
                 Check("navigation_collapses", !main.Navigation.IsExpanded);
@@ -106,6 +109,8 @@ internal sealed class ProductStartupCheck : IDisposable
     {
         deadline.Stop(); BenchmarkWindow.Check();
         Check("real_services_disposed_on_close", main.ServicesDisposed && !main.IsVisible);
+        var runtimeLog = File.ReadAllText(Path.Combine(ProfileRoot, ".dev-gui", "logs", "runtime.log"));
+        Check("runtime_log_flushed_on_close", runtimeLog.Contains("程序启动") && runtimeLog.Contains("程序退出"));
         result["passed"] = !result.ContainsKey("error");
         result["root"] = root;
         result["process_path"] = Environment.ProcessPath;

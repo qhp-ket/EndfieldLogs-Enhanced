@@ -2,7 +2,7 @@
 
 本规范用于 Python 与 C# 的共同事件边界。当前源码新录制默认使用 JSONL；新配置、未声明格式的已有配置及无效格式均使用该默认值。显式 `service.trace_format: "legacy"` 或 `"jsonl"` 按原选择读取、保存，旧 `.log` 仍可分析及导出。inputlog 格式不变。默认切换的源码修改和专项回归不代表整机性能、资源及最终候选验收已经通过。
 
-GUI 默认未记录；首页按钮或 `Ctrl+I` 启停 session、trace 及启用的输入侧录，每次开始创建新文件组。历史分析和单场导出共用 `HistorySelection`：按原有规则补入必要的角色、敌人属性等前文，排除前场伤害，回放日期取首个回放事件在录制时区的日期，首击 Unix 时间仍用于记录身份。
+GUI 未抓包时不记录；开始抓包会同时开始记录。首页按钮或 `Ctrl+I` 可独立启停 session、trace 及启用的输入侧录，每次开始创建新文件组；手动停止记录不会停止抓包与实时分析。历史分析和单场导出共用 `HistorySelection`：按原有规则补入必要的角色、敌人属性等前文，排除前场伤害，回放日期取首个回放事件在录制时区的日期，首击 Unix 时间仍用于记录身份。
 
 兼容正文只有时分秒。导出修改日期对应首条实际输出事件的录制本地日期；界面调用 `TraceExportService.DefaultBattleFileName`，默认名 `trace_战斗N-官网兼容.log` 不含日期。旧文本导入优先取文件名中的 `YYYYMMDD`，所以源录制日和首击日均不能直接用于单场默认命名。跨午夜计时、次日后续战斗、两种来源格式及东八区／西五区由契约回归覆盖。
 
@@ -42,13 +42,16 @@ GUI 默认未记录；首页按钮或 `Ctrl+I` 启停 session、trace 及启用�
 UTF-8，无 BOM，每个 JSON 对象一行，以 LF 结束。文件头只在各卷第一行出现：
 
 ```json
-{"format":"endfield.trace","version":1,"recording_id":"example","volume":1,"previous_volume":null,"generator":{"language":"python","version":"0.3.0"},"timezone":{"id":"Asia/Shanghai","offset_minutes":480},"resources":{"runtime_sha256":"..."}}
+{"format":"endfield.trace","version":2,"recording_id":"example","volume":1,"previous_volume":null,"generator":{"language":"python","version":"0.3.0"},"timezone":{"id":"Asia/Shanghai","offset_minutes":480},"resources":{"runtime_sha256":"..."}}
 ```
 
-后续每行是事件：
+后续为公共对象定义及业务事件；定义不占业务 `seq`，引用只能指向本卷已声明对象：
 
 ```json
-{"seq":1,"captured_at_ms":1793412000123,"client_tick_ms":1234,"source":{"session_id":"example-session","operation_seq":7,"owner_id":"18446744073709551615","generation":0,"action_id":14,"detail_index":0},"type":"damage","data":{}}
+{"type":"definition","kind":"capture_session","ref":1,"session_id":"example-session"}
+{"type":"definition","kind":"entity","ref":1,"id":"101"}
+{"type":"definition","kind":"template","ref":1,"template":"skill_template"}
+{"seq":1,"captured_at_ms":1793412000123,"client_tick_ms":1234,"source":{"session_ref":1,"operation_seq":7,"owner_id":{"entity_ref":1},"generation":0,"detail_index":0},"type":"damage","data":{"action":{"skill":{"template_ref":1},"action_id":14}}}
 ```
 
 - `captured_at_ms` 为完整 Unix 毫秒；不把跨午夜或迟到事件压成递增时间。`client_tick_ms` 只在上游实际有该时钟时出现。
@@ -56,8 +59,14 @@ UTF-8，无 BOM，每个 JSON 对象一行，以 LF 结束。文件头只在各�
 - 文件头的 `recording_id` 标识整个连续录制，`volume` 从1开始。`previous_volume` 为前卷文件名及其卷号；关联缺失必须在分析／导出中给出不完整提示。
 - 事件 `type` 使用表内小写名称。`source` 只包含已存在的上游身份；不把缺失字段补成0或字符串 `unknown`。`data` 为事件专用字段，不能嵌入旧文本行或整个 session。
 - 实例ID（actor、buff、skill、projectile、equipment 等）使用十进制字符串。序号、索引、模板数值ID与计数使用整数，数值证据保留原精度。无效上游值保存在未解析证据中，不冒充有效ID。
+- 每种定义从1连续编号，同一值不重复定义；每卷独立声明，重连新增捕获会话。读取器将 `session_ref`、身份字段中的 `entity_ref` 及技能／模板字段中的 `template_ref` 展开成统一原生模型；原始调试对象里碰巧同名的键不解释成引用。实体与模板的实际映射仍由独立业务事件提供，定义本身不推断绑定。
+- 仅去除从同一操作复制的 `packet_context` 与序号、会话等公共字段；冲突来源单独保留。操作所有者、事件所有者、攻击者、目标和各时钟表达不同事实，即使值相同也不能删除。
 - 缺失键表示未观测；`null` 表示显式无值；`0`、`false`、`[]`、`{}` 各有自身含义。读取器不统一替换。IEEE非有限值以显式状态及原始类别表示，不输出非标准JSON数字。
 - 伤害自身的修正项、属性报告／presence、计算参数及调试证据位于 `data.evidence`。源动作有多个details时分别发出事件，`detail_index` 保留原索引；独立BUFF、属性和黑板事件不合并进伤害。
+
+正常分析经 `TraceModel.Data`／`trace_model.event_data` 读取原生字段，不依赖旧标量类型、对象顺序或布局。v2 禁止 `data.legacy_layout`。声明的整数接受捕获来源的整数文本并规范为 JSON 整数；非法身份／整数为 null，`normalization_errors` 保留字段路径、状态和必要原值。非有限数值使用 `number_status`，不参与有效数值计算；不解释任意调试参数的同名数值字段。
+
+v1 仍由读取器接受，仅在 `TraceV1`／`trace_v1` 适配器中恢复原布局并转换装备；新录制不再生成该布局。官网兼容导出器独立生成旧标记、数值、顺序和转义，从公共来源补充旧格式的重复位置。v2 验收比较完整解析结果及 uploader 必要载荷，不要求键顺序、前导零和原始标量显示逐字节一致；v1 继续保留原格式导出能力。原技能、modifier 处理器索引、字段存在性和冲突原值属于正式证据，不随格式信息一同删除。
 
 ## 伤害事件边界
 
@@ -70,16 +79,15 @@ UTF-8，无 BOM，每个 JSON 对象一行，以 LF 结束。文件头只在各�
 | `data.action` | `skill`、`skill_level`、`template_int_id`、`template_type`、`action_id`、`original_template_int_id`、`damage_unit_index`；实例身份为 `event_inst_id`、`event_owner_id`、`part_inst_id` |
 | `data.amounts` | `value` 保留原符号和精度；`current_hp`、`is_crit` 仅在原 detail 有对应字段时保存 |
 | `data.blackboards` | 有序 `dynamic` 数组包含 `action_id`／`value`；有序 `calculation` 数组包含 `action_id`／`key`／`value`。重复 action／key 的原顺序保留，摄取沿用旧规则取最后值 |
-| `data.evidence` | 当前 detail 的 `modifier_args`、`battle_report_info`、`calculate_damage_check_args` 等原始证据；`presence` 保存独立 protobuf presence，`packet_context` 保存原修正项／属性验证所用的 `packetSeq`、`packetSessionId`，包括无效或缺失的来源状态 |
-| `data.legacy_layout` | 旧格式独立导出所需的结构布局；只保存字段顺序、实例 ID 的原始标量类别及规范化丢失的原值，不保存旧文本行 |
+| `data.evidence` | 当前 detail 的 `modifier_args`、`battle_report_info`、`calculate_damage_check_args` 等原始证据；`presence` 保存独立 protobuf presence。包来源取公共 `source`；与公共来源冲突的 `packet_context` 单独保留 |
 
 摄取先处理伤害，再按旧顺序处理修正项 UID、完整处理器句柄、属性报告 presence 和属性行。冲突仍使对应证据永久未解决，不能被随后合法数据覆盖。实测数值保留在事件中，现有分析投影继续采用旧 `hit` 取整、`raw` 两位小数、HP 整数和黑板六位有效数字规则。新入口直接更新共享状态，不渲染 `HP_V2`／`PKT_*` 后再解析。
 
-伤害中的 `attacker_id`、`target_id`、`event_inst_id`、`event_owner_id`、`part_inst_id` 及嵌套 `buff_inst_id` 统一投影成十进制字符串；无效身份为 `null`，原始无效观测保留在布局中。原先整数与字符串形式的 ID 不混淆。未知嵌套字段保留，后续事件族接入时继续盘点其身份字段。
+伤害中的 `attacker_id`、`target_id`、`event_inst_id`、`event_owner_id`、`part_inst_id` 及嵌套 `buff_inst_id` 统一投影成十进制字符串；无效身份为 `null`，原始无效观测保留在 `normalization_errors` 中。未知嵌套字段保留，不能把相等的不同身份事实合并。
 
-`legacy_layout` 的 `children` 按字段名记录子布局，`items` 按十进制数组索引记录子布局。旧格式 JSON 需要保序的 `modifier_args` 与 `observation` 子树记录 `keys` 数组，缺失或重复键不能被静默忽略。实例字段使用 `scalar` 标注 `integer`、`real`、`text`、`boolean` 或 `null`；仅规范化会丢失原表示时保存 `raw` 文本（例如前导零、负数或非法字符串）。非有限值在原字段位置使用 `{"number_status":"nan"}`、`positive_infinity` 或 `negative_infinity`，布局以 `nonfinite` 标明类别；有限数值保持原值与精度。这些状态不能作为有限伤害值参与计算。
+非有限值在原字段位置使用 `{"number_status":"nan"}`、`positive_infinity` 或 `negative_infinity`；有限数值保持原值与精度。这些状态不能作为有限伤害值参与计算。
 
-两版独立伤害导出器只接收事件与原时区偏移，不持有 TraceBridge 状态。保存、读取 JSONL 后，它们恢复原数值表示与修正项键顺序，再生成 `HP_V2`／`PKT_*`。既有固定 TraceBridge 样本用于逐字节验证，不更新原参考。实时摄取不调用导出器。
+两版独立伤害导出器只接收事件与原时区偏移，不持有 TraceBridge 状态，直接生成 `HP_V2`／`PKT_*`。既有固定旧正文参考不变，v2 与参考比较业务语义。实时摄取不调用导出器。
 
 ## 实体属性事件边界
 
@@ -87,13 +95,12 @@ UTF-8，无 BOM，每个 JSON 对象一行，以 LF 结束。文件头只在各�
 
 | 字段 | 含义 |
 | --- | --- |
-| `data.entity_id` | 十进制字符串实体身份；实例 ID 的原标量表示由 `legacy_layout` 保留 |
+| `data.entity_id` | 十进制字符串实体身份，磁盘可使用实体定义引用 |
 | `data.template` | 当前显式模板或沿用已有映射，不从相邻事件猜测 |
 | `data.kind` | 完整快照的 `character`／`object` 等类别；增量更新不补造类别 |
 | `data.attributes` | 原属性数组，包含各条 `attr_type`、`value`、`basic_value` 及其他已有字段；保留数组顺序、重复属性、原精度、空值和字段存在性 |
 | `data.level`、`data.hp` | 完整快照中原字段存在时保存，包括显式 `null` 与零；缺失时不补键 |
 | `data.object_id` | 增量更新中的对象身份；明确的零仍为 `"0"`，未观测到值为 `null` |
-| `data.legacy_layout` | 与伤害共用的标量表示与非有限状态布局，不保存原日志行 |
 
 完整快照进入属性时间轴并替换该实体的暴击观测；增量属性只更新既有暴击观测，不替换完整快照。模板不匹配时清除旧暴击观测；重复属性类型保持失效，后续重复项不能重新使其有效。缺少可转换属性值沿用原生产器的零值，缺少可转换基础值沿用属性值，不能把这些既有兼容规则扩展为其他未知证据的默认值。分析继续使用六位有效数字；原精度及非有限状态仍留在事件中。非有限属性值不进入有效属性字典。
 
@@ -101,17 +108,17 @@ UTF-8，无 BOM，每个 JSON 对象一行，以 LF 结束。文件头只在各�
 
 `BattleOpEntityValueModify`、`BattleOpEntityDie` 和生成实体动作分别发出 `entity_value`、`entity_die`、`ability_spawn`。这些与旧标记一样仅作诊断，摄取更新时间上下文，不据此生成属性快照、命中或队伍绑定。`entity_value.data` 按原字段存在性保存 `entity_id`、`operation_seq`、`scene_num_id`、`hp`、`ultimate_sp`、`delta` 及当前／原始来源类型和编号；`entity_die` 未观测到身份时不补键。
 
-每个有效生成实体明细形成一个 `ability_spawn`，顺序不变。动作层保存序号、时钟、动作编号、环境／所有者实例及技能和名称；`detail` 独立保存原始 `source_actor_id`、`entity_id`、`position` 和 `rotation`。来源零仍明确保存为 `"0"`，旧导出沿用回退所有者的规则；缺失坐标轴不补零，原精度、负零和非有限状态均保留。实例统一使用十进制字符串，`legacy_layout` 恢复旧死亡标记等原始标量表示。独立实体导出器同时覆盖这三类诊断，不依赖生产器状态。
+每个有效生成实体明细形成一个 `ability_spawn`，顺序不变。动作层保存序号、时钟、动作编号、环境／所有者实例及技能和名称；`detail` 独立保存原始 `source_actor_id`、`entity_id`、`position` 和 `rotation`。来源零仍明确保存为 `"0"`，旧导出沿用回退所有者的规则；缺失坐标轴不补零，原精度、负零和非有限状态均保留。实例统一使用十进制字符串。独立实体导出器同时覆盖这三类诊断，不依赖生产器状态。
 
 ## 队伍与角色映射事件边界
 
-`squad.data.members` 是有序数组，每个成员分别保存 `template` 和 `entity_id`，不保存拼好的旧成员标签。场景队伍与装备回退队伍的发出条件沿用原生产器；已有场景队伍时不额外发出装备回退队伍。`entity_id` 使用与实体属性相同的十进制字符串投影及原标量布局，保留原前导零等导出表示。
+`squad.data.members` 是有序数组，每个成员分别保存 `template` 和 `entity_id`，不保存拼好的旧成员标签。场景队伍与装备回退队伍的发出条件沿用原生产器；已有场景队伍时不额外发出装备回退队伍。`entity_id` 使用与实体属性相同的十进制字符串投影。
 
 旧文本入口和结构化入口共用队伍状态更新：观测过的角色 ID 累积保留；当前成员映射保留顺序，同一 ID 重复出现时清空整份当前映射；空队伍只清空当前映射。旧格式成员识别规则继续应用于独立字段中的已有标签，不把任意模板、负 ID 或缺失身份当成已绑定角色，也不把模板截断造成的历史识别差异默默改掉。结构化入口不拼装旧 `SQUAD` 行后再解析。
 
 `actor_mapping.data` 包含 `entity_id`、`template`、`mapping_source` 和 `skill`。`mapping_source` 保留 `skill_attach`、`launch_source`、`launch_projectile`、`damage_original_skill` 等现有来源；`skill` 可以明确为 `null`。生产器沿用已存在的显式来源及去重规则，不用新事件建立额外推断。与旧 `ACTOR_MAP` 一样，摄取只把它视为诊断，不用该诊断修改队伍或角色绑定权限。
 
-两版独立身份导出器按原顺序生成 `SQUAD`／`ACTOR_MAP`，保留原标量表示、空技能占位和时区。固定混合场景同时比较实体状态、队伍映射顺序、角色 ID 集合和导出字节。
+两版独立身份导出器按事件顺序生成 `SQUAD`／`ACTOR_MAP`，保留空技能占位和时区。固定混合场景同时比较实体状态、队伍映射顺序、角色 ID 集合和导出语义。
 
 ## 角色技能清单事件边界
 
@@ -121,7 +128,7 @@ UTF-8，无 BOM，每个 JSON 对象一行，以 LF 结束。文件头只在各�
 
 精炼补全共用原装备规则：必须有唯一队伍角色绑定、匹配的角色和有效武器实例，当前精炼未知，且官方武器主技能等级能唯一确定精炼。已有精炼零不是未知，不覆盖；缺少身份或等级有冲突时不补造精炼。成功补全另建 `CHAR_SKILLS` 装备观测组，保留证据索引、采集时间与独立历史快照，不修改先前观测组。结构化清单本身不增加队伍身份依据。
 
-两版独立身份导出器按事件和原时区生成 `CHAR_SKILLS`，恢复原等级表示、未知角色实例占位及换行。固定混合样本逐条比较技能等级与装备状态，并验证全部已连接事件的 JSONL 交叉读写和旧正文逐字节一致；独立测试另外覆盖唯一绑定、实例缺失、已知精炼、等级冲突及历史快照隔离。
+两版独立身份导出器按事件和原时区生成 `CHAR_SKILLS`，生成等级、未知角色实例占位及换行。固定混合样本逐条比较技能等级与装备状态，并验证全部已连接事件的 JSONL 交叉读写和兼容正文语义；独立测试另外覆盖唯一绑定、实例缺失、已知精炼、等级冲突及历史快照隔离。
 
 ## 装备观测事件边界
 
@@ -133,15 +140,17 @@ UTF-8，无 BOM，每个 JSON 对象一行，以 LF 结束。文件头只在各�
 | `loadout_slot` | `template`、原 `slot`、角色等级／潜能、武器模板／等级／精炼／突破、装备及套装观测、技能编号和完整性标志；角色、武器、宝石实例分别为 `entity_id`、`weapon_id`、`gem_id` |
 | `loadout_stats` | `template`、原 `slot`、武器模板及同步来源、各攻击力观测、精炼证据及来源、来源技能、宝石模板／词条；实例分别为 `weapon_id`、`gem_id`、`gem_weapon_id` |
 
-只保留上游实际存在的字段，不把缺失精炼、等级或攻击力补成已知值。`unplaced_equipment` 是有序 `{entity_id}` 数组；完整性标志严格保留 `true`／`false` 与缺失的区别。实例身份按共同规则投影为十进制字符串，原前导零等标量表示保存在 `legacy_layout` 中。攻击力原始精度、显式零与缺失各自保留。
+只保留上游实际存在的字段，不把缺失精炼、等级或攻击力补成已知值。`unplaced_equipment` 是有序 `{entity_id}` 数组；完整性标志严格保留 `true`／`false` 与缺失的区别。实例身份按共同规则投影为十进制字符串。攻击力原始精度、显式零与缺失各自保留。
 
-`equips`、`equip_suit`、`weapon_refine_stats`、`weapon_source_skills`、`gem_terms` 等沿用上游解码器已有的字段专用紧凑语法。这些字段是原始观测，不是整条旧日志；结构化摄取直接解析其子结构，构造与旧入口共用的装备观测对象和合并状态，不重新拼装 `LOADOUT`／`LOADOUT_STATS` 行。
+`equip_suit` 为 `{suit_id,piece_count}` 数组，`equip_inst_ids` 为 `{slot,entity_id}` 数组，`equips` 为 `{slot,item_id,enhance_levels,stats}` 数组，`skill_int_ids` 为整数数组；武器技能／精炼属性为带等级、潜能及 `bb` 的数组，`gem_terms` 为 `{term_num_id,template,cost}` 数组。旧捕获来源和 v1 的装备字符串只在边界解码一次；原生消费不再回拼或解析旧装备语法。无法规范化的宝石词条保留 `invalid_fields` 原值，不据此推算精炼。
+
+捕获适配器将上游解码器已有的紧凑字段转换为上述结构，旧格式导出器执行反向格式化；两者均不进入正常分析的装备消费链路。结构化摄取直接构造与旧入口共用的装备观测对象和合并状态。
 
 装备合并继续使用原规则：只有完整快照中的空装备能清空已有装备；部分快照不据缺失字段擦除旧值。武器实例更换清除旧武器的精炼、宝石及来源技能，权威覆盖同步作用于当前状态、观测组和活动武器，历史组保持独立。未知字段经原合并规则可能保持缺失，不统一补 `null`。装备事件本身不建立新的队伍身份依据。
 
 宝石辅助精炼仅在当前组的时间戳完全相同、来源为 `SC_SYNC_CHAR_BAG_INFO` 或 `SC_SELF_SCENE_INFO`，且有效武器／宝石实例及绑定关系匹配时参与；歧义、重复或损坏词条不能补造精炼。`LOADOUT_STATS` 原本没有武器等级，因此结构化统计事件不借用其他行的等级补攻击力。分析沿用旧整数攻击力投影，事件和导出仍保留原数值精度。
 
-两版独立装备导出器按事件与原时区生成 `LOADOUT`／`LOADOUT_STATS`，恢复原标量表示、未知占位、字段顺序和换行。固定混合场景逐个装备事件比较当前状态、历史组、活动武器／套装与角色技能，并验证完整已连接事件流的交叉读写及旧正文逐字节一致。
+两版独立装备导出器按事件与原时区生成 `LOADOUT`／`LOADOUT_STATS`，生成官网所需的装备语法、未知占位和换行。固定混合场景逐个装备事件比较当前状态、历史组、活动武器／套装与角色技能，并验证完整已连接事件流的交叉读写及兼容正文语义。
 
 ## 技能施放、技力与失衡事件边界
 
@@ -151,7 +160,7 @@ UTF-8，无 BOM，每个 JSON 对象一行，以 LF 结束。文件头只在各�
 | `atb` | `owner_id`、`owner`、原 `reason`、`value`、`recovery_speed`、`delta` 和已解析的 `source`／`original_source` |
 | `poise` | `attacker_id`、`attacker`、原 `modify_type`、`value`、`current_value`、`owner_type`、来源类型／模板编号、已解析来源及 `action_id`；没有目标身份，不补目标 |
 
-三类事件仅在原字段存在时保存 `operation_seq` 与 `client_tick_ms`；缺失、显式 `null` 和零保持不同。实例投影与其他事件相同，保存原标量布局；模板数值编号不是实例 ID。未解析的身份标签使用 `null`，不把旧格式的 `unknown` 或 `?` 占位变成已确定身份。旧格式导出时才按原规则生成占位。
+三类事件的 `operation_seq` 与 `client_tick_ms` 来自公共来源；冲突值保留在业务字段。实例投影与其他事件相同，模板数值编号不是实例 ID。未解析的身份标签使用 `null`，不把旧格式的 `unknown` 或 `?` 占位变成已确定身份。旧格式导出时才按原规则生成占位。
 
 施放生产器保留原实例有效性、技能映射和角色归属更新条件。结构化与旧文本入口共用施放状态：开始记录加入完整清单及活动实例；同实例再次开始时活动引用指向最新施放，不改写较早记录；结束只关闭匹配实例，以采集时间及证据索引标记，不使用客户端 tick 替换，也不因迟到而重排。不匹配的结束不补造施放。每角色近期索引保留16项，完整施放清单不裁剪；未解析的通用运行时技能不提前建立首次角色动作时刻。
 
@@ -179,7 +188,7 @@ UTF-8，无 BOM，每个 JSON 对象一行，以 LF 结束。文件头只在各�
 
 新旧入口共用创建、来源、启用及关键词验证，不以结构化格式代替证据审批。创建仍要求活动 UID、匹配模板、session／owner／generation 及原操作边界；重复、乱序与冲突沿用原历史和快照恢复规则。来源必须匹配实例及动作阶段；同操作的相反启用观测保留为冲突。关键词还需已绑定创建、审批来源和当前配置中的标记，缺失或损坏的行保留为未解析更新，不生成可用倍率。
 
-`buff_unresolved` 单独保存 `buff_inst_id`、可选 `operation_seq` 以及 nullable 的 `trigger_type`、`action_id`、`target_id`、`source_actor_id`；缺少序号、显式 null 和零不同。旧占位只在共享兼容适配与导出时恢复。独立导出器恢复原字段顺序、嵌套顺序、精度和换行，启用观测沿用原 ASCII JSON 策略。固定混合场景逐事件比较包括创建历史、未解析动作和关键词状态在内的完整 BUFF 状态，并与原参考正文逐字节比较。
+`buff_unresolved` 单独保存 `buff_inst_id`、可选 `operation_seq` 以及 nullable 的 `trigger_type`、`action_id`、`target_id`、`source_actor_id`；缺少序号、显式 null 和零不同。旧占位只在导出时生成。独立导出器生成字段、精度和换行，启用观测沿用原 ASCII JSON 策略。固定混合场景逐事件比较包括创建历史、未解析动作和关键词状态在内的完整 BUFF 状态，并与原参考正文比较解析结果。
 
 ## 动态黑板与属性刷新边界
 
@@ -195,7 +204,7 @@ UTF-8，无 BOM，每个 JSON 对象一行，以 LF 结束。文件头只在各�
 
 `blackboard_calculation`、`blackboard_modify`、`blackboard_preset` 共用动态值的原操作序号、tick、实例、owner、packet session、技能和动作字段。计算保存 `key`、`final_value` 和实际存在的 `value_a`／`value_b`；批量修改保存实际存在的 `key`／`value`；预设保存原 `modified_value`。保留原浮点精度、非有限类别及负零，旧导出才应用各标记原有的浮点或六位有效数字格式。生产器内供后续伤害引用的最近计算缓存仍按原顺序保留最近12项。
 
-`ink_release` 的 `data.observation` 保存 `schema_version`、`template_key`、`action_id`、`session_id`、`operation_seq`、`client_tick_ms`、`buff_inst_id`、`owner_id`、`source_actor_id` 和 `projectile_id`。实例均使用十进制字符串；原缺失身份为 null，布局记录原标量表示。独立导出器才恢复旧 `buff_uid` 字段名、顺序及占位表示，不把它们作为已解析身份。
+`ink_release` 的原生观测包含 `schema_version`、`template_key`、`action_id`、`session_id`、`operation_seq`、`client_tick_ms`、`buff_inst_id`、`owner_id`、`source_actor_id` 和 `projectile_id`；公共来源不在 `data.observation` 重复保存。实例均使用十进制字符串，原缺失身份为 null。独立导出器才生成旧 `buff_uid` 字段名及占位表示，不把它们作为已解析身份。
 
 两版笔意账本共用原状态机，增加直接事件观测入口；旧日志只在边界解析为同种观测。计算、动态赋值、释放、角色映射和施放不拼成旧行或做 JSON 往返。源命中仍须满足同 session、目标、tick、前一操作序号及金额匹配；释放冻结来源份额，随后清零累加器不会丢失在途 projectile。重复操作幂等、冲突及乱序保持失效，缺失来源不补造外部贡献。历史映射／施放释放块继续要求同实例、tick 及明确先后关系。
 
@@ -241,7 +250,7 @@ Python `EventBattleParser.snapshot_events` 使用相同的 generation／revision
 
 两版服务配置默认使用 `service.trace_format: "jsonl"`；显式 `"legacy"` 保留旧录制路径，C# 保存配置时也保留这一字段。新文件头记录实际生成器版本、录制时区偏移及已有运行资源清单／压缩包的 SHA-256；记录后的事件直接交给完整和摘要发布器。Python 原始 session 历史回放也直接使用事件，保留选定范围前的有效上下文和官方开始证据，不生成临时旧文本。必要的 Python 协议、录制、实时和历史接入维护在 `main/` 工作树；当前版本的独立增量性能与资源验收另行记录。
 
-保留原数值，同时保持旧分析的取整与精度规则：例如伤害 `int(abs(value)+0.5)`、旧 `raw` 两位小数以及部分六位有效数字证据。精度投影由对应旧适配／共享观测构造明确处理，不改变计算结果。仅在用户导出时生成旧布局；需要的编号、字段存在性、子观测顺序和格式类别保存在结构字段中，不存整行副本。导出正文须逐字节匹配固定 TraceBridge 参考。
+保留原数值，同时保持旧分析的取整与精度规则：例如伤害 `int(abs(value)+0.5)`、旧 `raw` 两位小数以及部分六位有效数字证据。精度投影由共享观测构造明确处理，不改变计算结果。仅在用户导出时生成旧日志；需要的编号、字段存在性和子观测顺序保存在业务结构中，不存整行副本。v2 导出与固定参考比较完整解析结果，v1 原格式保真测试继续保留。
 
 记录启用时使用常驻流，停止时在完整业务事件边界刷新并关闭文件，再次开始创建新文件组；实时分析会话继续，不因记录启停重置计时／缓存／笔意账本。不增加自动分场或容量轮转。活动文件末尾未完成的一行留待下次读取，不作为完整事件处理。两版交叉读写、旧正文、完整报告、逐击／来源／质量、增量与分卷验证共用既有工具及固定样本。
 
@@ -261,4 +270,4 @@ Python `TraceRecording` 同样使用常驻流，在业务组完成后刷新并�
 
 Python 历史导入接受 `.jsonl` 和旧 `.log`。JSONL 流式提取分场元数据，与旧文本共用范围选择规则；列表阶段不执行报告计算。选中记录后只将该范围的事件交给直接分析入口，报告时间使用记录时区和范围首事件的日期，跨午夜不重复加日。卷链的路径、大小、修改时间与文件身份共同参与索引及快照失效；任一卷追加、重命名或缺失都会重新校验。同一录制从不同卷导入只显示一组记录，以首卷为文件定位和列表移除身份；重命名不改写卷内证据，列表移除不删除文件。
 
-用户导出 JSONL 时，C# `TraceLegacyExporter` 和 Python `trace.legacy` 汇总各自独立事件导出器，最终证明另记录源录制及卷名。固定混合样本的正文 6,292 字节与旧参考逐字节相同；两版最终导出均经未修改的官方 parser／uploader 本地读取、证明校验、业务载荷及原文上传文档构建验证。两版的配对 session／trace 分卷可交叉读取、历史分析和导出；相同合成业务与资源得到相同旧正文，各自的最终证明独立校验。该验证没有登录或网络上传，也不替代当前版本的性能、资源及最终发行验收。
+用户导出 JSONL 时，C# `TraceLegacyExporter` 和 Python `trace.legacy` 汇总各自独立事件导出器，最终证明另记录源录制及卷名。旧参考正文保持不变，v2 导出按完整解析结果和 uploader 必要载荷验收，各自的最终证明独立校验。跨语言合成 fixture 覆盖定义、重连、迟到时间、独立相等身份及类型化装备；历史和单场导出另覆盖上下文及其他场次隔离。本地验证不执行登录或网络上传，也不替代性能、资源及最终发行验收。

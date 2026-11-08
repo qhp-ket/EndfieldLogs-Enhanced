@@ -10,8 +10,7 @@ public static class IdentityLegacyExporter
     public static IReadOnlyList<string> Lines(TraceEvent item, int timeZoneOffsetMinutes)
     {
         if (item.Type is not ("squad" or "actor_mapping" or "character_skills" or "identity_inference")) throw new InvalidDataException("Expected identity event");
-        if (item.Data.Get("legacy_layout") is not EvidenceObject layout) throw new InvalidDataException("Identity event lacks legacy export layout");
-        var data = Obj(TraceValueProjection.Restore(item.Data, layout));
+        var data = ExportValues.Data(item);
         string body;
         if (item.Type == "squad")
         {

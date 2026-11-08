@@ -1,4 +1,5 @@
 using System.Numerics;
+using EndfieldLogs.Core.Compatibility;
 
 namespace EndfieldLogs.Core.Ingestion;
 
@@ -17,6 +18,8 @@ public sealed record LoadoutSlotObservation(string Character)
     public IReadOnlyList<string> SkillIds { get; init; } = [];
     public IReadOnlyList<string>? UnplacedIds { get; init; }
     public bool? EquipmentComplete { get; init; }
+    public EvidenceArray? Suits { get; init; }
+    public EvidenceArray? Equipment { get; init; }
 }
 
 public sealed record LoadoutStatsObservation(string Character)
@@ -33,4 +36,7 @@ public sealed record LoadoutStatsObservation(string Character)
     public string GemWeapon { get; init; } = "";
     public string? GemTemplate { get; init; }
     public string TermsBlob { get; init; } = "";
+    public EvidenceArray? RefineStats { get; init; }
+    public EvidenceArray? SourceSkills { get; init; }
+    public EvidenceArray? Terms { get; init; }
 }

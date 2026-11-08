@@ -89,6 +89,12 @@ public static class EffectConditions
         missing["condition_type"] = Text(kind);
         missing["condition_source"] = condition.Get("source");
         if (kind == "always") return null;
+        if (kind == "value_compare")
+        {
+            if (BuffEvidence.OptionalFloat(condition.Get("left")) is not { } left || BuffEvidence.OptionalFloat(condition.Get("right")) is not { } right
+                || !Is(condition.Get("compare"), "Equals")) return Missing("missing_or_invalid_comparison_value");
+            return left == right ? null : Object(("reason", Text("value_comparison_unsatisfied")), ("reason_group", Text("condition_unsatisfied")));
+        }
         if (kind == "damage_decorate_mask")
         {
             if (Mask(condition.Get("mask")) is not BigInteger required || !Is(condition.Get("check"), "HasAll", "HasAny"))
@@ -115,7 +121,7 @@ public static class EffectConditions
                 return Missing("malformed_compound_condition");
             var failures = children.Items.Select(child => Failure(Object(("condition", child)), hit)).ToArray();
             if (kind == "any" && failures.Any(failure => failure is null)) return null;
-            return failures.FirstOrDefault(failure => failure is not null && Is(failure.Get("reason_group"), "condition_unobservable"))
+            return failures.FirstOrDefault(failure => failure is not null && Is(failure.Get("reason_group"), kind == "all" ? "condition_unsatisfied" : "condition_unobservable"))
                 ?? failures.FirstOrDefault(failure => failure is not null);
         }
         if (kind is "target_hp_compare" or "target_hp_ratio_lte")
@@ -162,7 +168,7 @@ public static class EffectConditions
         }
         if (kind == "damage_type_in")
         {
-            string[] valid = ["physical", "fire", "pulse", "cryst", "natural"];
+            string[] valid = ["physical", "real", "fire", "pulse", "cryst", "lifedrain", "natural", "ether"];
             var actual = hit.Get("damage_element");
             if (condition.Get("elements") is not EvidenceArray { Items.Count: > 0 } elements
                 || elements.Items.Any(element => !Is(element, valid)) || !Is(actual, valid)) return Missing("unresolved_damage_type");

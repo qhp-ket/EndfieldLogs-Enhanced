@@ -10,7 +10,7 @@ public static class BuffLegacyExporter
 {
     public static IReadOnlyList<string> Lines(TraceEvent item, int timezoneOffsetMinutes)
     {
-        var data = (EvidenceObject)TraceValueProjection.Restore(item.Data, (EvidenceObject)item.Data.Get("legacy_layout"));
+        var data = ExportValues.Data(item);
         var uid = SkillWire.IdentityToken(data.Get("buff_inst_id"));
         var body = item.Type switch
         {

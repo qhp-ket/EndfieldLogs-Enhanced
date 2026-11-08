@@ -72,6 +72,15 @@ public sealed class SemanticEffectCatalog(IReadOnlyDictionary<string, EvidenceOb
         foreach (var raw in Items(decoded.Get("conditions")).Cast<EvidenceObject>())
         {
             var condition = Copy((EvidenceObject)BuffEvidence.Clone(raw));
+            if (Is(raw.Get("type"), "value_compare"))
+                foreach (var side in new[] { "left", "right" })
+                {
+                    var config = (EvidenceObject)condition[side + "_config"]; condition.Remove(side + "_config");
+                    var key = Text(config.Get("blackboardKey")); var fromBoard = CatalogValues.Truth(config.Get("useBlackboardKey"));
+                    var value = BuffEvidence.OptionalFloat(fromBoard ? blackboard.Get(key) : config.Get("value"));
+                    condition[side] = value is { } number ? new EvidenceReal(number) : EvidenceNull.Value;
+                    if (fromBoard) condition[side + "_key"] = T(key);
+                }
             if (Is(raw.Get("type"), "target_hp_compare", "target_has_buff") && Is(effect.Get("enableSide"), "Attacker", "Defender"))
                 condition["subject_side"] = T(Is(effect.Get("enableSide"), "Attacker") ? "defender" : "attacker");
             if (Is(raw.Get("type"), "target_hp_compare"))

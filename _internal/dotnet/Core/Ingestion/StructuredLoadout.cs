@@ -35,15 +35,17 @@ public static class StructuredLoadout
             if (item.Data.Fields.ContainsKey("unplaced_equipment")) Identities(item.Data.Get("unplaced_equipment"));
         }
         else throw new InvalidDataException("Expected loadout event");
-        var data = (EvidenceObject)TraceValueProjection.Restore(item.Data, item.Data.Get("legacy_layout") as EvidenceObject ?? new(new Dictionary<string, EvidenceValue>()));
+        var data = TraceModel.Data(item);
         if (item.Type == "loadout_group") state.BeginGroup(((EvidenceText)data.Get("reason")).Value, evidenceIndex, item.CapturedAtMs);
         else if (item.Type == "loadout_slot")
         {
-            var observation = LoadoutWire.Slot(data); var suit = LoadoutWire.Text(data, "equip_suit", "{}");
+            var observation = LoadoutWire.Slot(data);
             state.ObserveSnapshot(observation, evidenceIndex, item.CapturedAtMs);
             if (observation.Slot >= 0 && observation.Character.Length > 0 && observation.Weapon.Length > 0
-                && !observation.Character.Concat(observation.Weapon).Any(char.IsWhiteSpace) && suit.StartsWith('{') && suit.Contains('}'))
-                state.ObserveActive(observation.Character, observation.Weapon, TraceFields.LoadoutSuits(suit));
+                && !observation.Character.Concat(observation.Weapon).Any(char.IsWhiteSpace))
+                state.ObserveActive(observation.Character, observation.Weapon, (observation.Suits ?? new EvidenceArray([])).Items.Cast<EvidenceObject>()
+                    .Where(row => row.Get("piece_count") is EvidenceInteger count && count.Value >= 3)
+                    .Select(row => ((EvidenceText)row.Get("suit_id")).Value).ToHashSet(StringComparer.Ordinal));
         }
         else state.ObserveSnapshot(LoadoutWire.Stats(data), evidenceIndex, item.CapturedAtMs);
     }

@@ -4,6 +4,7 @@ using EndfieldLogs.Core.Compatibility;
 using EndfieldLogs.Runtime.Tracing;
 using EndfieldLogs.Core.Tracing;
 using EndfieldLogs.Core.Ingestion;
+using EndfieldLogs.Core.Reporting;
 using EndfieldLogs.Core.Timing;
 using System.Numerics;
 using EndfieldLogs.Core.Allocation;
@@ -91,14 +92,35 @@ internal static class TraceBridgeCases
                 if (events.Count != expectedCount) throw new InvalidDataException("Structured damage count differs from fixed reference: " + test["name"]);
                 var expectedDamage = test["expected"]!.AsArray().Last()!.AsArray().Select(row => row!.GetValue<string>())
                     .Where(line => HitLine(line) || EntityLine(line) || IdentityLine(line) || SkillLine(line) || LoadoutLine(line) || ActivityLine(line) || BuffLine(line) || ClockLine(line) || TimerLine(line) || StageLine(line) || ContextLine(line) || line.Contains(" PKT_", StringComparison.Ordinal)).ToArray();
-                if (!exported.SequenceEqual(expectedDamage)) throw new InvalidDataException("Independent damage export differs from fixed bytes: " + test["name"]);
+                if (!exported.SequenceEqual(expectedDamage))
+                {
+                    // V2 intentionally drops old scalar spelling and object order.
+                    // Validate the whole parsed report when the generated text differs.
+                    var resources = new ResourceFiles(root);
+                    var analysis = BattleReportAnalysis.Load(resources, TimeZoneInfo.Utc);
+                    EvidenceObject? Report(IEnumerable<string> lines)
+                    {
+                        var text = string.Concat(lines);
+                        BattleIngestionStream stream = new(BattleIngestionResources.Load(resources));
+                        stream.Accept(text.Split('\n').Select((line, index) => (index + 1, line)));
+                        return analysis.BuildReport(BattleReportInput.Capture(stream, new(1970, 1, 1)), text, allowEmpty: true);
+                    }
+                    var expectedReport = Report(expectedDamage); var exportedReport = Report(exported);
+                    if (expectedReport is null ? exportedReport is not null
+                        : exportedReport is null || !EvidenceJson.PythonEquals(expectedReport, exportedReport))
+                        throw new InvalidDataException("Independent v2 export changes the parsed business report: " + test["name"]);
+                }
                 var oldStream = Stream(); var typedStream = Stream();
                 TimerEvidenceCollector oldOfficial = new(), typedOfficial = new();
                 InkObservationLog oldInk = new(), typedInk = new();
                 var eventIndex = 0; long stamp = 0; var lineNumber = 0;
-                foreach (var row in test["expected"]!.AsArray().Last()!.AsArray())
+                // The fixed old body was checked above through the full report.
+                // Compare detailed native evidence against the generated v2
+                // compatibility text, whose scalar types follow the new model.
+                var comparisonLines = includeEntities ? exported : test["expected"]!.AsArray().Last()!.AsArray().Select(row => row!.GetValue<string>());
+                foreach (var line in comparisonLines)
                 {
-                    lineNumber++; var line = row!.GetValue<string>();
+                    lineNumber++;
                     var previousEvent = eventIndex;
                     if (ContextLine(line))
                     {
@@ -182,7 +204,12 @@ internal static class TraceBridgeCases
                         else if (item.Type is "blackboard_calculation" or "blackboard_modify" or "blackboard_preset" or "ink_release") BlackboardWire.Observation(item);
                         else StructuredBuffPacket.Accept(item, lineNumber, typedStream.BuffPackets);
                         if (!JsonNode.DeepEquals(BuffInstanceCases.Snapshot(oldStream.Buffs), BuffInstanceCases.Snapshot(typedStream.Buffs)))
+                        {
+                            Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(outputPath))!);
+                            File.WriteAllText(outputPath + ".expected-state.json", BuffInstanceCases.Snapshot(oldStream.Buffs)!.ToJsonString());
+                            File.WriteAllText(outputPath + ".actual-state.json", BuffInstanceCases.Snapshot(typedStream.Buffs)!.ToJsonString());
                             throw new InvalidDataException("Per-event BUFF state differs at line " + lineNumber + ": " + test["name"]);
+                        }
                     }
                     else if (EntityLine(line))
                     {
@@ -218,7 +245,12 @@ internal static class TraceBridgeCases
                     ("release", item.Release ?? EvidenceNull.Value), ("identity", item.Identity ?? EvidenceNull.Value),
                     ("identity_present", new EvidenceBoolean(item.IdentityPresent)), ("invalid_identity", new EvidenceBoolean(item.InvalidIdentity)))).ToArray());
                 if (!JsonNode.DeepEquals(FieldCases.Canonical(InkState(oldInk.Capture())), FieldCases.Canonical(InkState(typedInk.Capture()))))
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(outputPath))!);
+                    File.WriteAllText(outputPath + ".expected-state.json", FieldCases.Canonical(InkState(oldInk.Capture()))!.ToJsonString());
+                    File.WriteAllText(outputPath + ".actual-state.json", FieldCases.Canonical(InkState(typedInk.Capture()))!.ToJsonString());
                     throw new InvalidDataException("Structured report ink observations differ from fixed legacy inputs: " + test["name"]);
+                }
                 var oldState = FieldCases.Canonical(HitObservationCases.Project(oldStream.Hits, oldStream.Packets));
                 var typedState = FieldCases.Canonical(HitObservationCases.Project(typedStream.Hits, typedStream.Packets));
                 if (!JsonNode.DeepEquals(oldState, typedState))

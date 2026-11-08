@@ -10,8 +10,7 @@ public static class SkillLegacyExporter
 {
     public static IReadOnlyList<string> Lines(TraceEvent item, int timeZoneOffsetMinutes)
     {
-        if (item.Data.Get("legacy_layout") is not EvidenceObject layout) throw new InvalidDataException("Skill event lacks export layout");
-        var data = (EvidenceObject)TraceValueProjection.Restore(item.Data, layout);
+        var data = ExportValues.Data(item);
         string L(string key, string fallback = "unknown") => SkillWire.Label(data, key, fallback);
         string Iden(string key) => SkillWire.IdentityToken(data.Get(key));
         string G(string key) => General(SkillWire.Number(data.Get(key)));
