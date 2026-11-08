@@ -34,7 +34,8 @@ def test_clock_bypass_preserves_pending_buff_time_and_exact_export():
     clocks = [parse(serialize(event), header=False) for event in events[:4]]
     assert [event.sequence for event in events] == list(range(1, len(events) + 1))
     assert clocks[0].data['client_ts'] == 9007199254740993 and clocks[0].data['server_ts'] == -1
-    assert clocks[1].data['tick_ms'] == '00042' and clocks[1].data['operation_seq'] == 0
+    assert clocks[1].data['tick_ms'] == 42 and clocks[1].source['operation_seq'] == 0
+    assert 'operation_seq' not in clocks[1].data
     assert 'message_id' not in clocks[3].data and clocks[2].data['message_id'] is None
     assert [line for event in clocks for line in clock_legacy_lines(event, timezone_offset_minutes=330)] == [
         '[05:30:09.000] GAME_CLOCK_SYNC source=CS_PING msgId=0 captureMs=9000 clientTs=9007199254740993 logicalTs=0 rawBodyHex=empty\n',

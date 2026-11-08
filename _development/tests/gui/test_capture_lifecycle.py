@@ -112,10 +112,57 @@ def test_new_recording_runs_on_capture_owner_and_delivers_both_paths(monkeypatch
     try:
         controller.start()
         assert controller.queue.get(timeout=3)[0] == 'state'
-        assert controller.running_config.recording_on_start is False
+        assert controller.running_config.recording_on_start is True
         controller.toggle_recording()
         assert controller.queue.get(timeout=3) == ('recording_changed', dict(active=True, trace=str(tmp_path/'trace_v002.jsonl')))
         assert len(owners) == 2 and owners[0] == owners[1] != threading.get_ident()
+    finally:
+        controller.stop(); controller.join()
+
+
+def test_capture_auto_recording_syncs_ui_and_can_stop_independently(main_window, monkeypatch, tmp_path):
+    window = main_window
+    controller = window.service_controller
+    runs = []
+    inputs, overlays = [], []
+    monkeypatch.setattr(window.independent_controller, 'set_recording', lambda active, trace=None: inputs.append((active, trace)))
+    monkeypatch.setattr(window.overlay_manager, 'set_recording', overlays.append)
+
+    class Service:
+        def __init__(self, config, observer):
+            self.observer, self.loop = observer, None
+            self.recording = config.recording_on_start
+            config.trace_file = tmp_path / f'trace_{len(runs)}.jsonl'
+            self.trace = config.trace_file
+            runs.append(self)
+        def set_full_analysis_required(self, required): pass
+        def request_stop(self):
+            if self.loop is not None and not self.loop.is_closed():
+                self.loop.call_soon_threadsafe(self.done.set)
+        async def run(self):
+            self.loop, self.done = asyncio.get_running_loop(), asyncio.Event()
+            self.observer.on_state_change(ServiceState.LIVE, 'synthetic', None)
+            await self.done.wait()
+        async def _broadcast(self, message): pass
+        def set_recording(self, active):
+            self.recording = active
+            return (None, self.trace) if active else (None, None)
+
+    monkeypatch.setattr(gui_service, 'DamageLogService', Service)
+    try:
+        for index in range(2):
+            controller.start()
+            wait_for(lambda: controller.lifecycle == CaptureLifecycle.RUNNING, QApplication.instance())
+            window._drain_queue()
+            assert controller.recording and inputs[-1] == (True, str(runs[index].trace)) and overlays[-1] is True
+            assert window.home_page.recording_btn.text() == '停止记录'
+            controller.toggle_recording()
+            wait_for(lambda: not runs[index].recording, QApplication.instance())
+            window._drain_queue()
+            assert not controller.recording and inputs[-1] == (False, None) and overlays[-1] is False
+            window._drain_queue()
+            assert controller.is_running() and not controller.recording
+            controller.stop(); controller.join(); window._drain_queue()
     finally:
         controller.stop(); controller.join()
 

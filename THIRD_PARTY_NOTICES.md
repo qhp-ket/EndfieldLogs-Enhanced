@@ -18,7 +18,7 @@
 
 | 内容 | 来源与记录 |
 | --- | --- |
-| 精简运行数据 `runtime-data.zip` 及清单 | [ZMDLogs](https://zmdlogs.com/) 3.0.12（2026-10-16）完整发行包；固定下载地址及 SHA-256 见 `_internal/data/resource-manifest.json` |
+| 精简运行数据 `runtime-data.zip` 及清单 | [ZMDLogs](https://zmdlogs.com/) 3.0.14（2026-11-05）完整发行包；固定下载地址及 SHA-256 见 `_internal/data/resource-manifest.json` |
 | 中文名称、技力与技能帧规则 | [AKEData 数据站](https://data.akedata.wiki/)、[网站](https://www.akedata.wiki/)及 [AKEDatabase 仓库](https://github.com/NagiYume/AKEDatabase)；版本、提交和原表哈希保留在数据的 `source` / `_source` 中 |
 | 圆形角色头像 | AKEData 数据站的 `charroundicon` 图片，缩放并圆形裁切为透明 PNG；角色 ID、原始链接和校验值见 `_internal/data/ui/characters/manifest.json`，维护方式见同目录 README |
 | 解析测试中的文案、公式与审核证据 | 固定 ZMDLogs 资源基线及 AKEData 文案快照；版本、表名与哈希见测试 JSON 和 fixtures 说明 |

@@ -1,6 +1,6 @@
 """Stable report versions and sentinel identities shared by parser stages."""
 
-PARSER_VERSION = "raw-log-parser-v60"
+PARSER_VERSION = "raw-log-parser-v61"
 RULES_VERSION = "raw-log-parser-v45"
 UNKNOWN_DUNGEON_KEY = "unknown_dungeon"
 UNKNOWN_ENEMY_KEY = "eny_0000_unknown"

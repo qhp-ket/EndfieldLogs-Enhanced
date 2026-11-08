@@ -2,7 +2,7 @@
 from copy import deepcopy
 
 from parser_core.trace_jsonl import TraceEvent
-from parser_core.trace_values import project_value
+from parser_core.trace_model import compact_data
 
 
 def observation_event(sequence, captured_at_ms, event_type, data, origin):
@@ -15,8 +15,10 @@ def observation_event(sequence, captured_at_ms, event_type, data, origin):
         source['generation'] = origin['generation']
     owner = origin.get('operation_owner_id')
     if type(owner) in (int, str) and str(owner).isascii() and str(owner).isdigit() and 0 <= int(owner) < 2**64:
-        source['owner_id'] = str(owner)
-    projected, layout = project_value(data)
-    projected['legacy_layout'] = layout
+        source['owner_id'] = str(int(owner))
     tick = origin.get('client_tick_tms')
+    if event_type in ('loadout_slot', 'loadout_stats'):
+        from parser_core.trace_loadout import typed_loadout
+        data = typed_loadout(data)
+    projected = compact_data(data, source, tick if type(tick) is int else None, event_type)
     return TraceEvent(sequence, captured_at_ms, event_type, projected, deepcopy(source), tick if type(tick) is int else None)

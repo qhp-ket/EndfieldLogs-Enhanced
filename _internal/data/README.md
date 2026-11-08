@@ -1,14 +1,15 @@
 # 运行数据维护
 
-开发环境与便携版共用精简数据。基准为 ZMDLogs 3.0.12（2026-10-16），另含四份项目维护规则。
-解析数据 2,786 个文件，约 16.9 MB；源码恢复包 `runtime-data.zip` 约 5.8 MB。体积使用十进制 MB。
+开发环境与便携版共用精简数据。基准为 ZMDLogs 3.0.14（2026-11-05），另含四份项目维护规则。
+解析数据 2,790 个文件，约 17.0 MB；源码恢复包 `runtime-data.zip` 约 5.8 MB。体积使用十进制 MB。
 
 ## 来源与保留范围
 
 | 内容 | 来源记录 |
 | --- | --- |
 | `runtime-data.zip` | 固定 ZMDLogs 发行包，地址与 SHA-256 见 `resource-manifest.json`；`akedata` 保留上游目录名 |
-| 明河角色及技能补充 | AKEData `1.6.4@11529267-11`；角色、潜能、技能分组、技能/Buff 配置、技能帧与技力参考的输入 SHA-256、资产 MD5 和版本见清单 `supplements`，未扩展 typed 伤害证据及 rDPS 批准规则 |
+| 明河角色及技能补充 | AKEData `1.6.4@11529267-11`；角色、潜能、技能分组、技能/Buff 配置、技能帧与技力参考的输入 SHA-256、资产 MD5 和版本见清单 `supplements`；typed 伤害证据和唤月外部攻击提升取自 3.0.14 官方资源 |
+| 官网独立 uploader | 3.0.14 已将上传器并入主程序；独立组件继续固定为已核验的 3.0.12 原版，来源及 SHA-256 见清单 `uploader_source` |
 | `local_semantics/team_energy_rules.json` | [AKEDatabase](https://github.com/NagiYume/AKEDatabase) 技力机制与技能表，提交 `31b53147cd88fb6e9576b5c389967d21687c85cf` 及表哈希见 `source` |
 | `local_semantics/skill_frame_rules.json` | AKEDatabase SkillData，资源时间、摘要和文件数见 `source` |
 | `game_resource_snapshot.json`、`packet_semantics/rdps_semantics_registry.json` | 本项目维护的元数据及解析规则，含输入哈希和证据 |
@@ -27,20 +28,20 @@
 - 完整 typed Buff roots、伤害 catalog 和原始证据哈希。
 
 typed roots 的结构/证明、按字节校验的武器定义保持原样。
-技能 manifest 保留层数上限所需的 23 条记录；`sourceResourceCount`、`sourceManifestSha256` 记录原始 2,928 项清单。
+技能 manifest 保留层数上限所需的 23 条记录；`sourceResourceCount`、`sourceManifestSha256` 记录原始 2,948 项清单。
 测试专用公式证据位于 `parser_core/tests/fixtures/runtime_evidence/`。
 
 ## 读取范围与体积
 
 | 分组 | MB | 主要读取者 |
 | --- | ---: | --- |
-| `akedata` | 1.65 | parser、hit_debug、uploader、loadout、buff_display |
-| `local_static` | 7.23 | parser 的 typed roots、伤害及公式证据 |
-| `local_semantics` | 3.51 | parser、技能帧、技力证据 |
-| `local_tables` | 3.04 | parser、capture/resolver、名称、loadout、trace |
-| `packet_semantics` | 1.24 | parser、协议映射、hit_debug |
+| `akedata` | 1.67 | parser、hit_debug、uploader、loadout、buff_display |
+| `local_static` | 7.27 | parser 的 typed roots、伤害及公式证据 |
+| `local_semantics` | 3.55 | parser、技能帧、技力证据 |
+| `local_tables` | 3.09 | parser、capture/resolver、名称、loadout、trace |
+| `packet_semantics` | 1.17 | parser、协议映射、hit_debug |
 | 消息 ID 表 | 0.18 | message_registry |
-| `public` | 0.02 | 关卡词条名称 |
+| `public` | 0.07 | 关卡词条名称、中文服务端文案 |
 | `jsondata` | 0.007 | 名称、头像映射、关卡辅助表 |
 
 等级属性表约 1.27 MB，技能 manifest 约 5 KB。

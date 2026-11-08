@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "source": "ZMDLogs 3.0.14 weapon/typed resources and pinned AKEData Chinese skill fields",
+  "sourceArchiveSha256": "0035dce6e8d8f8dc2fbd91df9a2f2e695490387d1b3f0927086ad93f50f467df",
+  "textSource": {
+    "source": "AKEData 1.6.4@11529267-11",
+    "SkillPatchTable": "06170b6f4c12c57b2d93e6bb4ce3b179712b29bcd1dcac0607324cef263f7469",
+    "I18nTextTable_CN": "2a92b375d44eae019fa119ca71df67b5779372e109ea513c060549b62adf9643"
+  },
+  "rows": {
+    "wpn_claym_0018": {
+      "skillId": "sk_wpn_claym_0018",
+      "skillSlot": 2,
+      "descriptionId": -8361805328598629879,
+      "description": "攻击力<@ba.vup>+{atk_up:0.0%}</>。\n装备者对敌人施加<#ba.static>定身</>时，使目标敌人受到的伤害<@ba.vup>+{dmg_taken_up:0.0%}</>，持续{duration:0}秒。\n装备者对敌人施加<#ba.static>定身</>或施放终结技后，{duration_combo:0}秒内的下个连携技造成的伤害<@ba.vup>+{combo_dmg_up:0.0%}</>。\n<@ba.info>两种效果独立生效，且均无法叠加。</>",
+      "weaponDefinitionSha256": "ee3e90efd4e47f6a01667be7037bfd3b836120cdde3b06919336fdc775d335cc",
+      "buffId": "buff_wpn_claym_0018_enemyvul",
+      "typedBuffSourceSha256": "74baaac3f082bf12d4705041f3b2cd23a7fddccd6171f4725e78b91fd2ba6cfe",
+      "attributeModifier": {
+        "attributeModifiers": [],
+        "isConvertedAttribute": false
+      },
+      "unchangedFromTextProof": "whitelist_new_item_official_text_20261016.json",
+      "damageModifier": [
+        {
+          "condition": {
+            "actionData": [],
+            "onlyExecuteWhenSourceIsGuard": false,
+            "onlyExecuteWhenSourceIsMainChar": false
+          },
+          "damageProcessors": [
+            {
+              "addition": {
+                "blackboardKey": "dmg_taken_up",
+                "useBlackboardKey": true,
+                "value": 0.0
+              },
+              "side": "Defender",
+              "zoneName": "NormalCalcZone"
+            }
+          ],
+          "enableSide": "Defender"
+        }
+      ]
+    },
+    "wpn_claym_0019": {
+      "skillId": "sk_wpn_claym_0019",
+      "skillSlot": 2,
+      "descriptionId": 7404384389884046137,
+      "description": "主能力<@ba.vup>+{primary_attr_up:0.0%}</>。\n装备者通过战技施加<#ba.crystinflict>寒冷附着</>或<#ba.fireinflict>灼热附着</>时，寒冷伤害<@ba.vup>+{cryst_dmg_up:0.0%}</>，持续{duration:0}秒。\n装备者对小队内其他干员施加<#ba.spellenhance>法术增幅</>后，全队法术伤害<@ba.vup>+{spell_dmg_up:0.0%}</>，持续{duration2:0}秒。\n<@ba.info>两种效果独立生效，且均无法叠加。</>",
+      "weaponDefinitionSha256": "d4f4e6c50762e9575504e223ed866fbec5164453ac0a960711406d61200f33b8",
+      "buffId": "buff_wpn_claym_0019_teamatk",
+      "typedBuffSourceSha256": "6be6dd4859a646ec92f550acc40bd13884dc0ee38371ec4f49293bc429139b8b",
+      "attributeModifier": {
+        "attributeModifiers": [
+          {
+            "attributeType": "FireDamageIncrease",
+            "formulaItem": "BaseAddition",
+            "modifyAttributeType": "Specific",
+            "param": {
+              "blackboardKey": "spell_dmg_up",
+              "useBlackboardKey": true,
+              "value": 0.0
+            }
+          },
+          {
+            "attributeType": "PulseDamageIncrease",
+            "formulaItem": "BaseAddition",
+            "modifyAttributeType": "Specific",
+            "param": {
+              "blackboardKey": "spell_dmg_up",
+              "useBlackboardKey": true,
+              "value": 0.0
+            }
+          },
+          {
+            "attributeType": "CrystDamageIncrease",
+            "formulaItem": "BaseAddition",
+            "modifyAttributeType": "Specific",
+            "param": {
+              "blackboardKey": "spell_dmg_up",
+              "useBlackboardKey": true,
+              "value": 0.0
+            }
+          },
+          {
+            "attributeType": "NaturalDamageIncrease",
+            "formulaItem": "BaseAddition",
+            "modifyAttributeType": "Specific",
+            "param": {
+              "blackboardKey": "spell_dmg_up",
+              "useBlackboardKey": true,
+              "value": 0.0
+            }
+          }
+        ],
+        "isConvertedAttribute": false
+      },
+      "unchangedFromTextProof": "whitelist_new_item_official_text_20261016.json",
+      "damageModifier": []
+    },
+    "wpn_sword_0025": {
+      "skillId": "sk_wpn_sword_0025",
+      "skillSlot": 2,
+      "descriptionId": -3743010060262356333,
+      "description": "源石技艺强度<@ba.vup>+{phy_spell_up:0}</>。\n装备者通过自身技能施加<#ba.conduct>导电</>后，全队攻击力<@ba.vup>+{atk_up:0.0%}</>，持续{duration:0}秒。\n装备者<#ba.consume>消耗</><#ba.spellinflict>法术附着</>后，电磁伤害<@ba.vup>+{pulse_dmg_up:0.0%}</>，持续{duration2:0}秒。\n<@ba.info>两种效果独立生效，且均无法叠加。</>",
+      "weaponDefinitionSha256": "86daf799a38025f1c019abb6cf61e569bf21f9f3e3ba55babf4c1cdefecbf547",
+      "buffId": "buff_wpn_sword_0025_pulseup",
+      "typedBuffSourceSha256": "ad6e28d25a013fb4e22b308d193117dbe8bc196cfe17a9d0ab8efe36497c63e9",
+      "attributeModifier": {
+        "attributeModifiers": [
+          {
+            "attributeType": "Atk",
+            "formulaItem": "BaseMultiplier",
+            "modifyAttributeType": "Specific",
+            "param": {
+              "blackboardKey": "atk_up",
+              "useBlackboardKey": true,
+              "value": 0.0
+            }
+          }
+        ],
+        "isConvertedAttribute": false
+      },
+      "damageModifier": []
+    }
+  }
+}

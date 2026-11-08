@@ -25,9 +25,9 @@ def test_damage_catalog_uses_current_typed_decoder_and_keeps_separate_legacy_art
     assert arts['decoder'] == {**parser._NATIVE_DAMAGE_SEMANTICS_BINDING,
                               'schemaSha256': 'da348402033bd4672bc14b1335382fb39c545987fc3d79947175932a0f8ef6d3'}
     assert CATALOG['source'] == 'current_official_item_skill_card_attribute'
-    assert CATALOG['weaponCount'] == 84
+    assert CATALOG['weaponCount'] == 85
     assert CATALOG['suitCount'] == 24
-    assert CATALOG['scannedUniqueWeaponSkillCount'] == 123
+    assert CATALOG['scannedUniqueWeaponSkillCount'] == 124
     assert CATALOG['scannedUniqueSuitSkillCount'] == 24
 
 
@@ -133,7 +133,7 @@ def test_triggered_damage_and_secondary_attribute_placeholders_are_not_static_da
     assert ('passive_equipsuit_fninflict_01', 'fire_dmg_up') not in keys
     assert ('passive_equipsuit_fninflict_01', 'nature_dmg_up') not in keys
     assert ('sk_wpn_funnel_0008', 'second_attr_up') not in keys
-    # No permanent amplification property exists in these 147 SkillData roots.
+    # No permanent amplification property exists in these 148 SkillData roots.
     assert not {65, 66, 67, 68} & {row['attributeType'] for row in ROWS}
 
 
@@ -169,8 +169,8 @@ def test_addition_acceptance_is_bound_to_this_version_and_exact_observed_propert
     manifest = json.loads((DATA / 'manifest.json').read_text(encoding='utf8'))
     # This is the historical complete scan, not the reduced runtime stack-limit list.
     assert manifest['projection'] == 'weapon_buff_stack_limits'
-    assert manifest['sourceManifestSha256'] == '1174a2e701b6804fdf439f49b203b3975dd7298d548fd6c5189eb2e85b3ee91f'
-    assert evidence['skillDataScan']['resourceCount'] == evidence['skillDataScan']['completeRootCount'] == manifest['sourceResourceCount'] == 2928
+    assert manifest['sourceManifestSha256'] == '8374054043a2d9770a64b56ed11e5be0b53e4c661bb02ee505690a3ef07b9994'
+    assert evidence['skillDataScan']['resourceCount'] == evidence['skillDataScan']['completeRootCount'] == manifest['sourceResourceCount'] == 2948
     assert all(row['id'].startswith('sk_wpn_') for row in manifest['entries'])
     assert evidence['skillDataScan']['errorCount'] == 0
     assert evidence['skillDataScan']['formulaCounts'] == {'BaseAddition': 13, 'Addition': 1}
@@ -183,8 +183,11 @@ def test_addition_acceptance_is_bound_to_this_version_and_exact_observed_propert
     assert len(historical) == 1
     assert historical[0]['sourceSha256'] == 'b5d68934d59fd92106ce63629eb95d151a47fbe621bef4f0f4cac8e13bd56ae4'
     assert historical[0]['formulaItem'] == 'BaseAddition'
+    historical_review = next(row for row in evidence['resourceReviews'] if row.get('date') == '2026-10-16')
+    assert historical_review['revalidatedBuffSourceSha256'] == 'f9f3da4aaee4c47db2c3775db1bb718af66b89482cd1416ea76548edfb5f950d'
     review = evidence['resourceReviews'][-1]
-    assert review['date'] == '2026-10-16'
+    assert review['date'] == '2026-11-07'
+    assert review['comparedExistingNaturalBuffCount'] == 29
     assert review['revalidatedBuff'] == 'buff_wpn_claym_0019_teamatk'
     assert review['nativeFormulaProofSha256'] == evidence['nativeFormulaProofSha256']
     assert review['changedExistingNaturalFormulas'] == 0

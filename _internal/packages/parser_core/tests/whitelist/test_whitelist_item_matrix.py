@@ -5,6 +5,7 @@ they do not infer triggers from casts or multiply already-final values again.
 """
 from parser_test_support.paths import FIXTURES, INTERNAL
 import json
+import hashlib
 import pytest
 from parser_core import battle_log_parser as parser
 
@@ -17,6 +18,7 @@ RATE = .2375
 # key, exact item, actual packet field, zone, approved elements, recipient.
 # Link uses its current 3605 parent-creation route, retaining approval 3606's key.
 CASES = [
+    ('buff_wpn_sword_0025_pulseup', 'wpn_sword_0025', 'atk_up', 'atk', ALL, 'attacker'),
     ('buff_wpn_funnel_0005_atk_up', 'wpn_funnel_0005', 'atk_up', 'atk', ALL, 'attacker'),
     ('buff_equipsuit_usp_02_AddAttack', 'suit_usp02', 'dmg_up', 'dmg_inc', ALL, 'attacker'),
     ('buff_wpn_pistol_0011_valid2', 'wpn_pistol_0011', 'spell_damage_taken_up', 'vuln_taken', SPELL, 'enemy'),
@@ -57,6 +59,7 @@ CASES = [
     ('buff_wpn_claym_0019_teamatk', 'wpn_claym_0019', 'spell_dmg_up', 'dmg_inc', SPELL, 'attacker'),
 ]
 TEXT_ANCHORS = {
+    'wpn_sword_0025': '全队攻击力',
     'wpn_funnel_0005': '和自身属性不同的干员', 'suit_usp02': '其他队友造成的伤害',
     'wpn_pistol_0011': '通过战技或终结技施加', 'wpn_funnel_0004': '全队获得物理和电磁伤害',
     'wpn_funnel_0006': '通过战技施加', 'wpn_funnel_0008': '法术爆发',
@@ -89,7 +92,7 @@ def record_for(case, rate=RATE):
               'packet_mapping': {'weapon_id' if item.startswith('wpn_') else 'suit_id': item}}
     if key == 'buff_wpn_sword_0026_celebration':
         record['bb_values']['phy_spell_up'] = 30.0
-    if item in {'wpn_claym_0018', 'wpn_claym_0019'}:
+    if item in {'wpn_claym_0018', 'wpn_claym_0019', 'wpn_sword_0025'}:
         # Explicit fixture of the loadout observed at this Buff's creation.
         record['source_weapon_template'] = item
     if key == 'buff_wpn_funnel_0018_layer_teammates':
@@ -123,7 +126,7 @@ def test_matrix_covers_every_current_weapon_and_suit_approval_exactly_once():
     assert {case[0] for case in CASES} == expected
 
 
-@pytest.mark.parametrize('case', [row for row in CASES if row[1] in {'wpn_claym_0018', 'wpn_claym_0019'}], ids=lambda case: case[0])
+@pytest.mark.parametrize('case', [row for row in CASES if row[1] in {'wpn_claym_0018', 'wpn_claym_0019', 'wpn_sword_0025'}], ids=lambda case: case[0])
 @pytest.mark.parametrize('change', ['missing_creation_weapon', 'different_creation_weapon', 'missing_source_actor', 'missing_target_actor', 'invalid_uid'])
 def test_new_weapons_require_observed_creation_loadout_and_actor_identity(case, change):
     record = record_for(case)
@@ -145,14 +148,23 @@ def test_new_weapons_require_observed_creation_loadout_and_actor_identity(case, 
 @pytest.mark.parametrize('case', CASES, ids=lambda case: case[0])
 def test_each_item_has_matching_text_current_field_and_approval(case):
     key, item, field, zone, elements, recipient = case
-    if item in {'wpn_claym_0018', 'wpn_claym_0019'}:
-        # These new items have official text rather than an old AKE snapshot.
+    if item in {'wpn_claym_0018', 'wpn_claym_0019', 'wpn_sword_0025'}:
+        # Bind reviewed Chinese text and typed modifiers to the current exact resources;
+        # the dated 2026-10-16 proof remains historical.
         text_proof = json.loads((FIXTURES /
-            'whitelist_new_item_official_text_20261016.json').read_text(encoding='utf8'))
-        catalog = json.loads((INTERNAL /
-            'data/local_static/skill/item_damage_baseline_catalog.json').read_text(encoding='utf8'))
-        assert all(catalog['sourceTables'][table] == digest for table, digest in text_proof['sourceTables'].items())
+            'whitelist_item_resource_review_20261107.json').read_text(encoding='utf8'))
         text = text_proof['rows'][item]
+        weapon_path = INTERNAL / f'data/local_tables/weapon/items/{item}.json'
+        assert hashlib.sha256(weapon_path.read_bytes()).hexdigest() == text['weaponDefinitionSha256']
+        buff = parser._load_current_buff_roots()[key]
+        def semantic(value):
+            if isinstance(value, dict):
+                return {k: semantic(v) for k, v in value.items() if not k.startswith('$')}
+            if isinstance(value, list):
+                return [semantic(v) for v in value]
+            return value
+        assert semantic(buff['attributeModifier']) == text['attributeModifier']
+        assert semantic(buff['damageModifier']) == text['damageModifier']
         assert parser._load_weapon_catalog()[item]['weapon_skill_ids'][text['skillSlot']] == text['skillId']
         assert TEXT_ANCHORS[item] in text['description']
     else:

@@ -18,6 +18,8 @@ class LoadoutSlotObservation:
     skill_ids: list[str] = field(default_factory=list)
     unplaced_ids: list[str] | None = None
     equipment_complete: bool | None = None
+    suits: list[dict] | None = None
+    equipment: list[dict] | None = None
 
 
 @dataclass(frozen=True)
@@ -35,3 +37,6 @@ class LoadoutStatsObservation:
     gem_weapon: str = ''
     gem_template: str | None = None
     terms_blob: str = ''
+    refine_stats: list[dict] | None = None
+    source_skills: list[dict] | None = None
+    terms: list[dict] | None = None

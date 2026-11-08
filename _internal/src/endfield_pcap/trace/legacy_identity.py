@@ -1,15 +1,13 @@
 """On-demand squad, actor mapping and skill-list export, independent of live state."""
 from datetime import datetime, timedelta, timezone
 
-from parser_core.trace_values import restore_value
+from endfield_pcap.trace.export_values import export_data
 
 
 def identity_legacy_lines(event, *, timezone_offset_minutes):
     if event.type not in ('squad', 'actor_mapping', 'character_skills', 'identity_inference'):
         raise ValueError('Expected identity event')
-    if 'legacy_layout' not in event.data:
-        raise ValueError('Identity event lacks legacy export layout')
-    data = restore_value(event.data, event.data['legacy_layout'])
+    data = export_data(event)
     if event.type == 'squad':
         members = data['members']
         labels = [f"{row['template']}_{row['entity_id']}" for row in members]

@@ -24,6 +24,13 @@ FIXTURE = Path(__file__).resolve().parents[3] / '_internal/packages/parser_core/
 BODY_HASH = '67c66dbbe838934cda9512236bb8d17c03684391967c359e96d8dd11de2f89e7'
 
 
+def assert_compatible(actual, expected):
+    # V2 exports canonical formatting; the complete parsed business report must
+    # still agree with the fixed old log, including equipment and BUFF evidence.
+    from parser_core.parser import parse_raw_battle_log_text
+    assert parse_raw_battle_log_text(actual.decode('utf8')) == parse_raw_battle_log_text(expected.decode('utf8'))
+
+
 def sample(monkeypatch, root):
     row = json.loads(FIXTURE.read_text(encoding='utf8'))
     assert row['reference_sha256'] == 'e23935c6e40f3ae3ec0ddd2653fe82ee7b447bed9653315096438c3b22e8632e'
@@ -76,17 +83,18 @@ def test_jsonl_recording_rotates_without_reset_and_exports_fixed_legacy(monkeypa
     assert events == [event for batch in batches for event in batch]
     assert [event.sequence for event in events] == list(range(1, len(events) + 1))
     assert recording.events_written == len(events)
-    assert legacy_text(chain).encode('utf8') == expected
+    exported = legacy_text(chain).encode('utf8')
+    assert_compatible(exported, expected)
     destination = tmp_path / 'uploader.log'
     proof = export_trace_log(last, destination)
     integrity = load_raw_log_integrity(str(destination))
-    assert integrity['verified'] and integrity['raw_content'].encode('utf8') == expected
+    assert integrity['verified'] and integrity['raw_content'].encode('utf8') == exported
     assert proof['meta']['source_recording_id'] == original_header.recording_id
     assert proof['meta']['source_volumes'] == [first.name, last.name]
     assert abs(destination.stat().st_mtime_ns - last.stat().st_mtime_ns) <= 1000
     renamed = first.with_name('renamed.jsonl')
     first.rename(renamed)
-    assert legacy_text(resolve_volumes(last)).encode('utf8') == expected
+    assert legacy_text(resolve_volumes(last)).encode('utf8') == exported
     with pytest.raises(ValueError, match='覆盖'):
         export_trace_log(last, renamed)
     outside = tmp_path / 'missing.jsonl'
@@ -133,7 +141,7 @@ def test_jsonl_recording_pending_buff_survives_volume_rotation(monkeypatch, tmp_
 
 def test_jsonl_volumes_reject_gaps_and_incomplete_tail(tmp_path):
     first, second = tmp_path / 'part1.jsonl', tmp_path / 'part2.jsonl'
-    event = TraceEvent(1, 0, 'battle_timer', {'phase': 'reset', 'source': 'CAPTURE_SESSION_START', 'legacy_layout': {}}, {})
+    event = TraceEvent(1, 0, 'battle_timer', {'phase': 'reset', 'source': 'CAPTURE_SESSION_START'}, {})
     with first.open('wb') as stream:
         TraceJsonlWriter(stream, header()).write(event)
     next_header = replace(header(), volume=2, previous_volume={'volume': 1, 'file': first.name})
@@ -249,7 +257,7 @@ def test_service_jsonl_records_and_publishes_same_business_events(service_factor
             monkeypatch.setattr('endfield_pcap.trace.legacy.legacy_lines', legacy_lines)
             destination = tmp_path / 'uploader.log'
             export_trace_log(path, destination)
-            assert load_raw_log_integrity(str(destination))['raw_content'].encode('utf8') == expected_body
+            assert_compatible(load_raw_log_integrity(str(destination))['raw_content'].encode('utf8'), expected_body)
         else:
             assert service.config.trace_file is None and service.status_file is None
             assert not list(tmp_path.rglob('*.jsonl'))
@@ -394,7 +402,7 @@ def test_paired_service_rotation_history_export_and_input(service_factory, monke
     # Moving this fixture by whole UTC days preserves time-only lines, while
     # the explicit captured Unix milliseconds must move with the observation.
     dated_body = expected_body.replace(b'captureMs=1300', f'captureMs={day + 1300}'.encode('ascii'))
-    assert load_raw_log_integrity(str(destination))['raw_content'].encode('utf8') == dated_body
+    assert_compatible(load_raw_log_integrity(str(destination))['raw_content'].encode('utf8'), dated_body)
     assert proof['meta']['source_session_volumes'] == [first_session.name, last_session.name]
     with pytest.raises(ValueError, match='覆盖'):
         export_trace_log(last_session, first_trace)

@@ -5,7 +5,7 @@ from copy import deepcopy
 
 from endfield_pcap.trace.formatting import _intish
 from parser_core.trace_jsonl import TraceEvent
-from parser_core.trace_values import project_value
+from parser_core.trace_model import compact_data
 
 
 def damage_event(sequence, captured_at_ms, event, detail, detail_index, presence, *,
@@ -32,14 +32,11 @@ def damage_event(sequence, captured_at_ms, event, detail, detail_index, presence
         source['generation'] = event['generation']
     owner = event.get('operation_owner_id')
     if type(owner) in (int, str) and str(owner).isascii() and str(owner).isdigit() and 0 <= int(owner) < 2**64:
-        source['owner_id'] = str(owner)
-    if 'action_id' in action:
-        source['action_id'] = action['action_id']
+        source['owner_id'] = str(int(owner))
     amounts = {output: detail[key] for key, output in (('value', 'value'), ('cur_hp', 'current_hp'), ('is_crit', 'is_crit')) if key in detail}
     evidence = {key: value for key, value in detail.items()
                 if key not in {'value', 'cur_hp', 'is_crit', 'target_id', 'damage_unit_index', 'part_inst_id'}}
     evidence['presence'] = presence
-    evidence['packet_context'] = {'packetSeq': event.get('seq_id'), 'packetSessionId': event.get('session_id')}
     actors = {'attacker': attacker, 'target': target}
     if attacker_id is not None:
         actors['attacker_id'] = attacker_id
@@ -49,7 +46,6 @@ def damage_event(sequence, captured_at_ms, event, detail, detail_index, presence
             'blackboards': {'dynamic': [{'action_id': a, 'value': v} for a, v in dynamic_rows],
                            'calculation': [{'action_id': a, 'key': k, 'value': v} for a, k, v in calculation_rows]},
             'evidence': evidence}
-    projected, layout = project_value(data)
-    projected['legacy_layout'] = layout
+    projected = compact_data(data, source, event.get('client_tick_tms'))
     return TraceEvent(sequence, captured_at_ms, 'damage', projected, deepcopy(source),
                       event.get('client_tick_tms') if type(event.get('client_tick_tms')) is int else None)

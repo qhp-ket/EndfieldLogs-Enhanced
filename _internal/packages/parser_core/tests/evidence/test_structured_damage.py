@@ -117,7 +117,7 @@ def test_business_damage_enters_state_without_text_or_json_roundtrip(monkeypatch
     assert event.data['amounts']['value'] == -123.45678901234567
     assert event.data['action']['part_inst_id'] == '9007199254740993'
     assert event.source == {'session_id': '合成', 'operation_seq': 7, 'generation': 0,
-                            'owner_id': '18446744073709551615', 'action_id': 14, 'detail_index': 0}
+                                'owner_id': '18446744073709551615', 'detail_index': 0}
     stream = state()
     consume_structured_damage(stream, event, 4)
     hit = stream.hits[0]
@@ -153,7 +153,8 @@ def test_independent_damage_export_preserves_timestamp_rounding_placeholders_and
         'packetSeq=unknown clientTick=unknown \n']
 
 
-def test_producer_normalizes_nested_ids_but_keeps_modifier_export_bytes(monkeypatch):
+def test_producer_normalizes_nested_ids_and_exports_modifier_facts(monkeypatch):
+    import json
     from parser_core.trace_jsonl import parse, serialize
     from endfield_pcap.trace.legacy_damage import damage_legacy_lines
     events, _, _ = produced_details(monkeypatch, [{'value': -50, 'target_id': 22, 'part_inst_id': '00077',
@@ -163,8 +164,10 @@ def test_producer_normalizes_nested_ids_but_keeps_modifier_export_bytes(monkeypa
     assert event.data['action']['part_inst_id'] == '77'
     assert event.data['evidence']['modifier_args']['attacker_modifiers'][0]['buff_inst_id'] == '18446744073709551615'
     lines = damage_legacy_lines(event, timezone_offset_minutes=480)
-    assert any('"attacker":[{"index":3,"buff_inst_id":18446744073709551615,"debug_args":{"z":1.5,"a":-0.0}}]' in line
-               and '"partInstId":"00077"' in line for line in lines)
+    detail = next(json.loads(line[line.index('{'):]) for line in lines if 'PKT_MOD_DETAIL' in line)
+    assert detail['attacker'] == [{'index': 3, 'buff_inst_id': '18446744073709551615', 'debug_args': {'z': 1.5, 'a': -0.0}}]
+    assert detail['partInstId'] == '77'
+    assert 'legacy_layout' not in event.data and 'packet_context' not in event.data['evidence']
     stream = state()
     consume_structured_damage(stream, event, 1)
     assert stream.hits[0]['packet_modifier_handles']['attacker'][0]['buff_inst_id'] == '18446744073709551615'

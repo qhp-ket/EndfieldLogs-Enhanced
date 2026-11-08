@@ -5,7 +5,7 @@ from parser_core.ingestion.skills import apply_atb_observation, apply_skill_star
 from parser_core.ingestion.skill_wire import integer, projected_number, label, identity_token
 from parser_core.ingestion.structured_damage import _identity, _object
 from parser_core.reporting.poise import poise_damage_observation
-from parser_core.trace_values import restore_value
+from parser_core.trace_model import event_data
 
 
 def consume_structured_skill(ingestion, event, evidence_index):
@@ -20,7 +20,7 @@ def consume_structured_skill(ingestion, event, evidence_index):
     for key in ("owner", "attacker", "skill", "skill_source", "source", "original_source"):
         if key in data and data[key] is not None and not isinstance(data[key], str):
             raise ValueError("Expected skill/resource label")
-    restored = restore_value(data, _object(data.get("legacy_layout", {})))
+    restored = event_data(event)
     stamp = event.captured_at_ms
     if event.type == "skill_cast":
         instance = identity_token(restored.get("skill_inst_id"))

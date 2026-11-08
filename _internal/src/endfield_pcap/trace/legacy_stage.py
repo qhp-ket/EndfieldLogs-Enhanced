@@ -2,15 +2,13 @@
 from datetime import datetime, timedelta, timezone
 
 from parser_core.ingestion.skill_wire import integer
-from parser_core.trace_values import restore_value
+from endfield_pcap.trace.export_values import export_data
 
 
 def stage_legacy_lines(event, *, timezone_offset_minutes):
     if event.type not in ('dungeon', 'contracts', 'battle_result'):
         raise ValueError('Expected stage event')
-    if 'legacy_layout' not in event.data:
-        raise ValueError('Stage event lacks legacy export layout')
-    data = restore_value(event.data, event.data['legacy_layout'])
+    data = export_data(event)
     if event.type == 'dungeon':
         parts = ['DUNGEON_CONTEXT', 'dungeonId=' + data['dungeon_id'], 'source=' + data['source']]
         for key, name in (('scene_num_id', 'scene'), ('scene_id', 'sceneId'), ('challenge_expire_ts', 'challengeExpireTs'),

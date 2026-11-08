@@ -2,13 +2,13 @@
   "schema_version": 2,
   "root": "_internal",
   "projection_version": 2,
-  "source_release": "ZMDLogs 3.0.12 (2026-10-16)",
-  "source_url": "https://zmdlogs.com/downloads/EndfieldLogsClient_3.0.12_20261016.zip",
-  "source_archive_sha256": "dbddebee37320fa3da91b2e1e747c30b16c66e893d9a1387d52fbbee0dc74571",
+  "source_release": "ZMDLogs 3.0.14 (2026-11-05)",
+  "source_url": "https://zmdlogs.com/downloads/EndfieldLogsClient_3.0.14_20261105.zip",
+  "source_archive_sha256": "0035dce6e8d8f8dc2fbd91df9a2f2e695490387d1b3f0927086ad93f50f467df",
   "bundle": {
     "path": "data/runtime-data.zip",
-    "bytes": 5815850,
-    "sha256": "c38cf5542ec8c2aeeb805143791fe26fd540ba5082e1c9239e08d673ecdf5476"
+    "bytes": 5816667,
+    "sha256": "16ec5f7d00c143d64e81eb105ee4899015af275cc0b832a2d3d1d9d278421510"
   },
   "files": [
     {
@@ -685,8 +685,8 @@
     },
     {
       "path": "data/akedata/buff/items/buff_cc_chr_0037_minghe_disarm.json",
-      "bytes": 99,
-      "sha256": "adef5306d824b3b688384e345a089e3bda88ad3a55933cf1c419933cb743e5fe",
+      "bytes": 98,
+      "sha256": "60d08fa22f3b620547fed3d98f7ff4e521fcfc9fa33081255f0014337629d830",
       "origin": "runtime_projection"
     },
     {
@@ -3403,146 +3403,146 @@
     },
     {
       "path": "data/akedata/buff/items/buff_chr_0037_minghe_attack04_finishprojectile.json",
-      "bytes": 102,
-      "sha256": "33f66af9ed23da93b99480654080595e9c2ee3d0e039abd72bc283e467100d52",
+      "bytes": 101,
+      "sha256": "cdb1eaf7b8424b7fe5bbe8ddf29b19f565906b6cff8921bebbb230e2ff8b4d66",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/buff/items/buff_chr_0037_minghe_bandagemode.json",
-      "bytes": 101,
-      "sha256": "c28056704bbf6a8767289cc5fb4f91cf1d4a9a41783825f06d7e7d69bc4f7f14",
+      "bytes": 100,
+      "sha256": "2753aaf84d4c593de9d101c12d422ea193ee0f8095b57b183ec09f0ee6976194",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/buff/items/buff_chr_0037_minghe_forbid_power.json",
-      "bytes": 93,
-      "sha256": "8d6f3aa243e16842f38de1be6084ca904b89092b68d6268ff541827455204ac1",
+      "bytes": 92,
+      "sha256": "e711455316707727a767cb317d57aca3033bb696292cb97d2e841c29f386237e",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/buff/items/buff_chr_0037_minghe_forbid_spdash.json",
-      "bytes": 93,
-      "sha256": "8d6f3aa243e16842f38de1be6084ca904b89092b68d6268ff541827455204ac1",
+      "bytes": 92,
+      "sha256": "e711455316707727a767cb317d57aca3033bb696292cb97d2e841c29f386237e",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/buff/items/buff_chr_0037_minghe_injuredmode.json",
-      "bytes": 101,
-      "sha256": "c28056704bbf6a8767289cc5fb4f91cf1d4a9a41783825f06d7e7d69bc4f7f14",
+      "bytes": 100,
+      "sha256": "2753aaf84d4c593de9d101c12d422ea193ee0f8095b57b183ec09f0ee6976194",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/buff/items/buff_chr_0037_minghe_listen_ultimateend_storymode.json",
-      "bytes": 100,
-      "sha256": "7853e3face4c5edefeb230a5472c941b24479f76ea9313db22c0f9970e4a3e60",
+      "bytes": 99,
+      "sha256": "acc3596b163ef5a5052c4d7f4190f5a2d3a75cc813215c3863ad558d99a4b04d",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/buff/items/buff_chr_0037_minghe_poiseup.json",
-      "bytes": 93,
-      "sha256": "8d6f3aa243e16842f38de1be6084ca904b89092b68d6268ff541827455204ac1",
+      "bytes": 92,
+      "sha256": "e711455316707727a767cb317d57aca3033bb696292cb97d2e841c29f386237e",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/buff/items/buff_chr_0037_minghe_potential_1.json",
-      "bytes": 96,
-      "sha256": "cd1dbf09077c67d57919882cf00c0f19f442934bfb52456b5955b9c485b367bf",
+      "bytes": 95,
+      "sha256": "0f414c1bc5382bf3c7cc30394f5c089cb29a1727bdc6ea5dc992423e42c9ce49",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/buff/items/buff_chr_0037_minghe_potential_3.json",
-      "bytes": 100,
-      "sha256": "7853e3face4c5edefeb230a5472c941b24479f76ea9313db22c0f9970e4a3e60",
+      "bytes": 99,
+      "sha256": "acc3596b163ef5a5052c4d7f4190f5a2d3a75cc813215c3863ad558d99a4b04d",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/buff/items/buff_chr_0037_minghe_potential_5.json",
-      "bytes": 96,
-      "sha256": "cd1dbf09077c67d57919882cf00c0f19f442934bfb52456b5955b9c485b367bf",
+      "bytes": 95,
+      "sha256": "0f414c1bc5382bf3c7cc30394f5c089cb29a1727bdc6ea5dc992423e42c9ce49",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/buff/items/buff_chr_0037_minghe_potential_5_effect.json",
-      "bytes": 96,
-      "sha256": "cd1dbf09077c67d57919882cf00c0f19f442934bfb52456b5955b9c485b367bf",
+      "bytes": 95,
+      "sha256": "0f414c1bc5382bf3c7cc30394f5c089cb29a1727bdc6ea5dc992423e42c9ce49",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/buff/items/buff_chr_0037_minghe_power.json",
-      "bytes": 100,
-      "sha256": "7853e3face4c5edefeb230a5472c941b24479f76ea9313db22c0f9970e4a3e60",
+      "bytes": 99,
+      "sha256": "acc3596b163ef5a5052c4d7f4190f5a2d3a75cc813215c3863ad558d99a4b04d",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/buff/items/buff_chr_0037_minghe_power_storymode.json",
-      "bytes": 100,
-      "sha256": "7853e3face4c5edefeb230a5472c941b24479f76ea9313db22c0f9970e4a3e60",
+      "bytes": 99,
+      "sha256": "acc3596b163ef5a5052c4d7f4190f5a2d3a75cc813215c3863ad558d99a4b04d",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/buff/items/buff_chr_0037_minghe_sethp.json",
-      "bytes": 92,
-      "sha256": "5c778221249a3b0514bbfc497fba9dcae9df1be138a96728572847ff8640321c",
+      "bytes": 91,
+      "sha256": "fe1174a9d00d2b890b3c5d2e609e67942dbcb5ecb12163456b1908b91388253d",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/buff/items/buff_chr_0037_minghe_talent.json",
-      "bytes": 101,
-      "sha256": "5e0fc4890d3ba7051be0126be6cb1d6622d9224210410975de2665b9228b7432",
+      "bytes": 100,
+      "sha256": "21b5cf4c874824b658cd0c0b41b264cdd4a44380585be85fc5ca44d4bda4e8d0",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/buff/items/buff_chr_0037_minghe_talent_1.json",
-      "bytes": 101,
-      "sha256": "5e0fc4890d3ba7051be0126be6cb1d6622d9224210410975de2665b9228b7432",
+      "bytes": 100,
+      "sha256": "21b5cf4c874824b658cd0c0b41b264cdd4a44380585be85fc5ca44d4bda4e8d0",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/buff/items/buff_chr_0037_minghe_talent_2.json",
-      "bytes": 101,
-      "sha256": "5e0fc4890d3ba7051be0126be6cb1d6622d9224210410975de2665b9228b7432",
+      "bytes": 100,
+      "sha256": "21b5cf4c874824b658cd0c0b41b264cdd4a44380585be85fc5ca44d4bda4e8d0",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/buff/items/buff_chr_0037_minghe_talent_2_effectbuff.json",
-      "bytes": 100,
-      "sha256": "7853e3face4c5edefeb230a5472c941b24479f76ea9313db22c0f9970e4a3e60",
+      "bytes": 99,
+      "sha256": "acc3596b163ef5a5052c4d7f4190f5a2d3a75cc813215c3863ad558d99a4b04d",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/buff/items/buff_chr_0037_minghe_thunderdebuff.json",
-      "bytes": 100,
-      "sha256": "e5f268b66df4407a6172b15061380e7f370a7b6f691e75cb2fe660527d0e40cd",
+      "bytes": 99,
+      "sha256": "a53f46491df96a37d10988b884fb628e835755614663b1efd5355c5c285e2bdd",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/buff/items/buff_chr_0037_minghe_thundertrigger.json",
-      "bytes": 100,
-      "sha256": "aa959d1d0f6c8325e324a1e79fba63a7d796f625f42d6be6fb29acdbf5581f8f",
+      "bytes": 99,
+      "sha256": "d2c3001dec6ec9e253203cbcc9ab46c36fb35ed0dbe7e6e8c49f5454927f96e0",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/buff/items/buff_chr_0037_minghe_thundertrigger_damagereduction.json",
-      "bytes": 100,
-      "sha256": "102b514d1554433c3c6151065e29cd096adb3f274bb81b3d2daac37a425da6a9",
+      "bytes": 99,
+      "sha256": "bee41a92fd0f9717cce96ca64c40e7cd9b8e56ce4af2722b1cda1ea003dbcdee",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/buff/items/buff_chr_0037_minghe_ultimate_grab.json",
-      "bytes": 101,
-      "sha256": "c28056704bbf6a8767289cc5fb4f91cf1d4a9a41783825f06d7e7d69bc4f7f14",
+      "bytes": 100,
+      "sha256": "2753aaf84d4c593de9d101c12d422ea193ee0f8095b57b183ec09f0ee6976194",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/buff/items/buff_chr_0037_minghe_ultimate_hit.json",
-      "bytes": 100,
-      "sha256": "107813a705d08cc4654826aa8fcf8c946348d4c97892aca1b915d31b3b45274e",
+      "bytes": 99,
+      "sha256": "214282935b10acfd85d01342ab37c226aaa28a45dc59d8c5a828e1c45aa38093",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/buff/items/buff_chr_0037_minghe_ultimaterush.json",
-      "bytes": 100,
-      "sha256": "7853e3face4c5edefeb230a5472c941b24479f76ea9313db22c0f9970e4a3e60",
+      "bytes": 99,
+      "sha256": "acc3596b163ef5a5052c4d7f4190f5a2d3a75cc813215c3863ad558d99a4b04d",
       "origin": "runtime_projection"
     },
     {
@@ -4003,8 +4003,8 @@
     },
     {
       "path": "data/akedata/buff/manifest.json",
-      "bytes": 403656,
-      "sha256": "c17ab1c6c4f449b67da54025ddf7083a91071359c4329951ca230f33c3f628a6",
+      "bytes": 403655,
+      "sha256": "7b5b83dcd43effd16f4a4cf890793b64494ddeadf3689227d64abccda8db4ebd",
       "origin": "runtime_projection"
     },
     {
@@ -4177,8 +4177,8 @@
     },
     {
       "path": "data/akedata/character/items/chr_0037_minghe.json",
-      "bytes": 4348,
-      "sha256": "b4d1e39d518b4e51418ddda0112faaa42f5a662852261ca65b6c6246fa214439",
+      "bytes": 4347,
+      "sha256": "e3dbcbce0ca471ae8f3457bcac46fee7eeffc655680701026a73a3850bd6ff1b",
       "origin": "runtime_projection"
     },
     {
@@ -4189,8 +4189,8 @@
     },
     {
       "path": "data/akedata/character/manifest.json",
-      "bytes": 8885,
-      "sha256": "e4adb657eb647292473691fb72e3f6154d3c40a6ff0c371feb52ce560435a1a2",
+      "bytes": 8884,
+      "sha256": "b6d9b8a913bf94558601fce520978229d9f8173f8665e850324cdfc74ffc3db2",
       "origin": "runtime_projection"
     },
     {
@@ -8233,116 +8233,116 @@
     },
     {
       "path": "data/akedata/skill/items/chr_0037_minghe_attack1.json",
-      "bytes": 1099,
-      "sha256": "1508be992bad4c79d5365a0ea3b24a53d4ea99ab382f763defc42292fa33b7cc",
+      "bytes": 1098,
+      "sha256": "912be4f51fe9dda5ba06ca8f7f67d35b91b582f6614e4a8adc84195a836c49b4",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/skill/items/chr_0037_minghe_attack2.json",
-      "bytes": 93,
-      "sha256": "bdd97e968a4bf26685a073b97efc5ccbed29cef4b7ec69afbada0aadb434f5dc",
+      "bytes": 92,
+      "sha256": "4d28b302b229925ce557463b433260aa720ee594d78e31d3ae35971a671a4210",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/skill/items/chr_0037_minghe_attack3.json",
-      "bytes": 93,
-      "sha256": "bdd97e968a4bf26685a073b97efc5ccbed29cef4b7ec69afbada0aadb434f5dc",
+      "bytes": 92,
+      "sha256": "4d28b302b229925ce557463b433260aa720ee594d78e31d3ae35971a671a4210",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/skill/items/chr_0037_minghe_attack4.json",
-      "bytes": 447,
-      "sha256": "d65a5a7b37ce259a1b94e9e31e50b51112561a3c0a599b5d8c0ccb32b58d2d66",
+      "bytes": 446,
+      "sha256": "255a09bcb24f16205b7f4469615b4b65c82ba5fc2afe4d9525442a0bf63abe50",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/skill/items/chr_0037_minghe_attack4_endprojectilehit.json",
-      "bytes": 93,
-      "sha256": "bdd97e968a4bf26685a073b97efc5ccbed29cef4b7ec69afbada0aadb434f5dc",
+      "bytes": 92,
+      "sha256": "4d28b302b229925ce557463b433260aa720ee594d78e31d3ae35971a671a4210",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/skill/items/chr_0037_minghe_attack4_flysword.json",
-      "bytes": 93,
-      "sha256": "bdd97e968a4bf26685a073b97efc5ccbed29cef4b7ec69afbada0aadb434f5dc",
+      "bytes": 92,
+      "sha256": "4d28b302b229925ce557463b433260aa720ee594d78e31d3ae35971a671a4210",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/skill/items/chr_0037_minghe_attack4_flysword_weapon.json",
-      "bytes": 93,
-      "sha256": "bdd97e968a4bf26685a073b97efc5ccbed29cef4b7ec69afbada0aadb434f5dc",
+      "bytes": 92,
+      "sha256": "4d28b302b229925ce557463b433260aa720ee594d78e31d3ae35971a671a4210",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/skill/items/chr_0037_minghe_attack4_hitground.json",
-      "bytes": 93,
-      "sha256": "bdd97e968a4bf26685a073b97efc5ccbed29cef4b7ec69afbada0aadb434f5dc",
+      "bytes": 92,
+      "sha256": "4d28b302b229925ce557463b433260aa720ee594d78e31d3ae35971a671a4210",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/skill/items/chr_0037_minghe_attack4_hitground_abilityentity.json",
-      "bytes": 93,
-      "sha256": "bdd97e968a4bf26685a073b97efc5ccbed29cef4b7ec69afbada0aadb434f5dc",
+      "bytes": 92,
+      "sha256": "4d28b302b229925ce557463b433260aa720ee594d78e31d3ae35971a671a4210",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/skill/items/chr_0037_minghe_attack4_hitground_abilityentity_groundeffect.json",
-      "bytes": 93,
-      "sha256": "bdd97e968a4bf26685a073b97efc5ccbed29cef4b7ec69afbada0aadb434f5dc",
+      "bytes": 92,
+      "sha256": "4d28b302b229925ce557463b433260aa720ee594d78e31d3ae35971a671a4210",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/skill/items/chr_0037_minghe_attack5.json",
-      "bytes": 93,
-      "sha256": "bdd97e968a4bf26685a073b97efc5ccbed29cef4b7ec69afbada0aadb434f5dc",
+      "bytes": 92,
+      "sha256": "4d28b302b229925ce557463b433260aa720ee594d78e31d3ae35971a671a4210",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/skill/items/chr_0037_minghe_combo_skill.json",
-      "bytes": 91,
-      "sha256": "56aac2227b60d2865ff5f111392a6d444be37e49548357b1ec0183119d29c7bf",
+      "bytes": 90,
+      "sha256": "843be3813664c99036793707641fe515e4b8242ff7103ec12810fd34442a6dfc",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/skill/items/chr_0037_minghe_normalskill_1.json",
-      "bytes": 92,
-      "sha256": "66436ccd9afc372e81dab954f9a72614b86d4943e490836241e2d7007a1168b5",
+      "bytes": 91,
+      "sha256": "b554a95ed5a9a52ce617b48724f2a402a1474e70a4dd751c1da3b949867b4a99",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/skill/items/chr_0037_minghe_normalskill_2.json",
-      "bytes": 483,
-      "sha256": "24be81104f1cefdea812a627c881d375df835b3bbd9f9d84e77a57afaab9abad",
+      "bytes": 482,
+      "sha256": "d3f97c17589cf73e4ec595ab521028068def3a7c5aedd3cd07c25be762a31660",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/skill/items/chr_0037_minghe_plunging_attack_end.json",
-      "bytes": 95,
-      "sha256": "b55a1724b9870952fc0b3abd82e261a5d6853632bbd47bb245c9fe89db16b11b",
+      "bytes": 94,
+      "sha256": "23700a16b00c4c064fe98b7f6b91e3ac5ad93ec98086a3242be544f8b1735644",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/skill/items/chr_0037_minghe_plunging_attack_start.json",
-      "bytes": 95,
-      "sha256": "b55a1724b9870952fc0b3abd82e261a5d6853632bbd47bb245c9fe89db16b11b",
+      "bytes": 94,
+      "sha256": "23700a16b00c4c064fe98b7f6b91e3ac5ad93ec98086a3242be544f8b1735644",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/skill/items/chr_0037_minghe_powerattack.json",
-      "bytes": 836,
-      "sha256": "8029a82573668cc9f16414880d4ff54add4f31a32c778cb76c7b652593d49a07",
+      "bytes": 835,
+      "sha256": "3c4aba068149b30d13a23f7ad1eeadc9f0dd592e903fc80fa6811c19a47089e3",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/skill/items/chr_0037_minghe_specialfracture_thunderskill.json",
-      "bytes": 904,
-      "sha256": "5948623d3faa5f0d9dadcc098ae9828d42301006312e811060df04f03c27a1f9",
+      "bytes": 903,
+      "sha256": "3586e56e1a8b149393f687ad2edf9084a7bb131f0459dea68c1295ac855eae2e",
       "origin": "runtime_projection"
     },
     {
       "path": "data/akedata/skill/items/chr_0037_minghe_ultimate_skill.json",
-      "bytes": 1171,
-      "sha256": "b4c95f0704060f3a56415b6f418918db71f3a57257f541e37af60a8a13343280",
+      "bytes": 1170,
+      "sha256": "ce74614e7198269ff4a6dd2311ea1ecb3e25b6c1efba8b5ff0dc9ce7cda4967b",
       "origin": "runtime_projection"
     },
     {
@@ -15007,26 +15007,26 @@
     },
     {
       "path": "data/game_resource_snapshot.json",
-      "bytes": 1867,
-      "sha256": "44d5052909885cc58114e62f153c2f5a5cb2613c829fa1f708668836116e5fc8",
+      "bytes": 1810,
+      "sha256": "d8ada5daed12d3a0850da33154bed363a250440ce385cacc65b2fa54cadf2ec9",
       "origin": "development_override"
     },
     {
       "path": "data/local_semantics/buff/details.json",
-      "bytes": 1574998,
-      "sha256": "643ec8f33065b4979057d5cb4a133f5d7d8fb4529f1a92225c2f9653bc150f73",
+      "bytes": 1587419,
+      "sha256": "80025b19899ab06df19e62f3d760ccd2220c8605495c4f9ee7b7f8e257617059",
       "origin": "runtime_projection"
     },
     {
       "path": "data/local_semantics/classifier_hints.json",
-      "bytes": 684275,
-      "sha256": "219dcd4fc0f8b152ce7479c56a023c0747020bf03a03f4f0ef99c9cc2d249028",
+      "bytes": 689754,
+      "sha256": "8b87669e555f4a22dd71ad1b58237866778818ff176749ec87e43128329d9706",
       "origin": "runtime_projection"
     },
     {
       "path": "data/local_semantics/skill/details.json",
-      "bytes": 970349,
-      "sha256": "b1a9604edc7c7121dafe0ed036736ebadb0e67347edfc77bd9f6a9b6ac360ac8",
+      "bytes": 976167,
+      "sha256": "aceba4f2fb8e3a2519a3e77e50ee40010e883d1701cb44906234e2905cb62165",
       "origin": "runtime_projection"
     },
     {
@@ -15049,8 +15049,8 @@
     },
     {
       "path": "data/local_static/buff/typed_roots.json.gz",
-      "bytes": 3555338,
-      "sha256": "86499d598f8d4ae5537d9f40a67dfc3765d5f67758b13c911c7091d590fabbae",
+      "bytes": 3560544,
+      "sha256": "fe4604c5b6a89015d7730d610c6d1c0edb0eda7b2ac84f1365130215c7bd9a1d",
       "origin": "runtime_projection"
     },
     {
@@ -15061,14 +15061,14 @@
     },
     {
       "path": "data/local_static/skill/damage_element_catalog.json",
-      "bytes": 3344931,
-      "sha256": "633fe01bead693be20d5f3f1997886a0697196ea7d55f71746c9b2fc95cad6ea",
+      "bytes": 3371032,
+      "sha256": "f01099bb80e820e19c52030a57e7a6d6b34cc011c15bf27853fc994797e972c5",
       "origin": "runtime_projection"
     },
     {
       "path": "data/local_static/skill/display_name_catalog.json",
-      "bytes": 240550,
-      "sha256": "f2b221852ce6b98ca61fcda492ef2d1c2d8f02bbd50d598905edbbccc4242658",
+      "bytes": 245414,
+      "sha256": "78b4c991f5902dbe45d52b4866fcf9dfc2cb6a5a3838721f7556c5a41bae36cf",
       "origin": "runtime_projection"
     },
     {
@@ -15080,19 +15080,19 @@
     {
       "path": "data/local_static/skill/item_damage_baseline_catalog.json",
       "bytes": 70795,
-      "sha256": "6a9e5759c61bc9beb276df7082283a1483a1504d0a82626da5fb7b07e700e854",
+      "sha256": "9b608ea5672f409fb12952d5c5dd8deae53f6a9cd80fe043db958541e3ff4bec",
       "origin": "runtime_projection"
     },
     {
       "path": "data/local_static/skill/manifest.json",
       "bytes": 5040,
-      "sha256": "eb97cccb36e0dbdaf4793940b49982e596928b71495d223880bea74099f0b6a7",
+      "sha256": "548bd437b0549ee1d5f9f8ca8f53fb6afe951ac203cb1c7e2939f8eb5456cd4d",
       "origin": "runtime_projection"
     },
     {
       "path": "data/local_tables/NumIdStrTable.json",
-      "bytes": 267991,
-      "sha256": "02f49c5465867b9a096bf52c1705166d3ba8b6cb55be551bd2cfdedbdd92298a",
+      "bytes": 268130,
+      "sha256": "efa8f669a56e500a12808b4c70c2b1d4cde479e7d949e3ac9247ca014990fd57",
       "origin": "runtime_projection"
     },
     {
@@ -15295,8 +15295,8 @@
     },
     {
       "path": "data/local_tables/character/items/chr_0037_minghe.json",
-      "bytes": 37047,
-      "sha256": "541dd82089c15f3d9c3d0c7139593199825cef091be0acf9ea18c5e535247c1c",
+      "bytes": 36218,
+      "sha256": "06cce6d79914f2ad162fa13335960244d337deb9de18e0f6817e0d0bdad3978c",
       "origin": "runtime_projection"
     },
     {
@@ -15313,8 +15313,8 @@
     },
     {
       "path": "data/local_tables/character/manifest.json",
-      "bytes": 13588,
-      "sha256": "ca1938ab85072aea08f033562f523b5181726123d0d2939f01ad4e3fc8fe1b7b",
+      "bytes": 13587,
+      "sha256": "d4521a2e0c1ebf1c2335d4bf1ed7a91f5ddf8da0a7efac8cce30768d306d6aff",
       "origin": "runtime_projection"
     },
     {
@@ -15637,8 +15637,8 @@
     },
     {
       "path": "data/local_tables/dungeon/items/dung_group_chartrain.json",
-      "bytes": 30322,
-      "sha256": "2a7c692c6426f73da8a5a943dbe72ce5c07972f762f28db1d301d0b143243f72",
+      "bytes": 31379,
+      "sha256": "a08f3e037c781ec85e950301a7a1959adc4662b72f001fa078096b44662b292d",
       "origin": "runtime_projection"
     },
     {
@@ -15759,6 +15759,18 @@
       "path": "data/local_tables/dungeon/items/dung_group_mifu03.json",
       "bytes": 1474,
       "sha256": "85d26f49fd44dae98215238c3672361a2da05f4a384de025deedbe1332f6330a",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/local_tables/dungeon/items/dung_group_minghe_01.json",
+      "bytes": 1457,
+      "sha256": "9fa477adbaacec5a728aa3914a0ebe48cf6f019fb0e81648070bc72499cef93c",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/local_tables/dungeon/items/dung_group_minghe_02.json",
+      "bytes": 1457,
+      "sha256": "b1b4688b5c19dad431692612256996a6a48538917612d7861ffcd6af9657b09b",
       "origin": "runtime_projection"
     },
     {
@@ -15889,8 +15901,8 @@
     },
     {
       "path": "data/local_tables/dungeon/items/indie_group_ccdg.json",
-      "bytes": 1804,
-      "sha256": "5e6bc653bc027a23c1020798890a8c4469ed5237b53a17fef4cfb988b4643802",
+      "bytes": 2948,
+      "sha256": "82e8b9bed125ed715174e2bb2f348201883db39216e6e01c383bb3a02ca5a909",
       "origin": "runtime_projection"
     },
     {
@@ -15968,19 +15980,19 @@
     {
       "path": "data/local_tables/dungeon/items/indie_group_twdg.json",
       "bytes": 67247,
-      "sha256": "e95e5be3c4e38e657e5612dac7a1a8634938d82a3c4226f8a817415405aa2803",
+      "sha256": "b95993622545e81771e7ae726cefcd4e1f2ace9710bb5315fac3ffaf4c481f0d",
       "origin": "runtime_projection"
     },
     {
       "path": "data/local_tables/dungeon/manifest.json",
-      "bytes": 28394,
-      "sha256": "bd2fc4849379c5f0c526afd505fcc8224dc6e619e23d96214fe4fd6f8c497c52",
+      "bytes": 28858,
+      "sha256": "cf4716968fe3bbe323543aeb7fd9d582a23e7d7b4dce18b5c7b82528a6a28514",
       "origin": "runtime_projection"
     },
     {
       "path": "data/local_tables/dungeon_catalog.json",
-      "bytes": 28742,
-      "sha256": "7036a3c1641e99916b819261109a78bcd2e3bed16d7017238d934743e899edf6",
+      "bytes": 29151,
+      "sha256": "05abd44b7669b5e8453a207d1adee86fe36d5b70c3c3c15d965278c4cc42d09a",
       "origin": "runtime_projection"
     },
     {
@@ -16136,7 +16148,7 @@
     {
       "path": "data/local_tables/equip/pieces.json",
       "bytes": 457819,
-      "sha256": "d181a5a27248f2c25ebc4699ad0df0ea0bd16152b7807bd4aa12333deb76ce02",
+      "sha256": "09ab9f4507bd8ed6feb10c4b4e8cd9f4d37c20104f1d262837609c08fb1da74f",
       "origin": "runtime_projection"
     },
     {
@@ -16638,6 +16650,12 @@
       "origin": "runtime_projection"
     },
     {
+      "path": "data/local_tables/weapon/items/wpn_sword_0025.json",
+      "bytes": 5276,
+      "sha256": "86daf799a38025f1c019abb6cf61e569bf21f9f3e3ba55babf4c1cdefecbf547",
+      "origin": "runtime_projection"
+    },
+    {
       "path": "data/local_tables/weapon/items/wpn_sword_0026.json",
       "bytes": 4601,
       "sha256": "7b1e04b1b7a43875e7c32d08a619b568d70048a37fe94654f942dd7d9f8d54a1",
@@ -16645,14 +16663,14 @@
     },
     {
       "path": "data/local_tables/weapon/manifest.json",
-      "bytes": 25944,
-      "sha256": "266c0e5b89f8b9fa6653f01fc23e206bab80d19095f51d1e57e9be6504c7a9f5",
+      "bytes": 26242,
+      "sha256": "0a445609a0c677257ed8f62314e0158c1f181401119814fe67335d3030bbc650",
       "origin": "runtime_projection"
     },
     {
       "path": "data/local_tables/weapon/refine_catalog.json",
-      "bytes": 51534,
-      "sha256": "8674edd6e7f1edd79a3a3f05c62bcd3a9a1ee0dd7f90deb238e689bb8e03d168",
+      "bytes": 52140,
+      "sha256": "f4bc10d1dcb19a23650576d386f6630f15dbc8989575a6612cfede9997e0d617",
       "origin": "runtime_projection"
     },
     {
@@ -16675,20 +16693,20 @@
     },
     {
       "path": "data/packet_semantics/mechanism_registry.json",
-      "bytes": 403578,
-      "sha256": "827478acb946d4ff38bd2ccdc91876105f8040f22c96878ca6a1c5c353e27a72",
+      "bytes": 405033,
+      "sha256": "f5cb2a93a8ce1bc8cf43c1e609824674820026617992fd5e5742151a2820e271",
       "origin": "runtime_projection"
     },
     {
       "path": "data/packet_semantics/packet_resolver_bundle.json",
-      "bytes": 263334,
-      "sha256": "e149ed9499654e17b221b0c8ad0958c45d37e6656117d29b8d494fe7b9e25ecd",
+      "bytes": 190790,
+      "sha256": "632d8b2c177acd6dae39c7a05104bd7cf9e891620a5e8ead65ac67d831704866",
       "origin": "runtime_projection"
     },
     {
       "path": "data/packet_semantics/rdps_semantics_registry.json",
-      "bytes": 98621,
-      "sha256": "b62570135c866d9c53c8ebb8d5376bd4946d6e15f119f5efb1b7cd57e6861d84",
+      "bytes": 99754,
+      "sha256": "7f731f22227f7262c11ffff1e76f86d188410bf288db10cb3817f12b6776785f",
       "origin": "development_override"
     },
     {
@@ -16705,8 +16723,14 @@
     },
     {
       "path": "data/public/contract_tags.json",
-      "bytes": 17330,
-      "sha256": "b85fd25a41ff6008bd367d1447b58919072740e5bdafa88822c5b0dbdcf720c5",
+      "bytes": 63420,
+      "sha256": "1b3e51b426dbcc7c1b2afcf1aaa4b86aca79e3e9f51facfdba337f31799b2846",
+      "origin": "runtime_projection"
+    },
+    {
+      "path": "data/public/server_texts.json",
+      "bytes": 7620,
+      "sha256": "d0e5abf4723377cce467805122f816062f9a9e5218b9b1ee50a05f10c9a8daec",
       "origin": "runtime_projection"
     },
     {
@@ -16717,8 +16741,8 @@
     },
     {
       "path": "jsondata/CharacterNameIndex.json",
-      "bytes": 1032,
-      "sha256": "f7703920a70ef0d3825943d26b478fd8722006a84dee8c77fe00941930a50ffe",
+      "bytes": 1031,
+      "sha256": "f3044ab47a10ef2158b03db28d5ffd2c60467c16993d1325b9971f8eb7051878",
       "origin": "runtime_projection"
     },
     {
@@ -17086,5 +17110,10 @@
       "scope": "Character names, skill groups, base attributes, potentials, skill metadata, buff lifetime and presentation references; no typed damage or rDPS approval changes",
       "display_adaptation": "镇影/奔霆 split uses the replacement heading in CharGrowthTable skill group description"
     }
-  ]
+  ],
+  "uploader_source": {
+    "source_release": "ZMDLogs 3.0.12 (2026-10-16)",
+    "source_url": "https://zmdlogs.com/downloads/EndfieldLogsClient_3.0.12_20261016.zip",
+    "source_archive_sha256": "dbddebee37320fa3da91b2e1e747c30b16c66e893d9a1387d52fbbee0dc74571"
+  }
 }

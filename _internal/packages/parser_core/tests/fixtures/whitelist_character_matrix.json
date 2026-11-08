@@ -91,16 +91,8 @@
         }
       ],
       "declaredEffects": [
-        {
-          "zone": "res",
-          "element": "all",
-          "bb_key": "def_decrease"
-        },
-        {
-          "zone": "res",
-          "element": "all",
-          "bb_key": "additional_def_decrease"
-        }
+        {"zone": "res", "element": "all", "bb_key": "def_decrease"},
+        {"zone": "res", "element": "all", "bb_key": "additional_def_decrease"}
       ],
       "dynamic": true
     },
@@ -125,7 +117,7 @@
       "declaredEffects": [
         {
           "zone": "vuln_taken",
-          "element": "spell",
+          "element": "all",
           "bb_key": "final_spell_resistance_decrease",
           "expose_bb_key": true
         }
@@ -172,16 +164,8 @@
         }
       ],
       "declaredEffects": [
-        {
-          "zone": "res",
-          "element": "all",
-          "bb_key": "def_decrease"
-        },
-        {
-          "zone": "res",
-          "element": "all",
-          "bb_key": "additional_def_decrease"
-        }
+        {"zone": "res", "element": "all", "bb_key": "def_decrease"},
+        {"zone": "res", "element": "all", "bb_key": "additional_def_decrease"}
       ],
       "dynamic": true
     },
@@ -987,16 +971,8 @@
         }
       ],
       "declaredEffects": [
-        {
-          "zone": "res",
-          "element": "all",
-          "bb_key": "def_decrease"
-        },
-        {
-          "zone": "res",
-          "element": "all",
-          "bb_key": "additional_def_decrease"
-        }
+        {"zone": "res", "element": "all", "bb_key": "def_decrease"},
+        {"zone": "res", "element": "all", "bb_key": "additional_def_decrease"}
       ],
       "dynamic": true
     },

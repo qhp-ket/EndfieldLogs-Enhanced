@@ -3,8 +3,8 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QPen
 
 ROLE_COLORS = ('#328cb5', '#bd8542', '#9272c2', '#339c85', '#c26c83', '#818b9b')
-CATEGORY_COLORS = {'重击': '#687f97', '战技': '#398c80', '大招': '#a58042',
-                   '连携': '#8972ae', '其他': '#747e8b', 'BUFF': '#a9687c'}
+CATEGORY_COLORS = {'重击': '#687f97', '战技': '#397caf', '大招': '#b94e59',
+                   '连携': '#b66c25', '其他': '#747e8b', 'BUFF': '#a9687c'}
 
 
 def stroke(color, width=1., style=Qt.PenStyle.SolidLine):

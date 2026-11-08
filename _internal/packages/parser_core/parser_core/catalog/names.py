@@ -28,6 +28,8 @@ _CURRENT_TYPED_RESOURCE_BINDING = {
 
 
 _RUNTIME_SKILL_NAME_OVERRIDES = {
+    # CharGrowth's replacement-skill heading distinguishes this from 镇影.
+    "chr_0037_minghe_normalskill_2": "奔霆",
     "chr_0017_yvonne_skill_162": "伊冯连携 / 机器人持续伤害",
     "chr_0017_yvonne_skill_163": "伊冯连携 / 机器人终结爆炸",
 }
@@ -273,6 +275,8 @@ def _resolve_skill_name(skill_key: str | None) -> str | None:
     if exact:
         return exact
     canonical = _canonical_packet_skill_id(skill_key)
+    if canonical in _RUNTIME_SKILL_NAME_OVERRIDES:
+        return _RUNTIME_SKILL_NAME_OVERRIDES[canonical]
     if canonical in exact_names:
         return exact_names[canonical] or None
     return _load_canonical_skill_display_names().get(canonical)

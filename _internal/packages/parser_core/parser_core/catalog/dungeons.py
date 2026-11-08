@@ -156,6 +156,7 @@ def _load_contract_tag_texts() -> dict[str, str]:
         _repo_root().parent / "endfield_tables" / "Data" / "TableCfg" / "I18nTextTable_CN.json",
         _repo_root() / "data" / "local_tables" / "I18nTextTable_CN.json",
     ]
+    result: dict[str, str] = {}
     for path in candidates:
         if not path.exists():
             continue
@@ -164,7 +165,6 @@ def _load_contract_tag_texts() -> dict[str, str]:
         except (OSError, json.JSONDecodeError):
             continue
         if isinstance(payload, dict):
-            result: dict[str, str] = {}
             for key, value in payload.items():
                 if isinstance(value, str):
                     result[str(key)] = value
@@ -172,8 +172,17 @@ def _load_contract_tag_texts() -> dict[str, str]:
                     text = value.get("text") or value.get("value")
                     if isinstance(text, str):
                         result[str(key)] = text
-            return result
-    return {}
+            break
+    server_path = _repo_root() / "data/public/server_texts.json"
+    if server_path.is_file():
+        try:
+            server = json.loads(server_path.read_text(encoding="utf-8"))
+            if server.get("source") == "SC_SYNC_MULTI_LANG_CONFIG" and server.get("language") == "CN":
+                result.update({str(key): value for key, value in server.get("texts", {}).items()
+                               if isinstance(value, str)})
+        except (OSError, ValueError, AttributeError):
+            pass
+    return result
 
 
 def _contract_tag_text(value: Any, texts: dict[str, str]) -> str | None:
@@ -236,9 +245,14 @@ def _load_contract_tag_catalog() -> dict[int, dict[str, Any]]:
         name_text = _contract_tag_text(name, texts) or _contract_tag_text(enriched.get("nameTextId"), texts)
         desc_text = _contract_tag_text(desc, texts) or _contract_tag_text(enriched.get("descTextId"), texts)
         if name_text:
-            enriched["name"] = name_text
+            enriched["name"] = name_text + str(enriched.get("romanNumSuffix") or "")
+        elif not isinstance(name, str):
+            enriched["name"] = None
         if desc_text:
             enriched["description"] = desc_text
+        if (enriched.get("formattedDescription") and enriched.get("descriptionTemplate")
+                == enriched.get("description")):
+            enriched["description"] = enriched["formattedDescription"]
         catalog[tag_id] = enriched
     return catalog
 

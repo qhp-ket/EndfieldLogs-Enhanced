@@ -1,7 +1,7 @@
 """Explicit team membership and mapping diagnostics, without new identity inference."""
 from parser_core.ingestion.identity import apply_squad, squad_bindings
 from parser_core.ingestion.structured_damage import _identity, _object
-from parser_core.trace_values import restore_value
+from parser_core.trace_model import event_data
 
 
 def consume_structured_identity(ingestion, event, evidence_index):
@@ -22,7 +22,7 @@ def consume_structured_identity(ingestion, event, evidence_index):
         _identity(projected['entity_id'])
     else:
         raise ValueError('Expected identity event')
-    data = restore_value(projected, _object(projected.get('legacy_layout', {})))
+    data = event_data(event)
     if event.type == 'squad':
         apply_squad(ingestion, squad_bindings((row['template'], row['entity_id']) for row in data['members']))
     # ACTOR_MAP was a diagnostic line, not authority to modify ingestion identity.

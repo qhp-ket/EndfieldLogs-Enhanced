@@ -97,6 +97,12 @@ def _effect_condition_failure(effect: dict[str, Any], hit: dict[str, Any]) -> di
     missing.update({"condition_type": condition_type, "condition_source": condition.get("source")})
     if condition_type == "always":
         return None
+    if condition_type == 'value_compare':
+        left = _coerce_optional_float(condition.get('left'))
+        right = _coerce_optional_float(condition.get('right'))
+        if left is None or right is None or condition.get('compare') != 'Equals':
+            return {**missing, 'detail': 'missing_or_invalid_comparison_value'}
+        return None if left == right else {'reason': 'value_comparison_unsatisfied', 'reason_group': 'condition_unsatisfied'}
     if condition_type == 'damage_decorate_mask':
         required, check = condition.get('mask'), condition.get('check')
         actual = hit.get('damage_decorate_mask')
@@ -129,7 +135,10 @@ def _effect_condition_failure(effect: dict[str, Any], hit: dict[str, Any]) -> di
         failures = [failure for failure in failures if failure is not None]
         if not failures:
             return None
-        return next((failure for failure in failures if failure.get("reason_group") == "condition_unobservable"), failures[0])
+        # A false AND term proves the branch cannot apply, even if another
+        # term is unknown. OR still needs every alternative to be disproved.
+        preferred = 'condition_unsatisfied' if condition_type == 'all' else 'condition_unobservable'
+        return next((failure for failure in failures if failure.get("reason_group") == preferred), failures[0])
     if condition_type in {"target_hp_compare", "target_hp_ratio_lte"}:
         compare = condition.get("compare") if condition_type == "target_hp_compare" else "LE"
         is_ratio = condition.get("is_ratio") if condition_type == "target_hp_compare" else True
@@ -169,7 +178,7 @@ def _effect_condition_failure(effect: dict[str, Any], hit: dict[str, Any]) -> di
         return {"reason": "target_buff_missing", "reason_group": "condition_unsatisfied", "condition_buff_ids": ids}
     if condition_type == "damage_type_in":
         elements = condition.get("elements")
-        valid = {"physical", "fire", "pulse", "cryst", "natural"}
+        valid = {"physical", "real", "fire", "pulse", "cryst", "lifedrain", "natural", "ether"}
         actual = hit.get("damage_element")
         if not isinstance(elements, list) or not elements or any(value not in valid for value in elements) or actual not in valid:
             return {**missing, "detail": "unresolved_damage_type"}
@@ -225,9 +234,10 @@ def _decoded_damage_modifier_condition_rows(buff_id: str) -> dict[int, dict[str,
                 'Beyond.Gameplay.Core.Conditions.CheckDamageType.Data': 'CheckDamageType',
                 'Beyond.Gameplay.Core.Conditions.CheckDamageTypeMask.Data': 'CheckDamageTypeMask',
                 'Beyond.Gameplay.Core.Conditions.CheckDamageDecorateMask.Data': 'CheckDamageDecorateMask',
+                'Beyond.Gameplay.Core.CompareFloat.Data': 'CompareFloat',
                 'Beyond.Gameplay.Core.CheckBuffStackNumAdvanced.Data': 'CheckBuffStackNumAdvanced',
             }.get(symbol, symbol)
-            if action_type not in {"CheckHp", "CheckDamageType", "CheckDamageTypeMask", "CheckDamageDecorateMask", "CheckBuffStackNumAdvanced"}:
+            if action_type not in {"CheckHp", "CheckDamageType", "CheckDamageTypeMask", "CheckDamageDecorateMask", "CheckBuffStackNumAdvanced", "CompareFloat"}:
                 errors.append("unsupported_action:" + action_type)
                 continue
             if action_type in {"CheckHp", "CheckBuffStackNumAdvanced"}:
@@ -240,7 +250,16 @@ def _decoded_damage_modifier_condition_rows(buff_id: str) -> dict[int, dict[str,
                         or any(selector.get(key) for key in ("targetGroupKey", "ownerContextKey", "targetContextKey"))):
                     errors.append("unsupported_condition_selector")
                     continue
-            if action_type == "CheckHp":
+            if action_type == 'CompareFloat':
+                operands = [action.get('valueA'), action.get('valueB')]
+                if action.get('compare') != 'Equals' or any(
+                        not isinstance(value, dict) or type(value.get('useBlackboardKey')) is not bool
+                        or (value['useBlackboardKey'] and not value.get('blackboardKey')) for value in operands):
+                    errors.append('unsupported_float_comparison')
+                    continue
+                conditions.append({'type': 'value_compare', 'source': action_type, 'compare': 'Equals',
+                                   'left_config': dict(operands[0]), 'right_config': dict(operands[1])})
+            elif action_type == "CheckHp":
                 value = action.get("value")
                 compare = action.get("compare")
                 if (compare not in {"LT", "LE", "GT", "GE", "EQ", "NE"}

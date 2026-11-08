@@ -117,6 +117,28 @@ def test_source_setup_uses_bundled_projection_without_network_or_raw(tmp_path, m
     assert not (tmp_path / '_internal/secrets').exists()
 
 
+def test_uploader_uses_its_separate_verified_archive_after_runtime_refresh(tmp_path, monkeypatch):
+    resources = tool('prepare_resources')
+    data, manifest = projection_fixture(tmp_path)
+    runtime_archive = tmp_path / 'new-integrated-client.zip'
+    uploader_archive = tmp_path / 'old-standalone-uploader.zip'
+    with zipfile.ZipFile(runtime_archive, 'w') as bundle:
+        bundle.writestr(resources.PREFIX + 'data/unused.json', '{}')
+    with zipfile.ZipFile(uploader_archive, 'w') as bundle:
+        bundle.writestr(resources.PREFIX + 'uploader/EndfieldLogsUploader/EndfieldLogsUploader.exe', b'official executable fixture')
+    manifest.update(source_url='https://example.invalid/new.zip', source_archive_sha256=resources.digest(runtime_archive),
+                    uploader_source=dict(source_url='https://example.invalid/old.zip', source_archive_sha256=resources.digest(uploader_archive)))
+    (data / 'resource-manifest.json').write_text(json.dumps(manifest), encoding='utf8')
+    requested = []
+    def acquire(root, source, explicit=None, offline=False):
+        requested.append(source['source_archive_sha256'])
+        return uploader_archive if source == manifest['uploader_source'] else runtime_archive
+    monkeypatch.setattr(resources, 'acquire_archive', acquire)
+    assert resources.prepare(tmp_path, uploader=True, offline=True) == 0
+    assert requested == [resources.digest(uploader_archive)]
+    assert (tmp_path / 'Uploader/EndfieldLogsUploader/EndfieldLogsUploader.exe').read_bytes() == b'official executable fixture'
+
+
 def test_bundled_projection_rejects_changes_and_unreviewed_members(tmp_path):
     resources = tool('prepare_resources')
     data, manifest = projection_fixture(tmp_path)
@@ -141,6 +163,8 @@ def test_raw_maintenance_is_separate_and_does_not_extract_keys_or_uploader(tmp_p
         bundle.writestr(resources.PREFIX + 'secrets/client_privkey.pem', b'not requested')
         bundle.writestr(resources.PREFIX + 'uploader/uploader.exe', b'not requested')
     manifest['source_archive_sha256'] = resources.digest(archive)
+    manifest['supplements'] = [dict(source='reviewed supplemental resource fixture')]
+    manifest['uploader_source'] = dict(source_release='separately pinned uploader')
     resources.prepare_raw(tmp_path, manifest, archive)
     raw = tmp_path / '_development/raw-resources/_internal'
     assert (raw / 'data/raw.json').is_file()
@@ -151,6 +175,8 @@ def test_raw_maintenance_is_separate_and_does_not_extract_keys_or_uploader(tmp_p
     inventory = json.loads((raw / 'data/resource-manifest.json').read_text(encoding='utf8'))
     assert inventory['schema_version'] == 1
     assert inventory['source_archive_sha256'] == manifest['source_archive_sha256']
+    assert inventory['supplements'] == manifest['supplements']
+    assert inventory['uploader_source'] == manifest['uploader_source']
 
 
 def test_extraction_refuses_compact_inputs_and_nested_output(tmp_path):

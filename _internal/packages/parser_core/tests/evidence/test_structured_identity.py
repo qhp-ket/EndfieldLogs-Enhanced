@@ -20,12 +20,12 @@ def test_squad_order_duplicate_invalid_and_empty_membership():
         return event('squad', {'members': [{'template': template, 'entity_id': identity} for template, identity in members]})
     first = squad([('chr_0002_beta', 22), ('chr_0001_alpha', '0011'), ('sample', 33), ('chr_0003_gamma', None)])
     consume_trace_event(stream, first, 1)
-    assert list(stream.squad_actor_keys.items()) == [('22', 'chr_0002_beta'), ('0011', 'chr_0001_alpha')]
-    assert stream.party_actor_ids == {'22', '0011'}
+    assert list(stream.squad_actor_keys.items()) == [('22', 'chr_0002_beta'), ('11', 'chr_0001_alpha')]
+    assert stream.party_actor_ids == {'22', '11'}
     consume_trace_event(stream, squad([('chr_0002_beta', 22), ('chr_0001_alpha', 22)]), 2)
-    assert stream.squad_actor_keys == {} and stream.party_actor_ids == {'22', '0011'}
+    assert stream.squad_actor_keys == {} and stream.party_actor_ids == {'22', '11'}
     consume_trace_event(stream, squad([]), 3)
-    assert stream.squad_actor_keys == {} and stream.party_actor_ids == {'22', '0011'}
+    assert stream.squad_actor_keys == {} and stream.party_actor_ids == {'22', '11'}
 
 
 def test_separate_fields_retain_legacy_member_policy_without_building_log_rows():

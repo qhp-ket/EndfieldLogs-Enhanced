@@ -44,12 +44,12 @@ def test_typed_snapshot_uses_shared_models_without_legacy_row_parsing(monkeypatc
     result = stream.loadout_by_char[OWNER]
     assert result['weapon_inst_id'] == '91'
     assert not {'weapon_level', 'weapon_base_atk', 'character_level', 'weapon_refine'} & result.keys()
-    assert result['equipment_snapshot_complete'] is True and result['unresolved_equip_inst_ids'] == ['00123']
+    assert result['equipment_snapshot_complete'] is True and result['unresolved_equip_inst_ids'] == ['123']
     assert result['equips'][0]['item_id'] == 'piece' and result['skill_int_ids'] == ['4', '5']
     assert stream.active_suits_by_char[OWNER] == {'suit_a'}
     assert not stream.party_actor_ids and not stream.squad_actor_keys
     item.data['unplaced_equipment'][0]['entity_id'] = '999'
-    assert result['unresolved_equip_inst_ids'] == ['00123']
+    assert result['unresolved_equip_inst_ids'] == ['123']
     assert stream.current_loadout_group['line_no'] == 1 and stream.current_loadout_group['ts_ms'] == 1000
 
 

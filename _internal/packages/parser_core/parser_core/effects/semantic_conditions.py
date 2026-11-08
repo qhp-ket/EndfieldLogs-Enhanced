@@ -100,6 +100,13 @@ def _semantic_damage_effect_condition(
     conditions = []
     for raw in decoded.get("conditions") or []:
         condition = dict(raw)
+        if condition.get('type') == 'value_compare':
+            for side in ('left', 'right'):
+                config = condition.pop(side + '_config')
+                key = str(config.get('blackboardKey') or '')
+                condition[side] = _coerce_optional_float(bb_values.get(key) if config['useBlackboardKey'] else config.get('value'))
+                if config['useBlackboardKey']:
+                    condition[side + '_key'] = key
         if condition.get('type') in {'target_hp_compare', 'target_has_buff'} and effect.get('enableSide') in {'Attacker', 'Defender'}:
             # ApplyModifier sets TargetHandle to the opposite participant
             # of the modifier's enabled/owning side, independently of the

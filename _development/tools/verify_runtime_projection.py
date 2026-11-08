@@ -62,10 +62,10 @@ def collect(data_root):
         results['packet:' + attr] = fingerprint(getattr(resolver, attr))
     import endfield_pcap.data.loadout as loadout_static
     import endfield_pcap.analysis.battle.buffs.labels as battle_buff_labels
-    import endfield_pcap.trace.bridge as trace_bridge
+    import endfield_pcap.trace.formatting as trace_formatting
     import endfield_pcap.analysis.battle.energy as battle_energy_evidence
     import endfield_pcap.data.skill_frames as skill_frame_reference
-    for module in (loadout_static, battle_buff_labels, trace_bridge, battle_energy_evidence, skill_frame_reference):
+    for module in (loadout_static, battle_buff_labels, trace_formatting, battle_energy_evidence, skill_frame_reference):
         module.bundle_root = lambda: data_root
     for name in ('weapon_catalog', 'equip_piece_catalog', 'attribute_type_catalog'):
         results['gui:' + name] = fingerprint(getattr(loadout_static, name)())
@@ -74,7 +74,7 @@ def collect(data_root):
     results['gui:buff_names'] = fingerprint(battle_buff_labels._manifest_names())
     results['gui:energy_rules'] = fingerprint(battle_energy_evidence.energy_rules())
     results['gui:frame_rules'] = fingerprint(skill_frame_reference.frame_rules())
-    results['live:dungeon_enemy_hints'] = fingerprint(trace_bridge._load_dungeon_enemy_hints())
+    results['live:dungeon_enemy_hints'] = fingerprint(trace_formatting._load_dungeon_enemy_hints())
     return dict(checks=results, skill_count=len(skill_ids), buff_count=len(buff_ids))
 
 

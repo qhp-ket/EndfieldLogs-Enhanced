@@ -3,11 +3,11 @@ import json
 from datetime import datetime, timezone, timedelta
 from parser_core.ingestion.buff_packet_wire import packet_observation
 from parser_core.ingestion.structured_buff_packet import unresolved_fields
-from parser_core.trace_values import restore_value
+from endfield_pcap.trace.export_values import export_data
 
 
 def buff_packet_legacy_lines(event, *, timezone_offset_minutes):
-    data = restore_value(event.data, event.data['legacy_layout'])
+    data = export_data(event)
     if event.type == 'buff_unresolved':
         fields = unresolved_fields(data)
         body = (f'BUFF_ACTION_UNRESOLVED uid={fields["uid"]} seq={fields["seq"]} '

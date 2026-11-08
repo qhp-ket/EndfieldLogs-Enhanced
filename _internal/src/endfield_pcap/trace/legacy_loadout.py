@@ -2,15 +2,13 @@
 from datetime import datetime, timedelta, timezone
 
 from parser_core.ingestion.loadout_wire import source_integer, source_number, source_text
-from parser_core.trace_values import restore_value
+from endfield_pcap.trace.export_values import export_data
 
 
 def loadout_legacy_lines(event, *, timezone_offset_minutes):
     if event.type not in ('loadout_group', 'loadout_slot', 'loadout_stats'):
         raise ValueError('Expected loadout event')
-    if 'legacy_layout' not in event.data:
-        raise ValueError('Loadout event lacks export layout')
-    data = restore_value(event.data, event.data['legacy_layout'])
+    data = export_data(event)
     def n(key):
         return source_number(data, key)
     def t(key, fallback=''):

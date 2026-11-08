@@ -1,6 +1,4 @@
 """Decoded loadout fields retain their evidence; only analysis applies old projections."""
-import re
-
 from parser_core.ingestion.loadout_observation import LoadoutSlotObservation, LoadoutStatsObservation
 from parser_core.ingestion.fields import _coerce_int
 
@@ -66,11 +64,21 @@ def slot_observation(data):
         character_level=source_number(data, 'char_level') or None, potential=source_number(data, 'potential'),
         weapon_instance=str(source_number(data, 'weapon_id')), weapon=source_text(data, 'weapon_template', 'unknown_weapon'),
         weapon_level=level if level > 0 else None, refine=refine if refine is not None and 0 <= refine <= 5 else None,
-        breakthrough=source_number(data, 'breakthrough'), suit_blob=compact_body(source_text(data, 'equip_suit', '{}')) or '',
-        equipment_blob=compact_body(source_text(data, 'equips', '{}')),
-        skill_ids=re.findall(r'\d+', source_text(data, 'skill_int_ids').split(']', 1)[0]),
-        unplaced_ids=re.findall(r'\d+', ','.join(str(row['entity_id']) for row in unplaced).split(']', 1)[0]) if unplaced is not None else None,
-        equipment_complete=data.get('equipment_snapshot_complete') if type(data.get('equipment_snapshot_complete')) is bool else None)
+        breakthrough=source_number(data, 'breakthrough'),
+        suits=native_rows(data, 'equip_suit'), equipment=native_rows(data, 'equips'),
+        skill_ids=[str(value) for value in native_rows(data, 'skill_int_ids')],
+        unplaced_ids=[row['entity_id'] for row in unplaced if row['entity_id'] is not None] if unplaced is not None else None,
+        equipment_complete=data.get('equipment_snapshot_complete')
+        if type(data.get('equipment_snapshot_complete')) is bool and 'equips' not in data.get('invalid_fields', {}) else None)
+
+
+def native_rows(data, key):
+    rows = data.get(key)
+    if rows is None:
+        return []
+    if not isinstance(rows, list):
+        raise ValueError(f'Expected native loadout array: {key}')
+    return rows
 
 
 def stats_observation(data):
@@ -80,9 +88,8 @@ def stats_observation(data):
         return _coerce_int(str(value) if value is not None else 'unknown')
     return LoadoutStatsObservation(character=data['template'], weapon=source_text(data, 'weapon_template', 'unknown_weapon'),
         weapon_instance=str(source_number(data, 'weapon_id')),
-        refine_stats_blob=compact_body('{' + source_text(data, 'weapon_refine_stats') + '}'),
-        source_skills_blob=compact_body('{' + source_text(data, 'weapon_source_skills') + '}'),
+        refine_stats=native_rows(data, 'weapon_refine_stats'), source_skills=native_rows(data, 'weapon_source_skills'),
         base_attack=attack('weapon_base_atk'), base_attack_lv1=attack('weapon_base_atk_lv1'), base_attack_max=attack('weapon_base_atk_max'),
         gem_instance=str(source_number(data, 'gem_id')), gem_weapon=str(source_number(data, 'gem_weapon_id')),
         gem_template=str(source_number(data, 'gem_template')),
-        terms_blob=compact_body('{' + source_text(data, 'gem_terms') + '}') or '')
+        terms=native_rows(data, 'gem_terms'))

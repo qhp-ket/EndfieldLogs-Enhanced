@@ -3,7 +3,7 @@ from parser_core.ingestion.hits import apply_buff_lifecycle
 from parser_core.ingestion.buff_observations import apply_buff_blackboard
 from parser_core.ingestion.structured_damage import _identity, _object
 from parser_core.ingestion.skill_wire import identity_token, projected_number
-from parser_core.trace_values import restore_value
+from parser_core.trace_model import event_data
 
 
 def _blackboard_value(value):
@@ -28,7 +28,7 @@ def consume_structured_buff(ingestion, event, evidence_index):
             not isinstance(row, dict) or not isinstance(row.get('key'), str)
             or not _blackboard_value(row.get('value')) for row in rows)):
         raise ValueError('Expected BUFF blackboard values')
-    restored = restore_value(data, _object(data.get('legacy_layout', {})))
+    restored = event_data(event)
     if event.type == 'buff_blackboard':
         # Repeated keys retain their original position and final observed value,
         # exactly as the legacy field reader. No UID-based rebinding is added.

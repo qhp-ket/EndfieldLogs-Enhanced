@@ -1,11 +1,11 @@
 """Independent old-log rendering of ordered BUFF snapshots."""
 from datetime import datetime, timezone, timedelta
 from parser_core.ingestion.skill_wire import identity_token
-from parser_core.trace_values import restore_value
+from endfield_pcap.trace.export_values import export_data
 
 
 def buff_legacy_lines(event, *, timezone_offset_minutes):
-    data = restore_value(event.data, event.data['legacy_layout'])
+    data = export_data(event)
     uid = identity_token(data.get('buff_inst_id'))
     if event.type == 'buff_start':
         body = (f'BUFF_START #{data["buff_seq"]} id="{data.get("template") or "unknown_buff"}" uid={uid} '

@@ -64,7 +64,7 @@ def resolve_volumes(path):
             issues.append(f'trace 缺少第 {expected}～{header.volume - 1} 卷，记录不完整')
         expected = header.volume + 1
         if any(getattr(header, field) != getattr(selected.header, field) for field in (
-                'language', 'generator_version', 'timezone_id', 'timezone_offset_minutes', 'resources')):
+                'version', 'language', 'generator_version', 'timezone_id', 'timezone_offset_minutes', 'resources')):
             raise ValueError('trace 连续分卷的生成器、时区或资源不一致')
         if header.previous_volume is not None:
             previous = header.previous_volume

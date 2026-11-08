@@ -1,4 +1,5 @@
 """Context and diagnostic evidence; absence of a timer completion never creates elapsed time."""
+from parser_core.trace_model import event_data
 from parser_core.ingestion.structured_damage import _object
 
 CONTEXT_TYPES = ('game_instance', 'game_mechanics', 'scene_battle', 'battle_reset', 'session_warning')
@@ -41,7 +42,7 @@ def context_data(kind, event, *, source=None, game_id=''):
 def context_observation(event):
     if event.type not in CONTEXT_TYPES:
         raise ValueError('Expected context event')
-    data = _object(event.data)
+    data = _object(event_data(event))
     if event.type in ('game_instance', 'game_mechanics'):
         declaration = MECHANICS.get(data.get('source'))
         if declaration is None or declaration[:2] != (event.type, data.get('action')):

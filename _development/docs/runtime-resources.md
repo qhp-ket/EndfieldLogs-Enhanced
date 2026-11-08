@@ -2,7 +2,7 @@
 
 ## 精简数据
 
-源码附带 `runtime-data.zip`（约 5.8 MB），恢复后约 16.9 MB。
+源码附带 `runtime-data.zip`（约 5.8 MB），恢复后约 17.0 MB。
 `Setup-Dev.cmd` 或 `prepare_resources.py` 离线恢复并校验，开发规则取当前源码；已有资源不匹配时人工核对。
 便携版直接携带恢复后的数据。
 
@@ -29,8 +29,9 @@ Uploader/EndfieldLogsUploader/
 ```
 
 可在任意目录独立运行。Uploader 使用上游版本号单独打包，构建时从官方 ZIP 原样提取。
+当前数据来自 3.0.14，该版已将上传器并入主程序；本项目的独立 uploader 仍固定为已核验的 3.0.12 原版，下载来源单独记录在资源清单 `uploader_source`，不随解析数据升级而替换。
 
-上传选择 `.dev-gui/logs/battles/YYYYMMDD/trace_*.log`，保留 `.log.status.json` 和完整性文件。
-本程序采集的 trace/status 直接兼容官网自动归档入口，登录、解析和排行按官网规则处理。
+新录制默认使用 JSONL。在战斗日志页选中一场并「导出官网兼容日志…」，将生成的单场 `.log` 交给官网 uploader；旧 `.log` 保留配套 `.log.status.json` 和完整性文件。
+3.0.14 官网 parser/uploader 已通过合成日志的本地读取、载荷和原文档构建检查；该版 uploader 只更新客户端与构建器版本标识，未改变载荷结构。未进行网络上传，登录和排行仍按官网规则处理。
 
 普通回归使用合成数据；资源完整性与便携验证见 [打包流程](portable-packaging.md)。

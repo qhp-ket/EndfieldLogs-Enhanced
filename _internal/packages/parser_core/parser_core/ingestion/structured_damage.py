@@ -10,7 +10,7 @@ from parser_core.ingestion.packet_evidence import (
 )
 from parser_core.ingestion.state import IngestionState
 from parser_core.trace_jsonl import TraceEvent
-from parser_core.trace_values import restore_value
+from parser_core.trace_model import event_data
 
 
 def _object(value) -> dict:
@@ -139,8 +139,7 @@ def _attribute_rows(report: dict, side: str) -> list[str]:
 
 def consume_structured_damage(ingestion: IngestionState, event: TraceEvent, evidence_index: int) -> None:
     observation = damage_observation(event)
-    layout = event.data.get('legacy_layout', {}).get('children', {}).get('evidence', {})
-    evidence = restore_value(event.data['evidence'], layout)
+    evidence = event_data(event)['evidence']
     # Validate/prepare before changing stream state. Presence and handle conflicts are
     # still handled by the shared evidence rules, not silently repaired here.
     mods = _object(evidence.get('modifier_args') or {})

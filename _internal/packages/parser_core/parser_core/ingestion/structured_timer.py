@@ -1,4 +1,5 @@
 """Structured timer boundaries call the same ordered state updates as legacy import."""
+from parser_core.trace_model import event_data
 from parser_core.ingestion.structured_damage import _object
 from parser_core.ingestion.timers import apply_timer_observation
 
@@ -29,7 +30,7 @@ def official_timer_data(event, phase, game_id, source):
 def timer_observation(event):
     if event.type not in TIMER_TYPES:
         raise ValueError('Expected timer event')
-    data = _object(event.data)
+    data = _object(event_data(event))
     phase = data.get('phase')
     missing = event.type == 'battle_timer_missing' or event.type == 'official_timer' and phase == 'missing'
     required = 'boundary' if missing else 'source'

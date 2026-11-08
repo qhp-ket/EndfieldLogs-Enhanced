@@ -3,7 +3,7 @@ from parser_core.ingestion.buff_packet_wire import packet_observation
 from parser_core.ingestion.buff_observations import apply_buff_packet, apply_buff_unresolved
 from parser_core.ingestion.structured_damage import _identity, _object
 from parser_core.ingestion.skill_wire import identity_token
-from parser_core.trace_values import restore_value
+from parser_core.trace_model import event_data
 
 
 PACKET_TYPES = {'buff_creation': 'creation', 'buff_origin': 'origin', 'buff_enable': 'enable', 'buff_keyword': 'keyword'}
@@ -28,7 +28,7 @@ def consume_structured_buff_packet(ingestion, event, evidence_index):
     for key in ('buff_inst_id', 'source_actor_id', 'target_id', 'owner_id', 'operation_owner_id', 'environment_inst_id'):
         if key in observation:
             _identity(observation[key])
-    restored = restore_value(data, _object(data.get('legacy_layout', {})))
+    restored = event_data(event)
     if event.type == 'buff_unresolved':
         apply_buff_unresolved(ingestion, unresolved_fields(restored), evidence_index, event.captured_at_ms)
     else:

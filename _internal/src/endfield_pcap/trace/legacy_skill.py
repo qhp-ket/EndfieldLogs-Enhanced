@@ -1,11 +1,11 @@
 """Independent legacy rendering of skill, ATB and poise evidence."""
 from datetime import datetime, timezone, timedelta
 from parser_core.ingestion.skill_wire import integer, number, label, identity_token
-from parser_core.trace_values import restore_value
+from endfield_pcap.trace.export_values import export_data
 
 
 def skill_legacy_lines(event, *, timezone_offset_minutes):
-    data = restore_value(event.data, event.data["legacy_layout"])
+    data = export_data(event)
     def general(key):
         value = number(data.get(key))
         return format(value, ".6g") if value is not None else "unknown"

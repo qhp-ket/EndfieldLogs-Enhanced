@@ -1,4 +1,5 @@
 """Stage observations enter the existing ordered context state without trace text."""
+from parser_core.trace_model import event_data
 from parser_core.ingestion.skill_wire import integer
 from parser_core.ingestion.structured_damage import _object
 from parser_core.ingestion.timers import apply_stage_context
@@ -28,7 +29,7 @@ def contract_tags(data):
 def stage_observation(event):
     if event.type not in STAGE_TYPES:
         raise ValueError('Expected stage event')
-    data = _object(event.data)
+    data = _object(event_data(event))
     if not isinstance(data.get('source'), str) or not data['source']:
         raise ValueError('Stage source is required')
     dungeon = data.get('dungeon_id')

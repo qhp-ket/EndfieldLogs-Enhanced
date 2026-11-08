@@ -1,7 +1,7 @@
 """On-demand entity export; structured ingestion never calls the text formatter."""
 from datetime import datetime, timedelta, timezone
 
-from parser_core.trace_values import restore_value
+from endfield_pcap.trace.export_values import export_data
 from endfield_pcap.trace.formatting import _entity_attr_tokens, _intish, _floatish
 from parser_core.ingestion.skill_wire import integer, identity_token, label
 from parser_core.ingestion.structured_entity import ENTITY_TYPES
@@ -10,9 +10,7 @@ from parser_core.ingestion.structured_entity import ENTITY_TYPES
 def entity_legacy_lines(event, *, timezone_offset_minutes):
     if event.type not in ENTITY_TYPES:
         raise ValueError('Expected entity event')
-    if 'legacy_layout' not in event.data:
-        raise ValueError('Entity event lacks legacy export layout')
-    data = restore_value(event.data, event.data['legacy_layout'])
+    data = export_data(event)
     attrs = ' '.join(_entity_attr_tokens(data.get('attributes')))
     def present(key):
         value = data.get(key)

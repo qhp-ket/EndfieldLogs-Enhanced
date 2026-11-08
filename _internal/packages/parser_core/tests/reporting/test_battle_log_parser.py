@@ -863,12 +863,12 @@ def test_parse_raw_battle_log_text_recomputes_contract_score_from_current_catalo
 
     assert parsed["battle"]["contract_tag_score"] == 10
     assert [(tag["tag_id"], tag["name"], tag["score"]) for tag in parsed["battle"]["contract_tags"]] == [
-        (101101, "改写：愈合", 1),
-        (102201, "环境：再构成", 2),
+        (101101, "改写：愈合Ⅰ", 1),
+        (102201, "环境：再构成Ⅰ", 2),
         (102302, "改写：奔腾", 2),
         (100003, "环境：过速", 3),
-        (900101, "改写：活性", 1),
-        (101501, "改写：遗毒", 1),
+        (900101, "改写：活性Ⅰ", 1),
+        (101501, "改写：遗毒Ⅰ", 1),
     ]
 
 def test_parse_raw_battle_log_text_keeps_known_enemy_over_context_hint() -> None:

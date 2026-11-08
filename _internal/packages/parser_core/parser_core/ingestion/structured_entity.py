@@ -7,7 +7,7 @@ from parser_core.ingestion.entities import apply_entity_snapshot, entity_stats_s
 from parser_core.ingestion.fields import _coerce_optional_int
 from parser_core.ingestion.identity import _extract_character_key
 from parser_core.ingestion.structured_damage import _identity, _object
-from parser_core.trace_values import restore_value
+from parser_core.trace_model import event_data
 
 
 ENTITY_TYPES = ('entity_stats', 'entity_attributes', 'entity_value', 'entity_die', 'ability_spawn')
@@ -39,6 +39,10 @@ def _integer(value):
 
 
 def _number(value):
+    if isinstance(value, dict) and value.get('number_status') in ('nan', 'positive_infinity', 'negative_infinity'):
+        # Carry an invalid-number sentinel to the shared attribute validator;
+        # a nonfinite observation must never take the missing-value zero default.
+        return float('nan')
     try:
         return float(value) if value is not None else None
     except (TypeError, ValueError, OverflowError):
@@ -60,7 +64,7 @@ def entity_observation(event):
     if 'entity_id' not in data:
         raise ValueError('Missing entity identity')
     _identity(data['entity_id'])
-    data = restore_value(data, _object(data.get('legacy_layout', {})))
+    data = event_data(event)
     template, kind = data.get('template'), data.get('kind')
     if not isinstance(template, str) or (kind is not None and not isinstance(kind, str)):
         raise ValueError('Expected entity labels')

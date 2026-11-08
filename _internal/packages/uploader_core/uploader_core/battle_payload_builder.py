@@ -81,7 +81,7 @@ from parser_core.battle_splitter.trace import (
 )
 
 
-PAYLOAD_BUILDER_VERSION = "payload-builder-2026.10.15.1"
+PAYLOAD_BUILDER_VERSION = "payload-builder-2026.11.05.1"
 
 
 def payload_builder_diagnostics() -> dict[str, str]:

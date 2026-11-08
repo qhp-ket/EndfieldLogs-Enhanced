@@ -7,7 +7,7 @@ import httpx
 from uploader_core.battle_payload_builder import payload_builder_diagnostics
 
 UPLOADER_CLIENT_NAME = "EndfieldLogsUploader"
-UPLOADER_CLIENT_VERSION = "2026.10.15.1"
+UPLOADER_CLIENT_VERSION = "2026.11.05.1"
 SAFE_ACCEPT_ENCODING = "gzip, deflate"
 
 

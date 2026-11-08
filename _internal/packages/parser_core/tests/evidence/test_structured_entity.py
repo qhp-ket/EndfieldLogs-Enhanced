@@ -148,7 +148,7 @@ def test_diagnostic_entities_preserve_presence_vectors_and_independent_export(mo
     bodies = [line for item in events for line in entity_legacy_lines(item, timezone_offset_minutes=0)]
     assert bodies == [
         '[23:59:59.999] ENTITY_VALUE seq=None id=7 scene=0 hp=inf ult=unknown delta=-0.0 srcType=unknown srcInt=0 origSrcType=unknown origSrcInt=unknown\n',
-        '[23:59:59.999] ENTITY_DIE id=0007\n', '[23:59:59.999] ENTITY_DIE id=None\n',
+        '[23:59:59.999] ENTITY_DIE id=7\n', '[23:59:59.999] ENTITY_DIE id=None\n',
         '[23:59:59.999] ABILITY_ENTITY_SPAWN seq=0 tick=0 actionId=4 inst=0 skill=unknown_skill templateIntId=unknown ownerId=7 owner=id_7 sourceId=7 source=id_7 entityId=9007199254740993 pos=1.23456789,unknown,-0.0 rot=inf,unknown,unknown\n',
         '[23:59:59.999] ABILITY_ENTITY_SPAWN seq=0 tick=0 actionId=4 inst=0 skill=unknown_skill templateIntId=unknown ownerId=7 owner=id_7 sourceId=7 source=id_7 entityId=unknown pos=unknown,unknown,unknown rot=unknown,unknown,unknown\n']
     monkeypatch.setattr(entities, '_parse_entity_stats_snapshot', lambda *_: pytest.fail('Diagnostic used old parser'))

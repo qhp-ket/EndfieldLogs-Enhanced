@@ -1,4 +1,5 @@
 """Historical observations retain numeric tokens; they grant no new identity or effect authority."""
+from parser_core.trace_model import event_data
 import re
 
 from parser_core.ingestion.fields import (

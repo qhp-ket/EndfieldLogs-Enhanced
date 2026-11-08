@@ -36,19 +36,22 @@ def ink_trace_observation(event):
     from parser_core.ingestion.dynamic_wire import dynamic_fields
     from parser_core.ingestion.buff_packet_wire import packet_observation
     from parser_core.ingestion.skill_wire import integer, identity_token, label
-    from parser_core.trace_values import restore_value
+    from parser_core.trace_model import event_data
     data = (blackboard_observation(event) if event.type in ('ink_release', 'blackboard_calculation')
-            else restore_value(event.data, event.data.get('legacy_layout', {})))
+            else event_data(event))
     if event.type == 'ink_release':
         return InkObservation('release', release=release_observation(data))
     if event.type == 'blackboard_dynamic':
         return InkObservation('operation', dynamic_fields(data), identity=packet_observation(data), identity_present=True)
     if event.type == 'blackboard_calculation':
         fields = blackboard_fields(data)
-        fields.update(key=data['key'], final=repr(float(data['final_value'])))
+        def numeric_token(value):
+            number = _number(value)
+            return repr(number) if number is not None else 'unknown'
+        fields.update(key=data['key'], final=numeric_token(data['final_value']))
         for source, target in (('value_a', 'valueA'), ('value_b', 'valueB')):
             if source in data:
-                fields[target] = repr(float(data[source]))
+                fields[target] = numeric_token(data[source])
         return InkObservation('operation', fields)
     if event.type == 'actor_mapping':
         return InkObservation('mapping', dict(id=identity_token(data.get('entity_id')),

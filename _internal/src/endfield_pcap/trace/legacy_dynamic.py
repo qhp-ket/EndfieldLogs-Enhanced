@@ -3,11 +3,11 @@ import json
 from datetime import datetime, timezone, timedelta
 from parser_core.ingestion.buff_packet_wire import packet_observation
 from parser_core.ingestion.dynamic_wire import dynamic_fields
-from parser_core.trace_values import restore_value
+from endfield_pcap.trace.export_values import export_data
 
 
 def dynamic_legacy_lines(event, *, timezone_offset_minutes):
-    data = restore_value(event.data, event.data['legacy_layout'])
+    data = export_data(event)
     observation = packet_observation(data)
     proof = json.dumps(observation, ensure_ascii=False, separators=(',', ':'), allow_nan=False)
     if event.type == 'blackboard_dynamic':

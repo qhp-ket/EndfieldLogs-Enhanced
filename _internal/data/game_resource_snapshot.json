@@ -10,45 +10,45 @@
       "fileCount": 112
     },
     "Persistent/42A8FCA6": {
-      "sha256": "47191804e77ba3675aae2efe81ea4e622d8148d26456765b244544a15bf3f222",
-      "fileCount": 29
+      "sha256": "e1f57675d68cfe98cee9b37f80d04d552c90401fa05e6dbab07849b1535c68d0",
+      "fileCount": 43
     },
     "Persistent/775A31D1": {
-      "sha256": "354c6b84f0098ec782f4992c0b6c9ab91768759eaea308680be50d61fca1f77d",
-      "fileCount": 81
+      "sha256": "152e432edc23181c481d3a0f63e8d204bd9f15a0b6af1c9375f98a2dc3e3cfd6",
+      "fileCount": 85
     }
   },
   "extracted": {
     "TableCfg": {
-      "sha256": "d56b3b7ce379a5652f14417735c25388e3db635787d83a28bf70751d1b499999",
+      "sha256": "2fd1f8e1b7281a95fa9277b8dc36831ce593be5591358a19a5da075a4cb03025",
       "fileCount": 770
     },
     "Json/BuffData": {
-      "sha256": "15a5b8ababe8bc36e76c1d70c34a94e959b17d52f9a372bd91effcc3edad8da8",
-      "fileCount": 3395
+      "sha256": "030742fd06c1b80a6aef4dfaeacbb6e8427b9edb7b17336580e864c86e0c0f9a",
+      "fileCount": 3425
     },
     "Json/SkillData": {
-      "sha256": "81d029e267bd50905f733535027cd781dd44b6d147e3be9f86618bea2b08c663",
-      "fileCount": 2928
+      "sha256": "12fac6f46160e88af298ed0cc11dc038236ee5df1168ad11234e9874b69cf1c6",
+      "fileCount": 2948
     },
     "Json/StringPool": {
-      "sha256": "7fd955ecfb9ba49380de1953d41445dabc70f07b10e74253e70a33373df08ee0",
+      "sha256": "f5b285d2e5d7ec87a1c045ed3f80b21bc35fe89becef1aa8f5e8047fc86a38cf",
       "fileCount": 30
     }
   },
   "generated": {
     "local_tables": {
-      "sha256": "f7967b5f2ddb3585ba4c54a84d7d86aef4e0767bae643db786f7f6c3064978fb",
-      "fileCount": 361,
+      "sha256": "12e68dda3d8347f7803f47c0e08bc50020db009bf6ebe9b4abf2fe62c735f4c6",
+      "fileCount": 365,
       "jsonNewlines": "LF"
     },
     "local_static": {
-      "sha256": "66304a81cfc615eda0df0fc19b126621b56c4a2684bb02424d7fd2f3b8c0b0eb",
+      "sha256": "7e759766bc63326593200dbd710a8b11dced1569eca344fd7e25f0da85a55378",
       "fileCount": 15,
       "jsonNewlines": "LF"
     },
     "local_semantics": {
-      "sha256": "3239c1f12d80ed830bc9e7794b8394878c63613052094897ba4a75bb15175cb2",
+      "sha256": "f281fa5eb990d37542c67c2ed7a24ac9061acfc0a73dc098bec62ee53b2919b0",
       "fileCount": 8,
       "jsonNewlines": "LF"
     }

@@ -1,12 +1,13 @@
 """Independent rendering of calculation, preset and ink-release evidence."""
 import json
 from datetime import datetime, timezone, timedelta
-from parser_core.ingestion.blackboard_wire import blackboard_fields, blackboard_observation, release_observation
+from parser_core.ingestion.blackboard_wire import blackboard_fields, release_observation
+from endfield_pcap.trace.export_values import export_data
 from endfield_pcap.trace.formatting import _trace_string
 
 
 def blackboard_legacy_lines(event, *, timezone_offset_minutes):
-    data = blackboard_observation(event)
+    data = export_data(event)
     if event.type == 'ink_release':
         body = 'INK_RELEASE ' + json.dumps(release_observation(data), ensure_ascii=False, separators=(',', ':'), allow_nan=False)
     else:

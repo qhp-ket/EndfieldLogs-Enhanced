@@ -269,6 +269,27 @@ def test_hit_context_and_allocation_share_instance_and_condition_gates(target_id
         assert context['contributions_map'] == pytest.approx({ATTACKER: 100, 'chr_0023_antal': 20})
 
 
+@pytest.mark.parametrize('flag,element,credit', [(1, 'physical', 20), (1, 'ether', 20),
+    (0, 'physical', 0), (None, 'physical', 0), (1, 'real', 0), (0, 'pulse', 20), (None, 'pulse', 20)])
+def test_enhanced_conduct_uses_observed_flag_and_exact_typed_damage_mask(flag, element, credit):
+    board = {'final_spell_resistance_decrease': .2}
+    if flag is not None:
+        board['if_contain_physicdamage'] = flag
+    effects = parser._collect_zone_effects({'event_key': 'buff_common_pulse_pulse_conduct_triggered_do',
+        'target_enemy_key': 'eny_0051_rodin', 'bb_values': board})
+    hit = {'character_key': ATTACKER, 'target_enemy_key': 'eny_0051_rodin', 'target_actor_id': '2001',
+        'hit_value': 120, 'ts_ms': 500, 'skill_key': 'explicit', 'damage_element': element,
+        'damage_school': 'physical' if element == 'physical' else 'spell'}
+    window = {'uid': 'conduct', 'event_key': 'buff_common_pulse_pulse_conduct_triggered_do',
+        'source_character_key': 'chr_0037_minghe', 'target_character_key': 'eny_0051_rodin',
+        'target_actor_id': '2001', 'start_ts_ms': 0, 'end_ts_ms': 1000, 'zone_effects': effects}
+    allocation = parser._allocate_rdps_for_hit(hit, [window])
+    assert allocation['contributions_map'].get('chr_0037_minghe', 0) == pytest.approx(credit)
+    assert sum(allocation['contributions_map'].values()) == pytest.approx(120)
+    if element == 'pulse':
+        assert not hit.get('rdps_unresolved_effect_conditions')
+
+
 def test_equal_effects_from_distinct_instances_or_times_are_not_merged():
     first = {'uid': 'a', 'source_character_key': 'chr_0023_antal',
              'target_character_key': ATTACKER, 'event_key': 'explicit_buff',

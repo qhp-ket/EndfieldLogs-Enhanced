@@ -90,6 +90,8 @@ def test_each_character_approval_has_effective_allocation_and_exclusion_contract
         rate = record['bb_values'].get('rate', .2)
         approved = {effect['element'] for effect in case['declaredEffects'] if effect['zone'] != 'arts_strength'}
         expected_elements = set(ELEMENTS) if 'all' in approved else (approved - {'spell'}) | (SPELL if 'spell' in approved else set())
+        if key == 'buff_common_pulse_pulse_conduct_triggered_do':
+            expected_elements = SPELL | ({'physical', 'ether'} if record['bb_values'].get('if_contain_physicdamage') == 1 else set())
         if record.get('origin_observations'):
             expected_elements &= MAIN_ELEMENTS[record['event_key']]
         if key == TYPHOEA:

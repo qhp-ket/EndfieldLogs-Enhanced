@@ -77,7 +77,7 @@ def test_non_finite_numeric_evidence_requires_explicit_status(number):
 def test_unknown_event_types_keep_evidence_and_invalid_versions_fail():
     future = TraceEvent(1, 0, "future_observation", {"evidence": []}, {})
     assert parse(serialize(future), header=False) == future
-    value = to_object(records()[0]) | {"version": 2}
+    value = to_object(records()[0]) | {"version": 3}
     with pytest.raises(ValueError, match="Unsupported"):
         from_object(value, header=True)
 

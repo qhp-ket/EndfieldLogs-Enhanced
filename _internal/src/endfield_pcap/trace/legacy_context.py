@@ -1,14 +1,14 @@
 """Independent rendering of context evidence, retaining the old optional field ordering."""
 from datetime import datetime, timedelta, timezone
-from parser_core.trace_values import restore_value
+from endfield_pcap.trace.export_values import export_data
 from parser_core.ingestion.structured_context import CONTEXT_TYPES, MECHANICS
 from endfield_pcap.trace.formatting import _intish
 
 
 def context_legacy_lines(event, *, timezone_offset_minutes):
-    if event.type not in CONTEXT_TYPES or 'legacy_layout' not in event.data:
+    if event.type not in CONTEXT_TYPES:
         raise ValueError('Expected context event with legacy layout')
-    data = restore_value(event.data, event.data['legacy_layout'])
+    data = export_data(event)
     if event.type in ('game_instance', 'game_mechanics'):
         source = data['source']
         parts = [MECHANICS[source][2], f'source={source}']

@@ -166,6 +166,7 @@ desktop.ini
 !/_internal/data/runtime-data.zip
 
 # Only reviewed synthetic trace contracts are retained.
+!/_internal/packages/parser_core/tests/fixtures/trace_v2_cross_language.jsonl
 !/_internal/packages/parser_core/tests/fixtures/rdps_snapshot_contract.log
 !/_internal/packages/parser_core/tests/fixtures/ink_recording_contract.log
 !/_internal/packages/parser_core/tests/fixtures/synthetic_combo_skill.log

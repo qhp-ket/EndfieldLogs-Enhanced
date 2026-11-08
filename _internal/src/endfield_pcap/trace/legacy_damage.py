@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 from parser_core.trace_jsonl import TraceEvent
-from parser_core.trace_values import restore_value
+from endfield_pcap.trace.export_values import export_data
 from endfield_pcap.trace.damage_evidence import calculation_tokens, write_damage_evidence
 from endfield_pcap.trace.formatting import _floatish, _intish, _trace_string
 
@@ -22,12 +22,10 @@ class _EvidenceSink:
 def damage_legacy_lines(event: TraceEvent, *, timezone_offset_minutes: int) -> list[str]:
     if event.type != 'damage':
         raise ValueError('Expected damage event')
-    if 'legacy_layout' not in event.data:
-        raise ValueError('Damage event lacks legacy export layout')
-    data = restore_value(event.data, event.data['legacy_layout'])
+    data = export_data(event)
     actors, action, amounts = data['actors'], data['action'], data['amounts']
     evidence = data['evidence']
-    context = evidence['packet_context']
+    context = evidence.get('packet_context', {'packetSeq': event.source.get('operation_seq'), 'packetSessionId': event.source.get('session_id')})
     detail = {key: value for key, value in evidence.items() if key not in ('presence', 'packet_context')}
     detail.update({'damage_unit_index': action.get('damage_unit_index'), 'part_inst_id': action.get('part_inst_id')})
     packet = {'session_id': context.get('packetSessionId'), 'seq_id': context.get('packetSeq')}

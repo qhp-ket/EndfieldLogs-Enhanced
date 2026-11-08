@@ -80,7 +80,7 @@ class ServiceController:
         # Service construction fills generated trace/status paths. Isolate it
         # from persisted settings so every restart creates a fresh capture.
         self.running_config = deepcopy(self.config)
-        self.running_config.recording_on_start = False
+        self.running_config.recording_on_start = True
         self.running_config.trace_file = self.running_config.status_file = None
         self.recording = self.recording_pending = False
         observer = ServiceObserver(
@@ -98,6 +98,9 @@ class ServiceController:
                 self._service = DamageLogService(self.running_config, observer=observer)
                 if getattr(self.running_config,'trace_file',None) is not None:
                     self.queue.put(('trace_path',str(self.running_config.trace_file)))
+                if getattr(self._service, 'recording', False):
+                    self.queue.put(('recording_changed', dict(active=True,
+                        trace=str(self.running_config.trace_file) if self.running_config.trace_file else None)))
                 self._service.observer.on_analysis_snapshot = self._on_full_snapshot if self._full_analysis_required else None
                 self._service.set_full_analysis_required(self._full_analysis_required)
                 if self._analysis_streams is not None:

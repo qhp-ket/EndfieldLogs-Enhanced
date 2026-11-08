@@ -1,4 +1,5 @@
 """Clock observations preserve their independent capture and simulation domains."""
+from parser_core.trace_model import event_data
 from dataclasses import dataclass
 
 from parser_core.ingestion.skill_wire import integer
@@ -42,7 +43,7 @@ class ClockObservation:
 def clock_observation(event):
     if event.type not in CLOCK_TYPES:
         raise ValueError('Expected clock event')
-    data = _object(event.data)
+    data = _object(event_data(event))
     source = data.get('source')
     if not isinstance(source, str) or not source:
         raise ValueError('Clock event requires its observed source')

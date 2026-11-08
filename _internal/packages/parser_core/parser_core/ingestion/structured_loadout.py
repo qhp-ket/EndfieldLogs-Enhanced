@@ -1,14 +1,13 @@
 """Structured equipment observations enter the shared loadout state directly."""
 import re
 
-from parser_core.ingestion.fields import _parse_loadout_suits
 from parser_core.ingestion.loadout import (
     apply_loadout_group, apply_loadout_snapshot, apply_active_loadout,
     loadout_slot_snapshot, loadout_stats_snapshot,
 )
-from parser_core.ingestion.loadout_wire import slot_observation, stats_observation, source_text
+from parser_core.ingestion.loadout_wire import slot_observation, stats_observation
 from parser_core.ingestion.structured_damage import _identity, _object
-from parser_core.trace_values import restore_value
+from parser_core.trace_model import event_data
 
 
 def consume_structured_loadout(ingestion, event, evidence_index):
@@ -38,7 +37,7 @@ def consume_structured_loadout(ingestion, event, evidence_index):
                 _identity(row['entity_id'])
     else:
         raise ValueError('Expected loadout event')
-    restored = restore_value(data, _object(data.get('legacy_layout', {})))
+    restored = event_data(event)
     if event.type == 'loadout_group':
         apply_loadout_group(ingestion, restored['reason'], evidence_index, event.captured_at_ms)
     elif event.type == 'loadout_slot':
@@ -46,11 +45,12 @@ def consume_structured_loadout(ingestion, event, evidence_index):
         snapshot = loadout_slot_snapshot(observation)
         # The old active-binding rule requires a nonnegative slot, nonempty
         # scalar labels and an explicitly braced suit field, independently of chr_.
-        suit = source_text(restored, 'equip_suit', '{}')
+        suit = restored.get('equip_suit', [])
         active = observation.slot >= 0 and observation.character and observation.weapon and not re.search(r'\s', observation.character + observation.weapon)
         apply_loadout_snapshot(ingestion, snapshot, evidence_index, event.captured_at_ms)
-        if active and suit.startswith('{') and '}' in suit:
-            apply_active_loadout(ingestion, observation.character, observation.weapon, _parse_loadout_suits(suit))
+        if active and isinstance(suit, list):
+            apply_active_loadout(ingestion, observation.character, observation.weapon,
+                                 {row['suit_id'] for row in suit if row['piece_count'] >= 3})
     else:
         current = ingestion.current_loadout_group
         allow = bool(current and current['ts_ms'] == event.captured_at_ms and current['reason'] in {'SC_SYNC_CHAR_BAG_INFO', 'SC_SELF_SCENE_INFO'})

@@ -292,7 +292,7 @@ def stage_uploader(name=None):
         raise ValueError(f'Uploader release name must match its upstream version: {UPLOADER_RELEASE_NAME}')
     from prepare_resources import acquire_archive
     manifest = json.loads((ROOT / '_internal/data/resource-manifest.json').read_text(encoding='utf8'))
-    archive = acquire_archive(ROOT, manifest)
+    archive = acquire_archive(ROOT, manifest.get('uploader_source', manifest))
     stage = RELEASES / name
     stage.mkdir(parents=True, exist_ok=False)
     stats = extract_uploader(archive, stage / 'Uploader')

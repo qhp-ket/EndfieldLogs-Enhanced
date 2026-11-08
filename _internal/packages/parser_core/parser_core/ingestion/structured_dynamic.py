@@ -3,7 +3,7 @@ from parser_core.ingestion.buff_packet_wire import packet_observation
 from parser_core.ingestion.dynamic_evidence import apply_dynamic_observation
 from parser_core.ingestion.dynamic_wire import dynamic_fields
 from parser_core.ingestion.structured_damage import _object, _identity
-from parser_core.trace_values import restore_value
+from parser_core.trace_model import event_data
 
 
 def consume_structured_dynamic(ingestion, event, evidence_index):
@@ -15,7 +15,7 @@ def consume_structured_dynamic(ingestion, event, evidence_index):
         for key in ('buff_inst_id', 'owner_id', 'operation_owner_id', 'environment_inst_id'):
             if key in fields:
                 _identity(fields[key])
-    restored = restore_value(data, _object(data.get('legacy_layout', {})))
+    restored = event_data(event)
     # Skill-setting packets have always been diagnostic evidence only; they
     # must not create an attribute refresh or an independently usable value.
     if event.type != 'blackboard_skill_setting':

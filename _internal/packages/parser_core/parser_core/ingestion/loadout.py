@@ -86,6 +86,17 @@ def _parse_inline_equips(raw_line: str) -> list[dict[str, Any]]:
 
 
 def _inline_equips_blob(equips_blob):
+    if isinstance(equips_blob, list):
+        catalog = _load_equip_item_catalog()
+        rows = []
+        for observed in equips_blob:
+            item_id = observed['item_id']
+            meta = catalog.get(item_id, {})
+            rows.append({**observed, 'item_name': meta.get('item_name') or item_id,
+                         'suit_id': meta.get('suit_id') or '', 'suit_name': meta.get('suit_name') or '',
+                         'part_name': meta.get('part_name') or '', 'rarity': meta.get('rarity'),
+                         'catalog_main_attr': meta.get('main_attr'), 'catalog_sub_attrs': meta.get('sub_attrs') or {}})
+        return rows
     if not equips_blob:
         return []
     matches = list(re.finditer(r"\[(\d+)\]=", equips_blob))
@@ -182,6 +193,8 @@ def loadout_slot_snapshot(observation):
         return None
     weapon_level, weapon_refine = observation.weapon_level, observation.refine
     equip_suit_blob = observation.suit_blob
+    if observation.suits is not None:
+        equip_suit_blob = ' '.join(f"[{row['suit_id']}]={row['piece_count']}" for row in observation.suits)
     weapon_meta = _load_weapon_catalog().get(weapon_template, {})
     row = {
         "slot": observation.slot,
@@ -199,8 +212,8 @@ def loadout_slot_snapshot(observation):
         "weapon_base_atk": _selected_weapon_base_atk(weapon_template, weapon_level),
         "weapon_catalog_skilllist": weapon_meta.get("skilllist") or [],
         "equip_suit_raw": "{" + equip_suit_blob + "}" if equip_suit_blob else "{}",
-        "suit_effects": _parse_suit_counts(equip_suit_blob),
-        "equips": _inline_equips_blob(observation.equipment_blob),
+        "suit_effects": _parse_suit_counts(observation.suits if observation.suits is not None else equip_suit_blob),
+        "equips": _inline_equips_blob(observation.equipment if observation.equipment is not None else observation.equipment_blob),
         "skill_int_ids": list(observation.skill_ids),
         "weapon_source_skills": [],
         "weapon_refine_stats": [],
@@ -272,15 +285,18 @@ def loadout_stats_snapshot(observation, *, allow_bound_gem=False):
     char_key, weapon_template, weapon_level = observation.character, observation.weapon, observation.weapon_level
     if not char_key.startswith('chr_'):
         return None
-    weapon_refine_stats = _parse_weapon_source_skills(observation.refine_stats_blob)
-    weapon_source_skills = _parse_weapon_source_skills(observation.source_skills_blob)
+    weapon_refine_stats = observation.refine_stats if observation.refine_stats is not None else _parse_weapon_source_skills(observation.refine_stats_blob)
+    weapon_source_skills = observation.source_skills if observation.source_skills is not None else _parse_weapon_source_skills(observation.source_skills_blob)
     gem_terms = None
     weapon_inst, gem_inst, raw_terms = observation.weapon_instance, observation.gem_instance, observation.terms_blob
     if (allow_bound_gem and re.fullmatch(r"[1-9]\d*", weapon_inst) and re.fullmatch(r"[1-9]\d*", gem_inst)
-            and observation.gem_weapon == weapon_inst and raw_terms):
-        matches = [re.fullmatch(r"(\d+):[^,@{}]*@cost(\d+)", part.strip()) for part in raw_terms.split(',')]
-        if all(matches):
-            gem_terms = [{"term_num_id": int(match[1]), "cost": int(match[2])} for match in matches]
+            and observation.gem_weapon == weapon_inst and (raw_terms or observation.terms)):
+        if observation.terms is not None:
+            gem_terms = [{'term_num_id': row['term_num_id'], 'cost': row['cost']} for row in observation.terms]
+        else:
+            matches = [re.fullmatch(r"(\d+):[^,@{}]*@cost(\d+)", part.strip()) for part in raw_terms.split(',')]
+            if all(matches):
+                gem_terms = [{"term_num_id": int(match[1]), "cost": int(match[2])} for match in matches]
     inferred_refine = _infer_verified_weapon_refine_from_levels(
         weapon_template,
         weapon_source_skills or weapon_refine_stats,
@@ -297,7 +313,7 @@ def loadout_stats_snapshot(observation, *, allow_bound_gem=False):
         "weapon_refine_stats": weapon_refine_stats,
         "weapon_source_skills": weapon_source_skills,
         "gem_template": observation.gem_template,
-        "gem_terms": _parse_bb_assignments(raw_terms.replace(":", "=")),
+        "gem_terms": {str(row['term_num_id']): f"{row['template']}@cost{row['cost']}" for row in observation.terms} if observation.terms is not None else _parse_bb_assignments(raw_terms.replace(":", "=")),
     }
 
 

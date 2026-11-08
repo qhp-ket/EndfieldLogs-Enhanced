@@ -17,7 +17,8 @@ from parser_core.ingestion.fields import _coerce_optional_int
 def _parse_suit_counts(raw: str | None) -> list[dict[str, Any]]:
     suits: list[dict[str, Any]] = []
     catalog = _load_suit_catalog()
-    for suit_id, count_text in re.findall(r"\[([^\]]+)\]=(\d+)", str(raw or "")):
+    observations = ((row['suit_id'], row['piece_count']) for row in raw) if isinstance(raw, list) else re.findall(r"\[([^\]]+)\]=(\d+)", str(raw or ""))
+    for suit_id, count_text in observations:
         count = int(count_text)
         meta = catalog.get(suit_id, {})
         suits.append(

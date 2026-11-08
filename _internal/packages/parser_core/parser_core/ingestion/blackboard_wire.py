@@ -1,7 +1,7 @@
 """Blackboard scalars and projectile releases, independent of trace text."""
 from parser_core.ingestion.skill_wire import integer, identity_token, label
 from parser_core.ingestion.structured_damage import _object, _identity
-from parser_core.trace_values import restore_value
+from parser_core.trace_model import event_data
 
 
 TYPES = ('blackboard_calculation', 'blackboard_modify', 'blackboard_preset', 'ink_release')
@@ -45,7 +45,7 @@ def blackboard_observation(event):
         raise ValueError('Expected calculation key and result')
     if event.type == 'blackboard_preset' and not isinstance(data.get('modified_value'), str):
         raise ValueError('Expected preset value')
-    return restore_value(data, _object(data.get('legacy_layout', {})))
+    return event_data(event)
 
 
 def consume_structured_blackboard(ingestion, event, evidence_index):
